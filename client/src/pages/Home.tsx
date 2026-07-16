@@ -3,10 +3,10 @@
  * Design: Nautical dark-mode dashboard. Deep ocean navy (#0a1628) base,
  * coral-orange (#ff6b35) accent, seafoam green (#3ecf8e) for good conditions.
  * Typography: Bebas Neue for headings, Inter for data.
- * Layout: Full-width header, sticky tab bar, content panels.
  */
 import { useEffect } from "react";
 import { useFishingData } from "@/hooks/useFishingData";
+import { useMySpots } from "@/hooks/useMySpots";
 import { Header } from "@/components/Header";
 import { Controls } from "@/components/Controls";
 import { GraphView } from "@/components/GraphView";
@@ -19,6 +19,7 @@ import { ErrorState } from "@/components/ErrorState";
 
 export default function Home() {
   const { state, loadData, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
+  const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
 
   useEffect(() => {
     loadData(state.location, state.days);
@@ -30,9 +31,13 @@ export default function Home() {
       <Header />
       <Controls
         state={state}
+        spots={spots}
         onLocationChange={setLocation}
         onDaysChange={setDays}
         onCustomLocation={setCustomLocation}
+        onAddSpot={addSpot}
+        onUpdateSpot={updateSpot}
+        onDeleteSpot={deleteSpot}
       />
       <TabBar view={state.view} onViewChange={setView} />
 
