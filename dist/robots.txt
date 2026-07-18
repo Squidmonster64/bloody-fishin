@@ -1,0 +1,4 @@
+User-Agent: *
+Allow: /
+Disallow: /api/*
+Sitemap: https://bloodyfishin-zf3nohkq.manus.space/sitemap.xml
