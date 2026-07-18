@@ -2,9 +2,8 @@
  * Bloody Dave's Fishing Planner — Home Page
  * Design: Nautical dark-mode dashboard. Deep ocean navy (#0a1628) base,
  * coral-orange (#ff6b35) accent, seafoam green (#3ecf8e) for good conditions.
- * Typography: Bebas Neue for headings, Inter for data.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFishingData } from "@/hooks/useFishingData";
 import { useMySpots } from "@/hooks/useMySpots";
 import { Header } from "@/components/Header";
@@ -16,10 +15,12 @@ import { SickieView } from "@/components/SickieView";
 import { TabBar } from "@/components/TabBar";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
+import { PrintView } from "@/components/PrintView";
 
 export default function Home() {
   const { state, loadData, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
   const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
+  const [showPrint, setShowPrint] = useState(false);
 
   useEffect(() => {
     loadData(state.location, state.days);
@@ -38,6 +39,7 @@ export default function Home() {
         onAddSpot={addSpot}
         onUpdateSpot={updateSpot}
         onDeleteSpot={deleteSpot}
+        onPrint={() => setShowPrint(true)}
       />
       <TabBar view={state.view} onViewChange={setView} />
 
@@ -55,15 +57,9 @@ export default function Home() {
                 onToggleVis={toggleVis}
               />
             )}
-            {state.view === "summary" && (
-              <SummaryView data={state.data} />
-            )}
-            {state.view === "table" && (
-              <TableView data={state.data} />
-            )}
-            {state.view === "sickie" && (
-              <SickieView data={state.data} />
-            )}
+            {state.view === "summary" && <SummaryView data={state.data} />}
+            {state.view === "table"   && <TableView   data={state.data} />}
+            {state.view === "sickie"  && <SickieView  data={state.data} />}
           </>
         )}
         {!state.loading && !state.error && !state.data && (
@@ -72,6 +68,15 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Print overlay — only rendered when triggered */}
+      {showPrint && state.data && (
+        <PrintView
+          data={state.data}
+          vis={state.vis}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
     </div>
   );
 }
