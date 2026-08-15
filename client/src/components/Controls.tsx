@@ -42,10 +42,10 @@ export function Controls({ state, spots, onLocationChange, onDaysChange, onCusto
   return (
     <div className="bg-[#0d1f3c] border-b border-[#1e3a5f] px-3 py-2.5 flex flex-wrap items-center gap-2.5">
       {/* Location selector */}
-      <div className="flex items-center gap-2 min-w-0 flex-1 max-w-full sm:flex-none">
-        <label className="text-xs text-[#7a9bb5] uppercase tracking-wider whitespace-nowrap font-semibold">📍</label>
+      <div className="controls-location flex w-full items-center gap-2 sm:w-auto sm:flex-1 sm:max-w-md">
+        <label className="text-xs text-[#7a9bb5] uppercase tracking-wider whitespace-nowrap font-semibold">📍 Location</label>
         <select
-          className="bg-[#0a1628] border border-[#1e3a5f] text-white text-sm rounded px-3 py-2 min-w-0 w-full sm:w-auto sm:max-w-xs focus:border-[#ff6b35] focus:outline-none min-h-[44px] font-medium"
+          className="bg-[#0a1628] border border-[#1e3a5f] text-white text-base rounded px-3 py-2 min-w-0 flex-1 sm:w-auto focus:border-[#ff6b35] focus:outline-none min-h-[48px] font-semibold"
           value={`${state.location.lat},${state.location.lon}`}
           onChange={e => {
             if (e.target.value === "__custom__") { setShowCustom(true); return; }

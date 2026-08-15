@@ -36,8 +36,8 @@ export const VESSEL_PRESETS: Record<VesselPreset, { label: string; emoji: string
   sl20: {
     label: "SL20 / Half-cabin",
     emoji: "⛵",
-    description: "Standard offshore runabout — the classic SL20 rating",
-    criteria: { minSL20Rank: 2, minFishStars: 4, maxWindKt: 15, maxSwellH: 1.0, minWindowHours: 3 },
+    description: "Standard offshore runabout — uses the SL20 chop + swell-period model",
+    criteria: { minSL20Rank: 2, minFishStars: 4, maxWindKt: 15, maxSwellH: null, minWindowHours: 3 },
   },
   offshore: {
     label: "Offshore Cruiser",

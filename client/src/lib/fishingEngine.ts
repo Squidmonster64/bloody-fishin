@@ -22,6 +22,7 @@ export interface HourRow {
   rainProb: number | null;
   waveH: number | null;
   waveP: number | null;
+  windWaveH: number | null;
   swellH: number | null;
   swellP: number | null;
   swellDir: number | null;
@@ -170,18 +171,50 @@ export function swellColor(h: number | null): string {
   return "#e05c5c";
 }
 
-export function rateSL20(windKt: number | null, swellH: number | null, swellP: number | null, waveH: number | null): SL20Rating {
-  const w = windKt || 0;
-  const sh = swellH || 0;
-  const sp = swellP || 10;
-  const wh = waveH || 0;
-  const adj = sp >= 14 ? 0.25 : sp >= 11 ? 0.10 : sp <= 7 ? -0.20 : 0;
-  const eff = Math.max(wh, sh - adj);
-  if (w > 22 || eff > 1.8) return { label: "Avoid",     bg: "rgba(224,92,92,0.2)",   fg: "#e05c5c", rank: 0 };
-  if (w > 20 || eff > 1.5) return { label: "Avoid",     bg: "rgba(224,92,92,0.2)",   fg: "#e05c5c", rank: 0 };
-  if (w > 15 || eff > 1.0) return { label: "Marginal",  bg: "rgba(245,166,35,0.2)",  fg: "#f5a623", rank: 1 };
-  if (w <= 8 && eff <= 0.5) return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
-  return { label: "Go", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 2 };
+/**
+ * SL20 boating rating.
+ *
+ * The prior version used `wave_height` as the decisive input. That is total
+ * sea state, so it includes clean groundswell; a calm, long-period day could
+ * therefore be labelled Avoid. This version prioritises wind chop and wind
+ * speed, then discounts organised long-period swell. It is a small-boat
+ * comfort/safety guide, not a substitute for skipper judgement or BOM advice.
+ */
+export function rateSL20(
+  windKt: number | null,
+  swellH: number | null,
+  swellP: number | null,
+  waveH: number | null,
+  windWaveH: number | null = null,
+): SL20Rating {
+  const wind = Math.max(0, windKt ?? 0);
+  const swell = Math.max(0, swellH ?? 0);
+  const period = Math.max(1, swellP ?? 9);
+  const totalWave = Math.max(0, waveH ?? 0);
+
+  // Long-period groundswell is generally more orderly than short-period chop.
+  // The factor represents the portion of swell height that affects a 20 ft
+  // runabout's ride. Short-period swell gets the full penalty; 13+ sec swell
+  // is discounted to 45%.
+  const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
+  const organisedSwellLoad = swell * periodFactor;
+
+  // Prefer marine API's wind-wave value. If unavailable, infer chop conservatively
+  // from the portion of total wave not accounted for by the primary swell.
+  const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
+  const windChop = Math.max(0, windWaveH ?? inferredWindChop);
+  const rideLoad = windChop + organisedSwellLoad * 0.55;
+
+  if (wind > 25 || windChop > 1.5 || rideLoad > 1.7) {
+    return { label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0 };
+  }
+  if (wind > 20 || windChop > 1.1 || rideLoad > 1.25) {
+    return { label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1 };
+  }
+  if (wind <= 10 && windChop <= 0.35 && rideLoad <= 0.60) {
+    return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
+  }
+  return { label: "Go", bg: "rgba(126,184,247,0.2)", fg: "#7eb8f7", rank: 2 };
 }
 
 export function isGolden(slRank: number, fishStars: number): boolean {
@@ -409,6 +442,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       rainProb:  (wh.precipitation_probability || [])[i] ?? null,
       waveH:     hasM ? (mh.wave_height || [])[mi] ?? null : null,
       waveP:     hasM ? (mh.wave_period || [])[mi] ?? null : null,
+      windWaveH: hasM ? (mh.wind_wave_height || [])[mi] ?? null : null,
       swellH:    hasM ? (mh.swell_wave_height || [])[mi] ?? null : null,
       swellP:    hasM ? (mh.swell_wave_period || [])[mi] ?? null : null,
       swellDir:  hasM ? (mh.swell_wave_direction || [])[mi] ?? null : null,
@@ -447,7 +481,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       });
       row.fishScore = f.score;
       row.fishStars = f.stars;
-      const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH);
+      const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
       row.slRank = sl.rank;
       row.golden = isGolden(sl.rank, f.stars);
     });

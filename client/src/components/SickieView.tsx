@@ -64,7 +64,7 @@ function flush(
   const peakStars = Math.max(...hours.map(h => h.fishStars));
   const winds = hours.map(h => h.windKt).filter((v): v is number => v != null);
   const swells = hours.map(h => h.swellH).filter((v): v is number => v != null);
-  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH);
+  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH);
 
   const dl = daylightByDate[first.dateStr];
   const daylightHours = dl
@@ -203,7 +203,7 @@ function CriteriaPanel({
               📖 How the algorithm works
             </summary>
             <div className="mt-2 text-[10px] text-[#7a9bb5] space-y-1 leading-relaxed bg-[#0a1628] rounded p-3 border border-[#1e3a5f]">
-              <p><strong className="text-white">SL20 Rank</strong> — Effective swell = max(wave_height, swell_height − period_bonus). Period bonus: +0.25m for ≥14s, +0.10m for ≥11s, −0.20m for ≤7s. Ranks: Excellent (wind≤8kt, eff≤0.5m), Go (≤15kt, ≤1.0m), Marginal (≤20kt, ≤1.5m), Avoid (else).</p>
+              <p><strong className="text-white">SL20 Rank</strong> — The boating model prioritises wind speed and wind chop, then discounts organised long-period groundswell rather than treating total wave height as dangerous chop. Excellent = wind≤10kt, chop≤0.35m and low ride load; Go = wind≤20kt with manageable chop; Marginal = wind≤25kt or moderate chop; Avoid = &gt;25kt wind, &gt;1.5m chop, or high combined ride load. It is a planning guide only — always check official warnings and your vessel limits.</p>
               <p><strong className="text-white">Fishing Score (0–100%)</strong> — Base 35pts. Moon phase: new/full +20, near +13, quarter +5. Moon transit/underfoot within 30min +22, 1hr +17, 1.5hr +10, 2hr +5. Sunrise/sunset within 30min +15, 1hr +10, 1.5hr +4. Tide rate: fast +12, moderate +10, slow +5, slack −4. Wind: calm−moderate +4, strong −6 to −30. Rain &gt;70% −8.</p>
               <p><strong className="text-white">Window</strong> — Consecutive hours where ALL criteria are met. Windows shorter than "Min Window Length" are discarded.</p>
               <p><strong className="text-white">Daylight flag</strong> — Hours between sunrise and sunset for that day.</p>
@@ -285,7 +285,7 @@ function WindowCard({ win, idx }: { win: SickieWindow; idx: number }) {
       <div className="overflow-x-auto px-3 py-2 bg-[#0d1f3c] scrollbar-hide">
         <div className="flex gap-1 min-w-max">
           {win.hours.map(row => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH);
+            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
             return (
               <div key={row.time}
                 className="flex flex-col items-center gap-0.5 bg-yellow-400/10 ring-1 ring-yellow-400/40 rounded px-1.5 py-1 min-w-[44px]">

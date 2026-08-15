@@ -233,6 +233,70 @@ button, select, input {
     display: block !important;
   }
 
+  .print-sheet {
+    display: block !important;
+    width: 100%;
+    color: #111827 !important;
+  }
+
+  .print-sheet .print-header {
+    display: flex !important;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-start;
+    border-bottom: 2px solid #374151 !important;
+    padding-bottom: 9px;
+    margin-bottom: 8px;
+  }
+
+  .print-sheet .print-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+  }
+
+  .print-sheet .print-header p,
+  .print-sheet .print-meta,
+  .print-sheet .print-meta span {
+    display: block;
+    margin: 3px 0 0;
+    color: #374151 !important;
+    font-size: 10px;
+  }
+
+  .print-sheet .print-meta { text-align: right; margin: 0; }
+
+  .print-sheet .print-legend {
+    display: flex !important;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0 0 8px;
+    color: #374151 !important;
+    font-size: 9px;
+  }
+
+  .print-sheet .print-chart-wrap {
+    height: 138mm;
+    width: 100%;
+    page-break-inside: avoid;
+  }
+
+  .print-sheet .print-chart-wrap canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .print-sheet footer {
+    display: block;
+    border-top: 1px solid #d1d5db !important;
+    margin-top: 8px;
+    padding-top: 5px;
+    color: #6b7280 !important;
+    font-size: 9px;
+  }
+
   /* Print layout */
   body {
     font-family: Arial, Helvetica, sans-serif;

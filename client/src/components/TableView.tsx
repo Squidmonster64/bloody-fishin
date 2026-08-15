@@ -12,7 +12,7 @@ function GoldenBadge() {
 }
 
 function Row({ row }: { row: HourRow }) {
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH);
+  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
   const dt = new Date(row.time);
   const dayLabel = row.isDayStart
     ? dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })

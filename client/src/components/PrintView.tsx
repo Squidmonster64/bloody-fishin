@@ -1,13 +1,18 @@
 /**
- * PrintView — white-background print-friendly forecast.
- * Triggered by window.print() after rendering this overlay.
- * Shows only the variables the user has toggled on, for the next 7 days.
- * Uses @media print CSS to hide everything else and show only this panel.
+ * PrintView — graph-only printout for the loaded forecast date range.
+ * Uses the same selected-variable visibility state as the live graph and
+ * prints a clean, white-background, landscape chart — no hourly table.
  */
 import { useEffect, useRef } from "react";
-import type { AppData, HourRow } from "@/lib/fishingEngine";
-import { rateSL20, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
+import {
+  Chart,
+  LineController, LineElement, PointElement, LinearScale, CategoryScale,
+  Filler, Legend,
+} from "chart.js";
+import type { AppData } from "@/lib/fishingEngine";
 import type { FishingState } from "@/hooks/useFishingData";
+
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend);
 
 interface Props {
   data: AppData;
@@ -15,253 +20,123 @@ interface Props {
   onClose: () => void;
 }
 
-// Columns driven by vis toggles
-interface ColDef {
-  key: string;
-  label: string;
-  visKey?: keyof FishingState["vis"];
-  always?: boolean;
-}
-
-const COLS: ColDef[] = [
-  { key: "datetime", label: "Date / Hour", always: true },
-  { key: "fish",     label: "Fish %",  always: true },
-  { key: "sl20",     label: "SL20",    always: true },
-  { key: "wind",     label: "Wind",    visKey: "wind" },
-  { key: "gust",     label: "Gust",    visKey: "wind" },
-  { key: "winddir",  label: "Dir",     visKey: "wind" },
-  { key: "swell",    label: "Swell",   visKey: "swell" },
-  { key: "period",   label: "Period",  visKey: "swell" },
-  { key: "wave",     label: "Wave",    visKey: "swell" },
-  { key: "tide",     label: "Tide",    visKey: "tide" },
-  { key: "temp",     label: "Temp",    visKey: "temp" },
-  { key: "rain",     label: "Rain%",   visKey: "rain" },
-];
-
-function slPrintColor(label: string): string {
-  if (label === "Excellent") return "#16a34a";
-  if (label === "Go")        return "#2563eb";
-  if (label === "Marginal")  return "#d97706";
-  return "#dc2626";
-}
-
-function PrintRow({ row, cols }: { row: HourRow; cols: ColDef[] }) {
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH);
-  const dt = new Date(row.time);
-  const dayLabel = row.isDayStart
-    ? dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })
-    : "";
-
-  return (
-    <tr style={{
-      backgroundColor: row.golden ? "#fefce8" : "white",
-      borderBottom: "1px solid #e5e7eb",
-    }}>
-      {cols.map(col => {
-        switch (col.key) {
-          case "datetime":
-            return (
-              <td key="datetime" style={{ padding: "4px 6px", whiteSpace: "nowrap", borderRight: "1px solid #e5e7eb" }}>
-                {row.isDayStart && (
-                  <div style={{ fontSize: 9, color: "#c2410c", fontWeight: 700, lineHeight: 1.2 }}>{dayLabel}</div>
-                )}
-                <div style={{ fontFamily: "monospace", fontSize: 11, color: "#111" }}>{row.hourLabel}</div>
-                {row.golden && <span style={{ fontSize: 8, color: "#d97706", fontWeight: 700 }}>⭐ GOLDEN</span>}
-              </td>
-            );
-          case "fish":
-            return (
-              <td key="fish" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap" }}>
-                <span style={{ fontWeight: 700, color: "#ea580c", fontSize: 11 }}>{row.fishScore}%</span>
-                <span style={{ color: "#ca8a04", fontSize: 9, marginLeft: 2 }}>{"★".repeat(row.fishStars)}</span>
-              </td>
-            );
-          case "sl20":
-            return (
-              <td key="sl20" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: slPrintColor(sl.label) }}>{sl.label}</span>
-              </td>
-            );
-          case "wind":
-            return (
-              <td key="wind" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: windColor(row.windKt) }}>
-                {row.windKt != null ? `${Math.round(row.windKt)}kt` : "—"}
-              </td>
-            );
-          case "gust":
-            return (
-              <td key="gust" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: windColor(row.gustKt) }}>
-                {row.gustKt != null ? `${Math.round(row.gustKt)}kt` : "—"}
-              </td>
-            );
-          case "winddir":
-            return (
-              <td key="winddir" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: "#374151" }}>
-                {degToCompass(row.windDir)}
-              </td>
-            );
-          case "swell":
-            return (
-              <td key="swell" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: swellColor(row.swellH) }}>
-                {row.swellH != null ? `${fmt(row.swellH)}m` : "—"}
-              </td>
-            );
-          case "period":
-            return (
-              <td key="period" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: "#374151" }}>
-                {row.swellP != null ? `${fmt(row.swellP, 0)}s` : "—"}
-              </td>
-            );
-          case "wave":
-            return (
-              <td key="wave" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: swellColor(row.waveH) }}>
-                {row.waveH != null ? `${fmt(row.waveH)}m` : "—"}
-              </td>
-            );
-          case "tide":
-            return (
-              <td key="tide" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: "#7c3aed" }}>
-                {row.seaLevel != null ? `${fmt(row.seaLevel)}m` : "—"}
-              </td>
-            );
-          case "temp":
-            return (
-              <td key="temp" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: "#b45309" }}>
-                {row.temp != null ? `${fmt(row.temp, 0)}°C` : "—"}
-              </td>
-            );
-          case "rain":
-            return (
-              <td key="rain" style={{ padding: "4px 6px", textAlign: "center", whiteSpace: "nowrap", fontSize: 11, color: "#2563eb" }}>
-                {row.rainProb != null ? `${row.rainProb}%` : "—"}
-              </td>
-            );
-          default:
-            return <td key={col.key} />;
-        }
-      })}
-    </tr>
-  );
+function buildLabels(data: AppData) {
+  return data.merged.map(row => {
+    if (row.isDayStart) {
+      return new Date(`${row.dateStr}T12:00:00`).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+    }
+    return row.hour % 6 === 0 ? row.hourLabel : "";
+  });
 }
 
 export function PrintView({ data, vis, onClose }: Props) {
-  const printRef = useRef<HTMLDivElement>(null);
-
-  // Determine active columns
-  const activeCols = COLS.filter(c => c.always || (c.visKey && vis[c.visKey]));
-
-  // Limit to next 7 days
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() + 7);
-  const rows = data.merged.filter(r => new Date(r.time) <= cutoff);
-
-  const generatedAt = new Date().toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const rangeStart = data.daily[0]?.date ?? "";
+  const rangeEnd = data.daily[data.daily.length - 1]?.date ?? "";
+  const rangeLabel = `${new Date(`${rangeStart}T12:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(`${rangeEnd}T12:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}`;
 
   useEffect(() => {
-    // Trigger print after a short delay to allow render
-    const t = setTimeout(() => {
-      window.print();
-    }, 300);
-    return () => clearTimeout(t);
+    if (!canvasRef.current || !data.merged.length) return;
+    chartRef.current?.destroy();
+    const rows = data.merged;
+    const datasets = [];
+
+    if (vis.wind) datasets.push({ label: "Wind (kt)", yAxisID: "y", data: rows.map(r => r.windKt), borderColor: "#2563eb", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, tension: 0.25 });
+    if (vis.swell) datasets.push({ label: "Swell (m)", yAxisID: "y2", data: rows.map(r => r.swellH), borderColor: "#059669", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, tension: 0.25 });
+    if (vis.fish) datasets.push({ label: "Fishing (%)", yAxisID: "y3", data: rows.map(r => r.fishScore), borderColor: "#ea580c", backgroundColor: "rgba(234,88,12,0.10)", borderWidth: 2.5, pointRadius: 0, tension: 0.25, fill: true });
+    if (vis.tide) datasets.push({ label: "Tide (m)", yAxisID: "y2", data: rows.map(r => r.seaLevel), borderColor: "#7c3aed", backgroundColor: "transparent", borderWidth: 1.6, pointRadius: 0, tension: 0.35, borderDash: [5, 3] });
+    if (vis.temp) datasets.push({ label: "Temperature (°C)", yAxisID: "y", data: rows.map(r => r.temp), borderColor: "#b45309", backgroundColor: "transparent", borderWidth: 1.8, pointRadius: 0, tension: 0.25 });
+    if (vis.rain) datasets.push({ label: "Rain (%)", yAxisID: "y3", data: rows.map(r => r.rainProb), borderColor: "#0284c7", backgroundColor: "transparent", borderWidth: 1.8, pointRadius: 0, tension: 0.25 });
+
+    const goldenHours = {
+      id: "printGoldenHours",
+      beforeDraw(chart: Chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!chartArea) return;
+        const x = scales.x;
+        ctx.save();
+        rows.forEach((row, i) => {
+          if (!row.golden) return;
+          const left = x.getPixelForValue(i);
+          const right = x.getPixelForValue(i + 1);
+          ctx.fillStyle = "rgba(250,204,21,0.14)";
+          ctx.fillRect(left, chartArea.top, Math.max(right - left, 2), chartArea.height);
+        });
+        ctx.restore();
+      },
+    };
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "line",
+      data: { labels: buildLabels(data), datasets },
+      plugins: [goldenHours],
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: true, position: "top", labels: { color: "#111827", boxWidth: 18, font: { size: 11, weight: "bold" } } },
+          tooltip: { enabled: false },
+        },
+        scales: {
+          x: { ticks: { color: "#374151", font: { size: 9 }, autoSkip: false, maxRotation: 0 }, grid: { color: "#e5e7eb" } },
+          y: { position: "left", ticks: { color: "#2563eb", font: { size: 10 } }, grid: { color: "#e5e7eb" } },
+          y2: { position: "right", ticks: { color: "#059669", font: { size: 10 } }, grid: { display: false } },
+          y3: { position: "right", display: vis.fish || vis.rain, min: 0, max: 100, ticks: { color: "#ea580c", font: { size: 10 } }, grid: { display: false } },
+        },
+      },
+    });
+
+    return () => { chartRef.current?.destroy(); chartRef.current = null; };
+  }, [data, vis]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => window.print(), 650);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  // Listen for afterprint to close
   useEffect(() => {
-    const handler = () => onClose();
-    window.addEventListener("afterprint", handler);
-    return () => window.removeEventListener("afterprint", handler);
+    const afterPrint = () => onClose();
+    window.addEventListener("afterprint", afterPrint);
+    return () => window.removeEventListener("afterprint", afterPrint);
   }, [onClose]);
 
   return (
     <>
-      {/* Screen overlay — shown on screen, hidden during print */}
-      <div className="print:hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center">
-          <p className="text-2xl mb-2">🖨️</p>
-          <h3 className="font-bold text-gray-900 text-lg mb-1">Print Forecast</h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Printing <strong>{rows.length}</strong> hourly rows for the next 7 days.<br />
-            Active columns: {activeCols.filter(c => !c.always).map(c => c.label).join(", ") || "Date/Hour, Fish%, SL20 only"}.
-          </p>
-          <p className="text-gray-500 text-xs mb-4">
-            The print dialog should open automatically. White background — minimal ink.
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => window.print()}
-              className="flex-1 bg-orange-500 text-white font-bold py-2.5 rounded-lg hover:bg-orange-600 transition-colors">
-              Print Now
-            </button>
-            <button onClick={onClose}
-              className="flex-1 bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-lg hover:bg-gray-200 transition-colors">
-              Cancel
-            </button>
+      <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
+          <p className="mb-2 text-3xl">🖨️</p>
+          <h3 className="text-lg font-bold text-gray-900">Preparing your forecast graph</h3>
+          <p className="mt-2 text-sm text-gray-600">Your selected variables will print across the complete loaded range: <strong>{rangeLabel}</strong>.</p>
+          <p className="mt-2 text-xs text-gray-500">White, landscape layout. Golden hours are shaded lightly. No hourly table.</p>
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => window.print()} className="min-h-[44px] flex-1 rounded-lg bg-orange-500 px-3 py-2 font-bold text-white hover:bg-orange-600">Print now</button>
+            <button onClick={onClose} className="min-h-[44px] flex-1 rounded-lg bg-gray-100 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
           </div>
         </div>
       </div>
 
-      {/* Print content — hidden on screen, shown during print */}
-      <div ref={printRef} className="print-only hidden print:block">
-        {/* Print header */}
-        <div style={{ borderBottom: "2px solid #374151", paddingBottom: 8, marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <h1 style={{ fontSize: 18, fontWeight: 900, color: "#111", margin: 0, letterSpacing: 1 }}>
-                BLOODY DAVE'S FISHING PLANNER
-              </h1>
-              <p style={{ fontSize: 11, color: "#374151", margin: "2px 0 0" }}>
-                📍 {data.location.name} · {data.location.lat.toFixed(4)}, {data.location.lon.toFixed(4)} · 🌐 {data.timezone}
-              </p>
-            </div>
-            <div style={{ textAlign: "right", fontSize: 10, color: "#6b7280" }}>
-              <div>Generated: {generatedAt}</div>
-              <div>Next 7 days · {rows.length} hourly rows</div>
-            </div>
+      <section className="print-sheet hidden print:block">
+        <header className="print-header">
+          <div>
+            <h1>BLOODY DAVE'S FISHING PLANNER</h1>
+            <p>📍 {data.location.name} · {data.location.lat.toFixed(4)}, {data.location.lon.toFixed(4)} · 🌐 {data.timezone}</p>
           </div>
+          <div className="print-meta">
+            <strong>{rangeLabel}</strong>
+            <span>Generated {new Date().toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}</span>
+          </div>
+        </header>
+        <div className="print-legend">
+          <span><b>Excellent</b> = calm wind / minimal chop</span>
+          <span><b>Go</b> = manageable runabout conditions</span>
+          <span><b>Marginal</b> = caution advised</span>
+          <span><b>⭐ Golden shade</b> = SL20 Go+ and 4★ fishing</span>
         </div>
-
-        {/* Legend */}
-        <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 9, color: "#374151", flexWrap: "wrap" }}>
-          <span><strong style={{ color: "#16a34a" }}>Excellent</strong> = Wind≤8kt, Swell≤0.5m</span>
-          <span><strong style={{ color: "#2563eb" }}>Go</strong> = Wind≤15kt, Swell≤1.0m</span>
-          <span><strong style={{ color: "#d97706" }}>Marginal</strong> = Wind≤20kt, Swell≤1.5m</span>
-          <span><strong style={{ color: "#dc2626" }}>Avoid</strong> = Exceeds above</span>
-          <span><strong style={{ color: "#d97706" }}>⭐ Golden</strong> = SL20 Go+ & 4★+ fishing</span>
-        </div>
-
-        {/* Table */}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f3f4f6", borderBottom: "2px solid #374151" }}>
-              {activeCols.map(col => (
-                <th key={col.key} style={{
-                  padding: "5px 6px",
-                  textAlign: col.key === "datetime" ? "left" : "center",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: "#374151",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  whiteSpace: "nowrap",
-                  borderRight: "1px solid #e5e7eb",
-                }}>
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(row => (
-              <PrintRow key={row.time} row={row} cols={activeCols} />
-            ))}
-          </tbody>
-        </table>
-
-        {/* Footer */}
-        <div style={{ marginTop: 10, borderTop: "1px solid #e5e7eb", paddingTop: 6, fontSize: 9, color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
-          <span>Bloody Dave's Fishing Planner · Powered by Open-Meteo (open-meteo.com)</span>
-          <span>Printed {generatedAt}</span>
-        </div>
-      </div>
+        <div className="print-chart-wrap"><canvas ref={canvasRef} /></div>
+        <footer>SL20 is a planning guide only. Check official marine warnings, local conditions and your vessel limits before departure.</footer>
+      </section>
     </>
   );
 }

@@ -196,14 +196,14 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       <div className="flex flex-wrap gap-1.5 px-3 py-1.5 bg-[#0a1628] border-b border-[#1e3a5f]">
         {VIS_KEYS.map(({ key, label, color }) => (
           <button key={key} onClick={() => onToggleVis(key)}
-            className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all duration-150 min-h-[28px]
+            className={`px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border transition-all duration-150 min-h-[38px]
               ${vis[key] ? "border-transparent text-white" : "border-[#1e3a5f] text-[#7a9bb5] bg-transparent"}`}
             style={vis[key] ? { backgroundColor: color + "33", borderColor: color, color } : {}}>
             {label}
           </button>
         ))}
         <button onClick={() => chartRef.current?.resetZoom()}
-          className="px-2 py-0.5 rounded text-[10px] font-semibold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 ml-auto min-h-[28px]">
+          className="px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 ml-auto min-h-[38px]">
           🔍 Reset Zoom
         </button>
       </div>
@@ -249,7 +249,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       <div className="overflow-x-auto px-2 pb-2 scrollbar-hide">
         <div className="flex gap-1 min-w-max pt-2">
           {dayRows.map((row, i) => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH);
+            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
             const isActive = i === activeHour;
             return (
               <div key={row.time}
