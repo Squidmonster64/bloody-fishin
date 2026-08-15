@@ -19,3 +19,10 @@
 - [x] Replace the iPhone SE location dropdown presentation with an unclipped, readable picker. Native select rendering remains cramped on iOS in landscape.
 - [x] Add a public, documented forecast URL format suitable for LLM retrieval without an app-specific API key. Open-Meteo offers public JSON endpoints; a static app cannot safely issue a secret key, so links will be generated from the active spot and date range.
 - [x] Verify touch-friendly preview behaviour, build, and publish the update.
+
+## Editable Vessel Presets
+
+- [x] Review the existing built-in preset data and Sickie configuration UI.
+- [x] Add persistent custom vessel profiles with editable wind, swell, weather, fishing, daylight, and duration criteria.
+- [x] Make selected profiles control the Sickie forecast and explain their active thresholds.
+- [x] Verify build and publish the vessel preset release.

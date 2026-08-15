@@ -11,6 +11,7 @@ import {
   VESSEL_PRESETS, DEFAULT_CRITERIA,
   type SickieCriteria, type VesselPreset,
 } from "@/lib/sickieCriteria";
+import { useVesselProfiles, type VesselProfile } from "@/hooks/useVesselProfiles";
 
 interface Props { data: AppData; }
 
@@ -40,7 +41,9 @@ function buildWindows(data: AppData, criteria: SickieCriteria): SickieWindow[] {
   let current: HourRow[] = [];
 
   for (const row of data.merged) {
-    if (meetsCriteria(row, criteria)) {
+    const daylight = daylightByDate[row.dateStr];
+    const daylightPasses = !criteria.daylightOnly || !daylight || isDaylight(row.hour, daylight.sunrise, daylight.sunset);
+    if (meetsCriteria(row, criteria) && daylightPasses) {
       current.push(row);
     } else {
       if (current.length >= criteria.minWindowHours) flush(current, windows, daylightByDate);
@@ -90,19 +93,56 @@ function flush(
 function CriteriaPanel({
   criteria,
   preset,
+  profiles,
+  activeProfileId,
   onPresetChange,
+  onProfileChange,
   onCriteriaChange,
+  onSaveProfile,
+  onDeleteProfile,
 }: {
   criteria: SickieCriteria;
   preset: VesselPreset;
+  profiles: VesselProfile[];
+  activeProfileId: string | null;
   onPresetChange: (p: VesselPreset) => void;
+  onProfileChange: (profile: VesselProfile) => void;
   onCriteriaChange: (c: SickieCriteria) => void;
+  onSaveProfile: (name: string, emoji: string, notes: string) => void;
+  onDeleteProfile: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [showSave, setShowSave] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileEmoji, setProfileEmoji] = useState("🚤");
+  const [profileNotes, setProfileNotes] = useState("");
 
   function set<K extends keyof SickieCriteria>(key: K, val: SickieCriteria[K]) {
     onCriteriaChange({ ...criteria, [key]: val });
   }
+
+  function saveProfile() {
+    const name = profileName.trim();
+    if (!name) return;
+    onSaveProfile(name, profileEmoji || "🚤", profileNotes.trim());
+    setProfileName("");
+    setProfileEmoji("🚤");
+    setProfileNotes("");
+    setShowSave(false);
+  }
+
+  const activeProfile = activeProfileId ? profiles.find(profile => profile.id === activeProfileId) : undefined;
+  const activeLabel = activeProfile?.name ?? VESSEL_PRESETS[preset].label;
+  const activeEmoji = activeProfile?.emoji ?? VESSEL_PRESETS[preset].emoji;
+  const activeDescription = activeProfile?.notes || (activeProfile ? "Saved vessel profile — changes are saved automatically" : VESSEL_PRESETS[preset].description);
+  const criteriaSummary = [
+    `Wind ≤${criteria.maxWindKt}kt`,
+    criteria.maxGustKt != null ? `gust ≤${criteria.maxGustKt}kt` : null,
+    criteria.maxWindWaveH != null ? `chop ≤${criteria.maxWindWaveH}m` : null,
+    criteria.maxSwellH != null ? `swell ≤${criteria.maxSwellH}m` : "swell: model",
+    criteria.daylightOnly ? "daylight" : null,
+    `${criteria.minWindowHours}hr min`,
+  ].filter(Boolean).join(" · ");
 
   return (
     <div className="bg-[#0d1f3c] border border-[#1e3a5f] rounded-xl overflow-hidden">
@@ -112,14 +152,14 @@ function CriteriaPanel({
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2">
-          <span className="text-xl">{VESSEL_PRESETS[preset].emoji}</span>
+          <span className="text-xl">{activeEmoji}</span>
           <div className="text-left">
-            <p className="text-white font-bold text-sm">{VESSEL_PRESETS[preset].label}</p>
-            <p className="text-[#7a9bb5] text-[10px]">{VESSEL_PRESETS[preset].description}</p>
+            <p className="text-white font-bold text-sm">{activeLabel}</p>
+            <p className="text-[#7a9bb5] text-[10px]">{activeDescription}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-[#7a9bb5]">Wind ≤{criteria.maxWindKt}kt · Swell ≤{criteria.maxSwellH ?? "any"}m · {criteria.minWindowHours}hr min</span>
+          <span className="text-[10px] text-[#7a9bb5]">{criteriaSummary}</span>
           <span className="text-[#7a9bb5] text-xs">{open ? "▲" : "▼"}</span>
         </div>
       </button>
@@ -140,6 +180,34 @@ function CriteriaPanel({
             </div>
           </div>
 
+          <div className="border-t border-[#1e3a5f] pt-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div>
+                <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">My Vessel Profiles</p>
+                <p className="text-[10px] text-[#3a5a7a] mt-0.5">Your saved profiles stay on this device. Edits to an active profile save automatically.</p>
+              </div>
+              <button onClick={() => setShowSave(v => !v)} className="min-h-[36px] flex-shrink-0 rounded border border-[#ff6b35] px-2.5 text-xs font-bold text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white">+ Save current</button>
+            </div>
+            {profiles.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profiles.map(profile => (
+                  <div key={profile.id} className={`flex items-center overflow-hidden rounded border ${activeProfileId === profile.id ? "border-[#ff6b35] bg-[#ff6b35]/15" : "border-[#1e3a5f] bg-[#0a1628]"}`}>
+                    <button onClick={() => onProfileChange(profile)} className="min-h-[38px] px-3 text-xs font-semibold text-white">{profile.emoji} {profile.name}</button>
+                    <button onClick={() => onDeleteProfile(profile.id)} className="min-h-[38px] px-2 text-sm text-[#7a9bb5] hover:text-red-400" title={`Delete ${profile.name}`} aria-label={`Delete ${profile.name}`}>×</button>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-xs text-[#7a9bb5]">Set your comfort limits, then save a named profile for each vessel.</p>}
+            {showSave && (
+              <div className="grid grid-cols-1 sm:grid-cols-[68px_1fr] gap-2 mt-3 rounded-lg border border-[#1e3a5f] bg-[#0a1628] p-3">
+                <input value={profileEmoji} onChange={e => setProfileEmoji(e.target.value)} maxLength={4} aria-label="Vessel emoji" className="min-h-[44px] rounded border border-[#1e3a5f] bg-[#0d1f3c] px-3 text-lg text-white" />
+                <input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Vessel name, e.g. Dave's 5.5m centre console" className="min-h-[44px] rounded border border-[#1e3a5f] bg-[#0d1f3c] px-3 text-sm text-white placeholder:text-[#3a5a7a]" />
+                <input value={profileNotes} onChange={e => setProfileNotes(e.target.value)} placeholder="Optional notes: hull, crew or comfort limits" className="min-h-[44px] rounded border border-[#1e3a5f] bg-[#0d1f3c] px-3 text-sm text-white placeholder:text-[#3a5a7a] sm:col-span-2" />
+                <div className="flex gap-2 sm:col-span-2"><button onClick={saveProfile} className="min-h-[42px] rounded bg-[#ff6b35] px-4 text-sm font-bold text-white">Save vessel</button><button onClick={() => setShowSave(false)} className="min-h-[42px] rounded border border-[#1e3a5f] px-4 text-sm font-semibold text-[#7a9bb5]">Cancel</button></div>
+              </div>
+            )}
+          </div>
+
           {/* Sliders */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <SliderField
@@ -150,14 +218,10 @@ function CriteriaPanel({
               color="#7eb8f7"
               onChange={v => set("maxWindKt", v)}
             />
-            <SliderField
-              label="Max Swell Height"
-              value={criteria.maxSwellH ?? 3}
-              min={0.2} max={3} step={0.1}
-              unit="m"
-              color="#3ecf8e"
-              onChange={v => set("maxSwellH", v)}
-            />
+            <OptionalSlider label="Max Wind Gust" value={criteria.maxGustKt} min={8} max={45} step={1} unit="kt" color="#60a5fa" onChange={v => set("maxGustKt", v)} />
+            <OptionalSlider label="Max Groundswell" value={criteria.maxSwellH} min={0.2} max={3} step={0.1} unit="m" color="#3ecf8e" onChange={v => set("maxSwellH", v)} />
+            <OptionalSlider label="Max Wind Chop" value={criteria.maxWindWaveH} min={0.1} max={1.8} step={0.1} unit="m" color="#38bdf8" onChange={v => set("maxWindWaveH", v)} />
+            <OptionalSlider label="Max Rain Chance" value={criteria.maxRainProb} min={10} max={100} step={5} unit="%" color="#60a5fa" onChange={v => set("maxRainProb", v)} />
             <div>
               <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider mb-1">Min Fishing Stars</p>
               <div className="flex gap-1">
@@ -195,6 +259,11 @@ function CriteriaPanel({
               color="#a78bfa"
               onChange={v => set("minWindowHours", v)}
             />
+            <button onClick={() => set("daylightOnly", !criteria.daylightOnly)}
+              className={`min-h-[64px] rounded-lg border px-3 text-left transition-colors ${criteria.daylightOnly ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-200" : "border-[#1e3a5f] bg-[#0a1628] text-[#7a9bb5]"}`}>
+              <span className="block text-[10px] uppercase tracking-wider">Daylight-only windows</span>
+              <span className="mt-1 block text-sm font-bold">{criteria.daylightOnly ? "☀️ On — night hours excluded" : "🌙 Off — night hours allowed"}</span>
+            </button>
           </div>
 
           {/* Algorithm explanation */}
@@ -205,8 +274,8 @@ function CriteriaPanel({
             <div className="mt-2 text-[10px] text-[#7a9bb5] space-y-1 leading-relaxed bg-[#0a1628] rounded p-3 border border-[#1e3a5f]">
               <p><strong className="text-white">SL20 Rank</strong> — The boating model prioritises wind speed and wind chop, then discounts organised long-period groundswell rather than treating total wave height as dangerous chop. Excellent = wind≤10kt, chop≤0.35m and low ride load; Go = wind≤20kt with manageable chop; Marginal = wind≤25kt or moderate chop; Avoid = &gt;25kt wind, &gt;1.5m chop, or high combined ride load. It is a planning guide only — always check official warnings and your vessel limits.</p>
               <p><strong className="text-white">Fishing Score (0–100%)</strong> — Base 35pts. Moon phase: new/full +20, near +13, quarter +5. Moon transit/underfoot within 30min +22, 1hr +17, 1.5hr +10, 2hr +5. Sunrise/sunset within 30min +15, 1hr +10, 1.5hr +4. Tide rate: fast +12, moderate +10, slow +5, slack −4. Wind: calm−moderate +4, strong −6 to −30. Rain &gt;70% −8.</p>
-              <p><strong className="text-white">Window</strong> — Consecutive hours where ALL criteria are met. Windows shorter than "Min Window Length" are discarded.</p>
-              <p><strong className="text-white">Daylight flag</strong> — Hours between sunrise and sunset for that day.</p>
+              <p><strong className="text-white">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>
+              <p><strong className="text-white">Window</strong> — Consecutive hours where ALL active criteria are met. Windows shorter than "Min Window Length" are discarded. With daylight-only enabled, night hours cannot qualify.</p>
             </div>
           </details>
         </div>
@@ -233,6 +302,32 @@ function SliderField({ label, value, min, max, step, unit, color, onChange }: {
       <div className="flex justify-between text-[9px] text-[#3a5a7a] mt-0.5">
         <span>{min}{unit}</span><span>{max}{unit}</span>
       </div>
+    </div>
+  );
+}
+
+function OptionalSlider({ label, value, min, max, step, unit, color, onChange }: {
+  label: string; value: number | null; min: number; max: number; step: number;
+  unit: string; color: string; onChange: (v: number | null) => void;
+}) {
+  if (value == null) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">{label}</p>
+          <button onClick={() => onChange(min)} className="rounded border border-[#1e3a5f] px-2 py-0.5 text-[10px] font-semibold text-[#7a9bb5] hover:border-[#ff6b35] hover:text-white">No limit · Add</button>
+        </div>
+        <div className="min-h-[44px] rounded border border-dashed border-[#1e3a5f] bg-[#0a1628] px-3 py-3 text-xs text-[#7a9bb5]">Not used by this vessel profile</div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">{label}</p>
+        <button onClick={() => onChange(null)} className="rounded border border-[#1e3a5f] px-2 py-0.5 text-[10px] font-semibold text-[#7a9bb5] hover:border-[#ff6b35] hover:text-white">Remove limit</button>
+      </div>
+      <SliderField label="" value={value} min={min} max={max} step={step} unit={unit} color={color} onChange={onChange} />
     </div>
   );
 }
@@ -315,15 +410,42 @@ function WindowCard({ win, idx }: { win: SickieWindow; idx: number }) {
 export function SickieView({ data }: Props) {
   const [preset, setPreset] = useState<VesselPreset>("sl20");
   const [criteria, setCriteria] = useState<SickieCriteria>(DEFAULT_CRITERIA);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const { profiles, addProfile, updateProfile, deleteProfile } = useVesselProfiles();
 
   function handlePresetChange(p: VesselPreset) {
     setPreset(p);
+    setActiveProfileId(null);
     if (p !== "custom") setCriteria(VESSEL_PRESETS[p].criteria);
   }
 
   function handleCriteriaChange(c: SickieCriteria) {
     setCriteria(c);
+    if (activeProfileId) {
+      updateProfile(activeProfileId, { criteria: c });
+    } else {
+      setPreset("custom");
+    }
+  }
+
+  function handleProfileChange(profile: VesselProfile) {
+    setActiveProfileId(profile.id);
     setPreset("custom");
+    setCriteria(profile.criteria);
+  }
+
+  function handleSaveProfile(name: string, emoji: string, notes: string) {
+    const profile = addProfile({ name, emoji, notes, criteria });
+    setActiveProfileId(profile.id);
+    setPreset("custom");
+  }
+
+  function handleDeleteProfile(id: string) {
+    deleteProfile(id);
+    if (activeProfileId === id) {
+      setActiveProfileId(null);
+      setPreset("custom");
+    }
   }
 
   const windows = useMemo(() => buildWindows(data, criteria), [data, criteria]);
@@ -350,8 +472,13 @@ export function SickieView({ data }: Props) {
       <CriteriaPanel
         criteria={criteria}
         preset={preset}
+        profiles={profiles}
+        activeProfileId={activeProfileId}
         onPresetChange={handlePresetChange}
+        onProfileChange={handleProfileChange}
         onCriteriaChange={handleCriteriaChange}
+        onSaveProfile={handleSaveProfile}
+        onDeleteProfile={handleDeleteProfile}
       />
 
       {/* Results */}

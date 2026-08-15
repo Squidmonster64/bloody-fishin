@@ -21,3 +21,13 @@ The published production domain was also tested from a fresh browser session. It
 The updated preview loaded the full forecast graph, showed the explicit `+`, `−`, and Reset Zoom controls, and displayed the revised instruction that phone users should use those controls while one-finger gestures remain available for normal page scrolling. The controls bar also exposes the new AI Data entry point.
 
 The AI Data panel was opened successfully in the updated preview. It generated public weather and marine JSON links for the active Fremantle location and five-day range, plus a ready-to-copy LLM prompt. The browser console reported no client-side errors after the panel opened.
+
+## Vessel Preset Release
+
+The updated preview loaded the vessel-preset build without startup errors and entered the normal external forecast loading state. The next check opens the Sickie tab once the forecast response is available.
+
+The Sickie tab loaded successfully with the SL20/Half-cabin profile, displaying its active wind, swell, and minimum-window summary. The expanded profile editor is the next interaction being checked.
+
+The expanded editor exposed built-in vessels plus adjustable steady wind, gust, groundswell, wind-chop, rain, fishing-star, SL20, daylight, and duration criteria. The Save Current form opened with vessel emoji, name, and optional notes fields.
+
+A temporary vessel profile was successfully named, saved, added to the profile list, and made active. The active profile header was then corrected to show the saved vessel identity and notes instead of a generic Custom label.
