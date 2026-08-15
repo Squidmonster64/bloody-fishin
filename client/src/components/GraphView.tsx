@@ -149,10 +149,12 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           zoom: {
             zoom: {
               wheel: { enabled: true, speed: 0.08 },
-              pinch: { enabled: true },
+              // One-finger navigation must scroll the page on mobile. Touch
+              // zoom is therefore intentionally disabled; use +/- controls.
+              pinch: { enabled: false },
               mode: "x",
             },
-            pan: { enabled: true, mode: "x" },
+            pan: { enabled: false, mode: "x" },
             limits: { x: { minRange: 8 } },
           },
         },
@@ -206,13 +208,23 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           className="px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 ml-auto min-h-[38px]">
           🔍 Reset Zoom
         </button>
+        <button onClick={() => chartRef.current?.zoom(0.8)}
+          className="px-3 py-1.5 rounded text-sm font-bold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 min-h-[38px]"
+          aria-label="Zoom out graph">
+          −
+        </button>
+        <button onClick={() => chartRef.current?.zoom(1.25)}
+          className="px-3 py-1.5 rounded text-sm font-bold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 min-h-[38px]"
+          aria-label="Zoom in graph">
+          +
+        </button>
       </div>
 
       {/* Full-range chart */}
       <div className="relative px-2 py-2 chart-container" style={{ height: "260px", minHeight: "200px" }}>
-        <canvas ref={canvasRef} />
+        <canvas ref={canvasRef} className="forecast-canvas" />
         <p className="absolute bottom-3 right-4 text-[9px] text-[#3a5a7a]">
-          Pinch/scroll to zoom · Drag to pan · Double-click to reset · ⭐ = golden hour
+          Desktop: mouse-wheel zoom · Phone: use +/- then scroll normally · ⭐ = golden hour
         </p>
       </div>
 
