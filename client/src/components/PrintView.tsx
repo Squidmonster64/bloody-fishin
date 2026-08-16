@@ -3,7 +3,7 @@
  * Uses the same selected-variable visibility state as the live graph and
  * prints a clean, white-background, landscape chart — no hourly table.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Chart,
   LineController, LineElement, PointElement, LinearScale, CategoryScale,
@@ -32,6 +32,8 @@ function buildLabels(data: AppData) {
 export function PrintView({ data, vis, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
+  const [printImage, setPrintImage] = useState("");
+  const [ready, setReady] = useState(false);
   const rangeStart = data.daily[0]?.date ?? "";
   const rangeEnd = data.daily[data.daily.length - 1]?.date ?? "";
   const rangeLabel = `${new Date(`${rangeStart}T12:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(`${rangeEnd}T12:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}`;
@@ -67,6 +69,8 @@ export function PrintView({ data, vis, onClose }: Props) {
       },
     };
 
+    setReady(false);
+    setPrintImage("");
     chartRef.current = new Chart(canvasRef.current, {
       type: "line",
       data: { labels: buildLabels(data), datasets },
@@ -88,13 +92,31 @@ export function PrintView({ data, vis, onClose }: Props) {
       },
     });
 
-    return () => { chartRef.current?.destroy(); chartRef.current = null; };
+    const snapshotTimer = window.setTimeout(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+      chart.resize(1120, 700);
+      chart.update("none");
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          setPrintImage(chart.toBase64Image("image/png", 1));
+          setReady(true);
+        });
+      });
+    }, 80);
+
+    return () => {
+      window.clearTimeout(snapshotTimer);
+      chartRef.current?.destroy();
+      chartRef.current = null;
+    };
   }, [data, vis]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => window.print(), 650);
+    if (!ready || !printImage) return;
+    const timer = window.setTimeout(() => window.print(), 250);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [ready, printImage]);
 
   useEffect(() => {
     const afterPrint = () => onClose();
@@ -107,17 +129,17 @@ export function PrintView({ data, vis, onClose }: Props) {
       <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
         <div className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
           <p className="mb-2 text-3xl">🖨️</p>
-          <h3 className="text-lg font-bold text-gray-900">Preparing your forecast graph</h3>
+          <h3 className="text-lg font-bold text-gray-900">{ready ? "Your forecast graph is ready" : "Preparing your forecast graph"}</h3>
           <p className="mt-2 text-sm text-gray-600">Your selected variables will print across the complete loaded range: <strong>{rangeLabel}</strong>.</p>
           <p className="mt-2 text-xs text-gray-500">White, landscape layout. Golden hours are shaded lightly. No hourly table.</p>
           <div className="mt-5 flex gap-2">
-            <button onClick={() => window.print()} className="min-h-[44px] flex-1 rounded-lg bg-orange-500 px-3 py-2 font-bold text-white hover:bg-orange-600">Print now</button>
+            <button disabled={!ready} onClick={() => window.print()} className="min-h-[44px] flex-1 rounded-lg bg-orange-500 px-3 py-2 font-bold text-white hover:bg-orange-600 disabled:cursor-wait disabled:bg-orange-300">{ready ? "Print now" : "Rendering graph…"}</button>
             <button onClick={onClose} className="min-h-[44px] flex-1 rounded-lg bg-gray-100 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
           </div>
         </div>
       </div>
 
-      <section className="print-sheet hidden print:block">
+      <section className="print-sheet" aria-hidden="true">
         <header className="print-header">
           <div>
             <h1>BLOODY DAVE'S FISHING PLANNER</h1>
@@ -134,9 +156,12 @@ export function PrintView({ data, vis, onClose }: Props) {
           <span><b>Marginal</b> = caution advised</span>
           <span><b>⭐ Golden shade</b> = SL20 Go+ and 4★ fishing</span>
         </div>
-        <div className="print-chart-wrap"><canvas ref={canvasRef} /></div>
+        <div className="print-chart-wrap">
+          {printImage ? <img src={printImage} alt="Selected forecast graph" /> : <span>Rendering selected forecast graph…</span>}
+        </div>
         <footer>SL20 is a planning guide only. Check official marine warnings, local conditions and your vessel limits before departure.</footer>
       </section>
+      <canvas ref={canvasRef} className="print-source-canvas" aria-hidden="true" />
     </>
   );
 }

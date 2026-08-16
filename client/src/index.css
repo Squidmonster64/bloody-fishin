@@ -176,8 +176,25 @@ button, select, input {
 
 /* One-finger drags over the graph should remain page scrolls on touch screens.
    Mobile zoom is offered via the explicit +/- buttons instead. */
-.forecast-canvas {
-  touch-action: pan-y !important;
+.forecast-canvas { touch-action: pan-y !important; }
+
+/* The print chart stays laid out offscreen before printing so Chart.js can paint a
+   stable image. Safari otherwise measures a `display:none` canvas at 0 × 0. */
+.print-sheet {
+  position: fixed;
+  left: -200vw;
+  top: 0;
+  width: 1120px;
+  opacity: 0;
+  pointer-events: none;
+}
+.print-source-canvas {
+  position: fixed;
+  left: -200vw;
+  top: 0;
+  width: 1120px;
+  height: 700px;
+  pointer-events: none;
 }
 
 /* ── Phone-specific overrides (≤480px) ───────────────────────────────────── */
@@ -245,6 +262,10 @@ button, select, input {
   .print-sheet {
     display: block !important;
     width: 100%;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    opacity: 1 !important;
     color: #111827 !important;
   }
 
@@ -291,11 +312,14 @@ button, select, input {
     page-break-inside: avoid;
   }
 
-  .print-sheet .print-chart-wrap canvas {
+  .print-sheet .print-chart-wrap img {
     display: block !important;
     width: 100% !important;
     height: 100% !important;
+    object-fit: fill;
   }
+
+  .print-source-canvas { display: none !important; }
 
   .print-sheet footer {
     display: block;
