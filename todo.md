@@ -26,3 +26,11 @@
 - [x] Add persistent custom vessel profiles with editable wind, swell, weather, fishing, daylight, and duration criteria.
 - [x] Make selected profiles control the Sickie forecast and explain their active thresholds.
 - [x] Verify build and publish the vessel preset release.
+
+## iPhone SE Planning Toolkit
+
+- [x] Review current forecast data and identify reusable compact UI patterns. Reuse the existing localStorage hooks and bottom-sheet/drawer patterns; keep comparison and sharing out of the tab bar.
+- [x] Cache successful forecasts locally and show the last saved data when live retrieval is unavailable.
+- [x] Add an iPhone SE-friendly briefing sheet with copy/share actions.
+- [x] Add two-spot comparison and a calendar export action for qualifying windows.
+- [x] Verify build, mobile-safe controls, and publish the release.

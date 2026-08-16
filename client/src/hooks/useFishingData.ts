@@ -6,6 +6,7 @@ import {
   type AppData,
   type Location,
 } from "@/lib/fishingEngine";
+import { loadForecastCache, saveForecastCache } from "@/lib/forecastCache";
 
 export type ViewType = "graph" | "summary" | "table" | "sickie";
 
@@ -18,6 +19,7 @@ export interface FishingState {
   loading: boolean;
   error: string | null;
   timezone: string;
+  cacheSavedAt: string | null;
   vis: {
     wind: boolean;
     swell: boolean;
@@ -40,27 +42,38 @@ export function useFishingData() {
     loading: false,
     error: null,
     timezone: "Australia/Perth",
+    cacheSavedAt: null,
     vis: { wind: true, swell: true, fish: true, tide: true, temp: false, rain: false },
   });
 
   const loadData = useCallback(async (loc: Location, days: number) => {
-    setState(s => ({ ...s, loading: true, error: null, data: null }));
+    const cached = loadForecastCache(loc, days);
+    setState(s => ({
+      ...s,
+      loading: true,
+      error: null,
+      data: cached?.data ?? null,
+      cacheSavedAt: cached?.savedAt ?? null,
+      timezone: cached?.data.timezone ?? s.timezone,
+      hourlyDay: cached?.data.daily[0]?.date ?? s.hourlyDay,
+    }));
     try {
       const tz = await getTimezone(loc.lat, loc.lon);
       const data = await fetchFishingData(loc, days, tz);
+      saveForecastCache(loc, days, data);
       setState(s => ({
         ...s,
         loading: false,
         data,
         timezone: tz,
+        cacheSavedAt: null,
         hourlyDay: s.hourlyDay || (data.daily[0]?.date ?? null),
       }));
     } catch (e: unknown) {
-      setState(s => ({
-        ...s,
-        loading: false,
-        error: e instanceof Error ? e.message : "Unknown error",
-      }));
+      setState(s => {
+        if (s.data) return { ...s, loading: false, error: null };
+        return { ...s, loading: false, error: e instanceof Error ? e.message : "Unknown error" };
+      });
     }
   }, []);
 

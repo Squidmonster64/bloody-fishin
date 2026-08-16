@@ -17,12 +17,16 @@ import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
 import { PrintView } from "@/components/PrintView";
 import { AIDataAccess } from "@/components/AIDataAccess";
+import { BriefingSheet } from "@/components/BriefingSheet";
+import { CompareSpotsSheet } from "@/components/CompareSpotsSheet";
 
 export default function Home() {
   const { state, loadData, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
   const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
   const [showPrint, setShowPrint] = useState(false);
   const [showAIData, setShowAIData] = useState(false);
+  const [showBrief, setShowBrief] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
 
   useEffect(() => {
     loadData(state.location, state.days);
@@ -43,13 +47,17 @@ export default function Home() {
         onDeleteSpot={deleteSpot}
         onPrint={() => setShowPrint(true)}
         onAIData={() => setShowAIData(true)}
+        onBrief={() => setShowBrief(true)}
+        onCompare={() => setShowCompare(true)}
       />
       <TabBar view={state.view} onViewChange={setView} />
 
       <main className="flex-1 overflow-hidden">
-        {state.loading && <LoadingState />}
+        {state.loading && !state.data && <LoadingState />}
+        {state.loading && state.data && <div className="border-b border-[#1e3a5f] bg-[#0d1f3c] px-3 py-2 text-center text-xs text-[#7a9bb5]">Refreshing live conditions… showing the latest saved forecast meanwhile.</div>}
+        {state.cacheSavedAt && !state.loading && <div className="border-b border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-center text-xs text-yellow-200">📡 Offline fallback — showing a saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. Pull down or retry when you have reception.</div>}
         {state.error && <ErrorState error={state.error} onRetry={() => loadData(state.location, state.days)} />}
-        {!state.loading && !state.error && state.data && (
+        {!state.error && state.data && (
           <>
             {state.view === "graph" && (
               <GraphView
@@ -88,6 +96,8 @@ export default function Home() {
           onClose={() => setShowAIData(false)}
         />
       )}
+      {showBrief && state.data && <BriefingSheet data={state.data} onClose={() => setShowBrief(false)} />}
+      {showCompare && state.data && <CompareSpotsSheet baseData={state.data} savedSpots={spots} onClose={() => setShowCompare(false)} />}
     </div>
   );
 }

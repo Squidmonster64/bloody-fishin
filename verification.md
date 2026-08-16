@@ -31,3 +31,17 @@ The Sickie tab loaded successfully with the SL20/Half-cabin profile, displaying 
 The expanded editor exposed built-in vessels plus adjustable steady wind, gust, groundswell, wind-chop, rain, fishing-star, SL20, daylight, and duration criteria. The Save Current form opened with vessel emoji, name, and optional notes fields.
 
 A temporary vessel profile was successfully named, saved, added to the profile list, and made active. The active profile header was then corrected to show the saved vessel identity and notes instead of a generic Custom label.
+
+## iPhone SE Planning Toolkit
+
+The updated app exposed compact Compare and Brief actions alongside the existing controls. During a live refresh, the saved forecast graph, hourly strip, and full selected range remained visible beneath a clear refresh notice, confirming the offline-cache experience no longer blanks the planner.
+
+The comparison sheet opened in a compact phone-safe layout and began a live comparison request for Johnny Big Boy. A bounded fallback is being added so slow or unavailable upstream data cannot leave this sheet in an indefinite loading state.
+
+The comparison sheet now has a 15-second bounded request with a plain-language retry state. The compact Fishing Briefing sheet opened successfully and included the selected spot, date range, peak wind, peak swell, fishing score, highlighted hour, plus native Share and Copy actions.
+
+The Sickie tab loaded with the expanded active-vessel summary, including steady wind, gust, wind-chop, groundswell mode, daylight and duration thresholds. Calendar export is attached to each qualifying window; the current SL20 thresholds did not return a qualifying three-hour window in this forecast, so the control is not shown until a window exists.
+
+Switching to the Offshore Cruiser preset produced two qualifying Sickie windows. Each compact window card displayed a touch-sized Calendar action alongside its time range, conditions, and hourly strip, confirming the export trigger appears only where it is useful.
+
+The next Sickie window's Calendar action successfully generated `bloody-daves-2026-08-16-fishing-window.ics`, confirmed in the browser download history.

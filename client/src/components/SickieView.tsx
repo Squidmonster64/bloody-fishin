@@ -12,6 +12,7 @@ import {
   type SickieCriteria, type VesselPreset,
 } from "@/lib/sickieCriteria";
 import { useVesselProfiles, type VesselProfile } from "@/hooks/useVesselProfiles";
+import { downloadSickieCalendarEvent } from "@/lib/calendar";
 
 interface Props { data: AppData; }
 
@@ -334,8 +335,20 @@ function OptionalSlider({ label, value, min, max, step, unit, color, onChange }:
 
 // ─── Window Card ─────────────────────────────────────────────────────────────
 
-function WindowCard({ win, idx }: { win: SickieWindow; idx: number }) {
+function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; idx: number; locationName: string; timezone: string }) {
   const isNext = idx === 0;
+  const lastHour = win.hours[win.hours.length - 1];
+  function addToCalendar() {
+    downloadSickieCalendarEvent({
+      locationName,
+      timezone,
+      date: win.date,
+      startHour: win.hours[0].hour,
+      endDate: lastHour.dateStr,
+      endHour: lastHour.hour + 1,
+      description: `Bloody Dave's Sickie window at ${locationName}. Peak fishing ${win.peakFish}% (${win.peakStars} stars). ${win.slLabel}. Wind from ${win.minWind?.toFixed(0) ?? "—"}kt; max swell ${win.maxSwell?.toFixed(1) ?? "—"}m.`,
+    });
+  }
   return (
     <div className={`rounded-xl border overflow-hidden
       ${isNext ? "border-yellow-400 shadow-lg shadow-yellow-400/20" : "border-[#1e3a5f]"}`}>
@@ -374,6 +387,7 @@ function WindowCard({ win, idx }: { win: SickieWindow; idx: number }) {
         {win.minWind != null && <span style={{ color: windColor(win.minWind) }}>💨 Wind {Math.round(win.minWind)}kt</span>}
         {win.maxSwell != null && <span style={{ color: swellColor(win.maxSwell) }}>🌊 Swell {fmt(win.maxSwell)}m</span>}
         {win.hours[0].seaLevel != null && <span className="text-[#a78bfa]">Tide {fmt(win.hours[0].seaLevel)}m</span>}
+        <button onClick={addToCalendar} className="ml-auto min-h-[32px] rounded border border-[#1e3a5f] px-2.5 text-xs font-bold text-[#7eb8f7] hover:border-[#ff6b35] hover:text-white">📅 Calendar</button>
       </div>
 
       {/* Hourly strip */}
@@ -494,7 +508,7 @@ export function SickieView({ data }: Props) {
             Found <strong className="text-yellow-400">{windows.length}</strong> window{windows.length > 1 ? "s" : ""} ≥ {criteria.minWindowHours}hr in the next {data.daily.length} days
           </div>
           {windows.map((win, i) => (
-            <WindowCard key={`${win.date}-${win.startHour}`} win={win} idx={i} />
+            <WindowCard key={`${win.date}-${win.startHour}`} win={win} idx={i} locationName={data.location.name} timezone={data.timezone} />
           ))}
         </>
       )}

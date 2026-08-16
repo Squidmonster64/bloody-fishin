@@ -197,6 +197,8 @@ button, select, input {
   /* Controls — stack location on its own row */
   .controls-location { width: 100%; }
   .phone-location-trigger { font-size: 16px !important; }
+  .controls-actions { width: 100%; margin-left: 0; justify-content: space-between; gap: 0.25rem; }
+  .controls-actions > button { min-width: 44px; padding-left: 0.6rem; padding-right: 0.6rem; }
 
   /* Chart shorter on small screens */
   .chart-container { height: 200px !important; }

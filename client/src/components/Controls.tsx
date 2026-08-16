@@ -16,9 +16,11 @@ interface Props {
   onDeleteSpot: (id: string) => void;
   onPrint: () => void;
   onAIData: () => void;
+  onBrief: () => void;
+  onCompare: () => void;
 }
 
-export function Controls({ state, spots, onLocationChange, onDaysChange, onCustomLocation, onAddSpot, onUpdateSpot, onDeleteSpot, onPrint, onAIData }: Props) {
+export function Controls({ state, spots, onLocationChange, onDaysChange, onCustomLocation, onAddSpot, onUpdateSpot, onDeleteSpot, onPrint, onAIData, onBrief, onCompare }: Props) {
   const [showCustom, setShowCustom] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [latStr, setLatStr] = useState("");
@@ -113,7 +115,13 @@ export function Controls({ state, spots, onLocationChange, onDaysChange, onCusto
       )}
 
       {/* Right-side actions */}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="controls-actions ml-auto flex items-center gap-2">
+        <button onClick={onCompare} className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-sm font-semibold text-[#7a9bb5] transition-all duration-150 hover:border-[#ff6b35] hover:text-white" title="Compare fishing spots">
+          <span>⚖️</span><span className="hidden lg:inline">Compare</span>
+        </button>
+        <button onClick={onBrief} className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-sm font-semibold text-[#7a9bb5] transition-all duration-150 hover:border-[#ff6b35] hover:text-white" title="Share fishing briefing">
+          <span>📤</span><span className="hidden lg:inline">Brief</span>
+        </button>
         <button
           onClick={onAIData}
           className="flex min-h-[44px] items-center gap-1.5 rounded border border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-sm font-semibold text-[#7a9bb5] transition-all duration-150 hover:border-[#ff6b35] hover:text-white"
