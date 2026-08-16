@@ -28,3 +28,7 @@ export function loadForecastCache(location: Location, days: number): CachedForec
     return raw ? JSON.parse(raw) as CachedForecast : null;
   } catch { return null; }
 }
+
+export function clearForecastCache(location: Location, days: number) {
+  try { localStorage.removeItem(key(location, days)); } catch { /* ignore unavailable storage */ }
+}

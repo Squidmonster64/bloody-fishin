@@ -6,7 +6,7 @@ import {
   type AppData,
   type Location,
 } from "@/lib/fishingEngine";
-import { loadForecastCache, saveForecastCache } from "@/lib/forecastCache";
+import { clearForecastCache, loadForecastCache, saveForecastCache } from "@/lib/forecastCache";
 
 export type ViewType = "graph" | "summary" | "table" | "sickie";
 
@@ -105,5 +105,14 @@ export function useFishingData() {
     loadData(loc, state.days);
   }, [loadData, state.days]);
 
-  return { state, loadData, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation };
+  const refresh = useCallback(() => {
+    loadData(state.location, state.days);
+  }, [loadData, state.location, state.days]);
+
+  const clearCache = useCallback(() => {
+    clearForecastCache(state.location, state.days);
+    setState(s => ({ ...s, data: null, cacheSavedAt: null, error: null, hourlyDay: null }));
+  }, [state.location, state.days]);
+
+  return { state, loadData, refresh, clearCache, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation };
 }

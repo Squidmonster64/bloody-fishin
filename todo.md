@@ -34,3 +34,14 @@
 - [x] Add an iPhone SE-friendly briefing sheet with copy/share actions.
 - [x] Add two-spot comparison and a calendar export action for qualifying windows.
 - [x] Verify build, mobile-safe controls, and publish the release.
+
+## Manual Forecast Refresh
+
+- [x] Inspect current control props and refresh/load state.
+- [x] Add a touch-safe manual refresh button with active loading feedback.
+- [x] Verify build and publish the refresh control.
+
+## Stale Cache Recovery
+
+- [x] Make the active cache state and saved timestamp visible near the refresh action.
+- [x] Provide a clear-cache action that restores live-only loading for the active location and range.

@@ -21,7 +21,7 @@ import { BriefingSheet } from "@/components/BriefingSheet";
 import { CompareSpotsSheet } from "@/components/CompareSpotsSheet";
 
 export default function Home() {
-  const { state, loadData, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
+  const { state, loadData, refresh, clearCache, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
   const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
   const [showPrint, setShowPrint] = useState(false);
   const [showAIData, setShowAIData] = useState(false);
@@ -49,13 +49,14 @@ export default function Home() {
         onAIData={() => setShowAIData(true)}
         onBrief={() => setShowBrief(true)}
         onCompare={() => setShowCompare(true)}
+        onRefresh={refresh}
       />
       <TabBar view={state.view} onViewChange={setView} />
 
       <main className="flex-1 overflow-hidden">
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && <div className="border-b border-[#1e3a5f] bg-[#0d1f3c] px-3 py-2 text-center text-xs text-[#7a9bb5]">Refreshing live conditions… showing the latest saved forecast meanwhile.</div>}
-        {state.cacheSavedAt && !state.loading && <div className="border-b border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-center text-xs text-yellow-200">📡 Offline fallback — showing a saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. Pull down or retry when you have reception.</div>}
+        {state.cacheSavedAt && !state.loading && <div className="flex flex-wrap items-center justify-center gap-2 border-b border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-center text-xs text-yellow-200"><span>📡 Saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. It could be stale.</span><button onClick={refresh} className="min-h-[32px] rounded border border-yellow-300/50 px-2 font-bold text-yellow-100 hover:bg-yellow-300/15">↻ Refresh now</button><button onClick={clearCache} className="min-h-[32px] rounded border border-yellow-300/30 px-2 font-semibold text-yellow-100 hover:bg-yellow-300/15">Clear saved copy</button></div>}
         {state.error && <ErrorState error={state.error} onRetry={() => loadData(state.location, state.days)} />}
         {!state.error && state.data && (
           <>

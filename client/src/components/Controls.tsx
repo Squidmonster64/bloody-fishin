@@ -18,9 +18,10 @@ interface Props {
   onAIData: () => void;
   onBrief: () => void;
   onCompare: () => void;
+  onRefresh: () => void;
 }
 
-export function Controls({ state, spots, onLocationChange, onDaysChange, onCustomLocation, onAddSpot, onUpdateSpot, onDeleteSpot, onPrint, onAIData, onBrief, onCompare }: Props) {
+export function Controls({ state, spots, onLocationChange, onDaysChange, onCustomLocation, onAddSpot, onUpdateSpot, onDeleteSpot, onPrint, onAIData, onBrief, onCompare, onRefresh }: Props) {
   const [showCustom, setShowCustom] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [latStr, setLatStr] = useState("");
@@ -116,6 +117,9 @@ export function Controls({ state, spots, onLocationChange, onDaysChange, onCusto
 
       {/* Right-side actions */}
       <div className="controls-actions ml-auto flex items-center gap-2">
+        <button onClick={onRefresh} disabled={state.loading} className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[#ff6b35] bg-[#ff6b35]/15 px-3 py-2 text-sm font-bold text-[#ffb093] transition-all duration-150 hover:bg-[#ff6b35] hover:text-white disabled:cursor-wait disabled:opacity-60" title="Refresh live forecast" aria-label="Refresh live forecast">
+          <span className={state.loading ? "animate-spin" : ""}>↻</span><span className="hidden lg:inline">Refresh</span>
+        </button>
         <button onClick={onCompare} className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-sm font-semibold text-[#7a9bb5] transition-all duration-150 hover:border-[#ff6b35] hover:text-white" title="Compare fishing spots">
           <span>⚖️</span><span className="hidden lg:inline">Compare</span>
         </button>

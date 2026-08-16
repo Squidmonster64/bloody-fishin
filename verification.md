@@ -45,3 +45,9 @@ The Sickie tab loaded with the expanded active-vessel summary, including steady 
 Switching to the Offshore Cruiser preset produced two qualifying Sickie windows. Each compact window card displayed a touch-sized Calendar action alongside its time range, conditions, and hourly strip, confirming the export trigger appears only where it is useful.
 
 The next Sickie window's Calendar action successfully generated `bloody-daves-2026-08-16-fishing-window.ics`, confirmed in the browser download history.
+
+## Manual Forecast Refresh
+
+The updated controls now show a prominent coral-outlined Refresh action next to the compact iPhone-safe planning actions. A successful live refresh completed and removed the refresh-in-progress message while retaining the graph and hourly data.
+
+Clicking Refresh triggered the explicit in-place loading message while the cached graph remained usable. The live request completed successfully, restored the ready-state button, and displayed the refreshed forecast without a blank-screen transition.
