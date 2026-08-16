@@ -174,11 +174,11 @@ export function swellColor(h: number | null): string {
 /**
  * SL20 boating rating.
  *
- * The prior version used `wave_height` as the decisive input. That is total
- * sea state, so it includes clean groundswell; a calm, long-period day could
- * therefore be labelled Avoid. This version prioritises wind chop and wind
- * speed, then discounts organised long-period swell. It is a small-boat
- * comfort/safety guide, not a substitute for skipper judgement or BOM advice.
+ * Wind sets the primary band: Go below 15 kt, Marginal from 15–20 kt and
+ * Avoid above 20 kt. Swell is a separate period-aware modifier: short-period
+ * swell and wind chop can downgrade a rating, while clean long-period swell
+ * is treated more gently than total wave height. It is a small-boat planning
+ * guide, not a substitute for skipper judgement or official marine warnings.
  */
 export function rateSL20(
   windKt: number | null,
@@ -197,28 +197,28 @@ export function rateSL20(
   // runabout's ride. Short-period swell gets the full penalty; 13+ sec swell
   // is discounted to 45%.
   const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
-  const organisedSwellLoad = swell * periodFactor;
-
   // Prefer marine API's wind-wave value. If unavailable, infer chop conservatively
   // from the portion of total wave not accounted for by the primary swell.
   const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
   const windChop = Math.max(0, windWaveH ?? inferredWindChop);
-  const rideLoad = windChop + organisedSwellLoad * 0.55;
+  const shortPeriodSwell = swell * periodFactor;
 
-  if (wind > 25 || windChop > 1.5 || rideLoad > 1.7) {
+  // Wind is the clear primary classification. Severe chop or steep, short swell
+  // can still override a calm wind rating, but clean groundswell alone cannot.
+  if (wind > 20 || windChop > 1.5 || (period < 8 && swell > 2.0)) {
     return { label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0 };
   }
-  if (wind > 20 || windChop > 1.1 || rideLoad > 1.25) {
+  if (wind >= 15 || windChop > 1.1 || (period < 8 && swell > 1.2) || (period < 10 && shortPeriodSwell > 1.35)) {
     return { label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1 };
   }
-  if (wind <= 10 && windChop <= 0.35 && rideLoad <= 0.60) {
+  if (wind <= 10 && windChop <= 0.35 && swell < 1.0) {
     return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
   }
   return { label: "Go", bg: "rgba(126,184,247,0.2)", fg: "#7eb8f7", rank: 2 };
 }
 
-export function isGolden(slRank: number, fishStars: number): boolean {
-  return slRank >= 2 && fishStars >= 4;
+export function isGolden(input: { windKt: number | null; swellH: number | null; rainProb: number | null; fishStars: number; daylight: boolean }): boolean {
+  return input.daylight && (input.windKt ?? Infinity) <= 10 && (input.swellH ?? Infinity) < 1.0 && input.rainProb === 0 && input.fishStars >= 4;
 }
 
 // ─── Moon & Solunar ──────────────────────────────────────────────────────────
@@ -264,6 +264,12 @@ function parseHM(s: string): number | null {
   return h + m / 60;
 }
 
+function isDaylightHour(hour: number, sunrise: string, sunset: string): boolean {
+  const sr = parseHM(sunrise);
+  const ss = parseHM(sunset);
+  return sr == null || ss == null || (hour >= sr && hour <= ss);
+}
+
 export function moonTransitTimes(date: Date, sunriseStr: string, sunsetStr: string) {
   const sr = parseHM(sunriseStr);
   const ss = parseHM(sunsetStr);
@@ -279,16 +285,14 @@ export function moonTransitTimes(date: Date, sunriseStr: string, sunsetStr: stri
 
 interface FishingOpts {
   hour: number;
-  windKt: number | null;
   seaLevelRate: number | null;
   sunrise: string;
   sunset: string;
   moonTimes: { transit: number; underfoot: number; phase: number };
-  rainProb: number | null;
 }
 
 export function fishingScore(opts: FishingOpts): { score: number; stars: number } {
-  const { hour, windKt, seaLevelRate, sunrise, sunset, moonTimes, rainProb } = opts;
+  const { hour, seaLevelRate, sunrise, sunset, moonTimes } = opts;
   let score = 35;
 
   const illum = moonIllumination(moonTimes.phase);
@@ -322,16 +326,6 @@ export function fishingScore(opts: FishingOpts): { score: number; stars: number 
   else if (tr > 0.12) score += 10;
   else if (tr > 0.06) score += 5;
   else if (tr < 0.01) score -= 4;
-
-  const wk = windKt || 0;
-  if (wk > 25)      score -= 30;
-  else if (wk > 20) score -= 18;
-  else if (wk > 15) score -= 6;
-  else if (wk < 3)  score -= 2;
-  if (wk >= 5 && wk <= 12) score += 4;
-
-  if ((rainProb || 0) > 70) score -= 8;
-  else if ((rainProb || 0) > 50) score -= 4;
 
   score = Math.max(5, Math.min(100, score));
 
@@ -476,14 +470,19 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
 
     rows.forEach(row => {
       const f = fishingScore({
-        hour: row.hour, windKt: row.windKt,
-        seaLevelRate: row.tideRate, sunrise, sunset, moonTimes, rainProb: row.rainProb,
+        hour: row.hour, seaLevelRate: row.tideRate, sunrise, sunset, moonTimes,
       });
       row.fishScore = f.score;
       row.fishStars = f.stars;
       const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
       row.slRank = sl.rank;
-      row.golden = isGolden(sl.rank, f.stars);
+      row.golden = isGolden({
+        windKt: row.windKt,
+        swellH: row.swellH,
+        rainProb: row.rainProb,
+        fishStars: f.stars,
+        daylight: isDaylightHour(row.hour, sunrise, sunset),
+      });
     });
 
     const fishScores = rows.map(r => r.fishScore);

@@ -141,6 +141,8 @@ function CriteriaPanel({
     criteria.maxGustKt != null ? `gust ≤${criteria.maxGustKt}kt` : null,
     criteria.maxWindWaveH != null ? `chop ≤${criteria.maxWindWaveH}m` : null,
     criteria.maxSwellH != null ? `swell ≤${criteria.maxSwellH}m` : "swell: model",
+    criteria.maxRainProb != null ? `rain ≤${criteria.maxRainProb}%` : null,
+    `${criteria.minFishStars}★+ fish`,
     criteria.daylightOnly ? "daylight" : null,
     `${criteria.minWindowHours}hr min`,
   ].filter(Boolean).join(" · ");
@@ -222,7 +224,7 @@ function CriteriaPanel({
             <OptionalSlider label="Max Wind Gust" value={criteria.maxGustKt} min={8} max={45} step={1} unit="kt" color="#60a5fa" onChange={v => set("maxGustKt", v)} />
             <OptionalSlider label="Max Groundswell" value={criteria.maxSwellH} min={0.2} max={3} step={0.1} unit="m" color="#3ecf8e" onChange={v => set("maxSwellH", v)} />
             <OptionalSlider label="Max Wind Chop" value={criteria.maxWindWaveH} min={0.1} max={1.8} step={0.1} unit="m" color="#38bdf8" onChange={v => set("maxWindWaveH", v)} />
-            <OptionalSlider label="Max Rain Chance" value={criteria.maxRainProb} min={10} max={100} step={5} unit="%" color="#60a5fa" onChange={v => set("maxRainProb", v)} />
+            <OptionalSlider label="Max Rain Chance" value={criteria.maxRainProb} min={0} max={100} step={5} unit="%" color="#60a5fa" onChange={v => set("maxRainProb", v)} />
             <div>
               <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider mb-1">Min Fishing Stars</p>
               <div className="flex gap-1">
@@ -273,8 +275,9 @@ function CriteriaPanel({
               📖 How the algorithm works
             </summary>
             <div className="mt-2 text-[10px] text-[#7a9bb5] space-y-1 leading-relaxed bg-[#0a1628] rounded p-3 border border-[#1e3a5f]">
-              <p><strong className="text-white">SL20 Rank</strong> — The boating model prioritises wind speed and wind chop, then discounts organised long-period groundswell rather than treating total wave height as dangerous chop. Excellent = wind≤10kt, chop≤0.35m and low ride load; Go = wind≤20kt with manageable chop; Marginal = wind≤25kt or moderate chop; Avoid = &gt;25kt wind, &gt;1.5m chop, or high combined ride load. It is a planning guide only — always check official warnings and your vessel limits.</p>
-              <p><strong className="text-white">Fishing Score (0–100%)</strong> — Base 35pts. Moon phase: new/full +20, near +13, quarter +5. Moon transit/underfoot within 30min +22, 1hr +17, 1.5hr +10, 2hr +5. Sunrise/sunset within 30min +15, 1hr +10, 1.5hr +4. Tide rate: fast +12, moderate +10, slow +5, slack −4. Wind: calm−moderate +4, strong −6 to −30. Rain &gt;70% −8.</p>
+              <p><strong className="text-white">SL20 Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
+              <p><strong className="text-white">Fishing Score (0–100%)</strong> — Fishing is calculated only from sun, moon and tide: moon phase, moon transit/underfoot, sunrise/sunset and tide movement. Weather is kept separate, so a rain or wind forecast cannot quietly alter the fishing score.</p>
+              <p><strong className="text-white">Golden Window</strong> — The SL20 default is daylight, wind≤10kt, swell&lt;1.0m, rain chance 0%, fishing≥4★, and at least three consecutive qualifying hours.</p>
               <p><strong className="text-white">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>
               <p><strong className="text-white">Window</strong> — Consecutive hours where ALL active criteria are met. Windows shorter than "Min Window Length" are discarded. With daylight-only enabled, night hours cannot qualify.</p>
             </div>

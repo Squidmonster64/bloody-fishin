@@ -1,21 +1,25 @@
 # Bloody Dave's Fishing Planner — LLM Data Access
 
-This is a public fishing-planning application. Live forecasts are fetched client-side from Open-Meteo's public JSON APIs; the website itself does not store forecast data or issue app-specific API keys.
+Use the public, keyless briefing endpoints below. They resolve built-in spots, worldwide place names, or direct latitude/longitude, fetch live Open-Meteo weather and marine data, and return an LLM-readable briefing.
 
-To analyse the currently selected location, query these two public endpoints with the latitude, longitude and forecast_days values for the location:
+Human-readable Markdown:
+https://weather.bloodydaves.com/brief?spot=freo&days=5
 
-Weather endpoint template:
-https://api.open-meteo.com/v1/forecast?latitude={LATITUDE}&longitude={LONGITUDE}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability&daily=sunrise,sunset,uv_index_max&wind_speed_unit=kn&timezone=auto&forecast_days={DAYS}
+Structured JSON:
+https://weather.bloodydaves.com/brief.json?spot=freo&days=5
 
-Marine endpoint template:
-https://marine-api.open-meteo.com/v1/marine?latitude={LATITUDE}&longitude={LONGITUDE}&hourly=wave_height,wave_period,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,sea_level_height_msl&timezone=auto&forecast_days={DAYS}&cell_selection=sea
+Location parameters:
+- `spot=freo` or `spot=johnny` selects a built-in reference spot.
+- `place=Broome%20WA` resolves a worldwide place name.
+- `name=My%20Reef&lat=-32.0600&lon=115.6500` uses direct coordinates and labels the result.
 
-Built-in locations:
-- Fremantle Offshore: -32.0600, 115.6500
-- Johnny Big Boy: -25.50945, 113.49710
+Window parameters:
+- `mode=wind&maxWind=5&minHours=3` finds the next continuous three-hour wind window at or below 5 knots; add `daylight=true` if you only want daylight.
+- `vessel=sl20|tinnie|offshore|kayak` uses a built-in boating profile.
+- `minHours=3`, `daylight=true`, `minStars=4`, `maxSwell=1`, and `maxChop=0.65` further tune vessel-style queries.
 
-Interpretation notes:
-- Treat wind speed and wind-wave height as the primary small-boat comfort inputs.
-- Discount organised long-period swell relative to short-period chop. Do not classify a day as unsafe from total wave height alone.
-- The app regards a golden fishing hour as SL20 Go or Excellent plus a fishing score of 4 or 5 stars.
-- Fishing scores are calculated locally from solunar timing, sunrise/sunset, tide movement, wind and rain. They are planning aids, not safety advice.
+Example: https://weather.bloodydaves.com/brief?place=Fremantle&mode=wind&maxWind=5&minHours=3&days=7
+
+Golden Window defaults: daylight, wind at or below 10 kt, swell below 1.0 m, zero rain chance, 4★+ fishing, and a minimum three consecutive hours. SL20 wind bands are Go below 15 kt, Marginal from 15–20 kt, and Avoid above 20 kt; short-period swell and wind chop can downgrade the wind band, while clean long-period swell is discounted.
+
+Forecast scores are planning aids only. Always check official marine warnings, local conditions, and vessel limits.

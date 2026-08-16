@@ -16,7 +16,6 @@ import { TabBar } from "@/components/TabBar";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
 import { PrintView } from "@/components/PrintView";
-import { AIDataAccess } from "@/components/AIDataAccess";
 import { BriefingSheet } from "@/components/BriefingSheet";
 import { CompareSpotsSheet } from "@/components/CompareSpotsSheet";
 
@@ -24,7 +23,6 @@ export default function Home() {
   const { state, loadData, refresh, clearCache, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
   const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
   const [showPrint, setShowPrint] = useState(false);
-  const [showAIData, setShowAIData] = useState(false);
   const [showBrief, setShowBrief] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
 
@@ -46,7 +44,6 @@ export default function Home() {
         onUpdateSpot={updateSpot}
         onDeleteSpot={deleteSpot}
         onPrint={() => setShowPrint(true)}
-        onAIData={() => setShowAIData(true)}
         onBrief={() => setShowBrief(true)}
         onCompare={() => setShowCompare(true)}
         onRefresh={refresh}
@@ -87,14 +84,6 @@ export default function Home() {
           data={state.data}
           vis={state.vis}
           onClose={() => setShowPrint(false)}
-        />
-      )}
-      {showAIData && (
-        <AIDataAccess
-          location={state.location}
-          days={state.days}
-          timezone={state.timezone}
-          onClose={() => setShowAIData(false)}
         />
       )}
       {showBrief && state.data && <BriefingSheet data={state.data} onClose={() => setShowBrief(false)} />}

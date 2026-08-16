@@ -5,6 +5,7 @@
 import { useState } from "react";
 import type { MySpot } from "@/hooks/useMySpots";
 import type { Location } from "@/lib/fishingEngine";
+import { findPlaces, type PlaceMatch } from "@/lib/geocoding";
 
 interface Props {
   spots: MySpot[];
@@ -28,6 +29,9 @@ export function MySpotsManager({ spots, currentLat, currentLon, currentName, onA
   const [newLon, setNewLon] = useState(currentLon?.toFixed(4) ?? "");
   const [newNotes, setNewNotes] = useState("");
   const [addErr, setAddErr] = useState("");
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [matches, setMatches] = useState<PlaceMatch[]>([]);
+  const [searching, setSearching] = useState(false);
 
   // Edit form state
   const [editName, setEditName] = useState("");
@@ -39,7 +43,31 @@ export function MySpotsManager({ spots, currentLat, currentLon, currentName, onA
     setNewLon(currentLon?.toFixed(4) ?? "");
     setNewNotes("");
     setAddErr("");
+    setPlaceQuery("");
+    setMatches([]);
     setAddMode(true);
+  }
+
+  async function searchPlaces() {
+    try {
+      setSearching(true);
+      setAddErr("");
+      const results = await findPlaces(placeQuery);
+      setMatches(results);
+      if (!results.length) setAddErr("No matching places. Try a town, island, harbour, or landmark.");
+    } catch (error) {
+      setAddErr(error instanceof Error ? error.message : "Place search failed.");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function chooseMatch(match: PlaceMatch) {
+    setNewName(match.name);
+    setNewLat(match.lat.toFixed(5));
+    setNewLon(match.lon.toFixed(5));
+    setMatches([]);
+    setAddErr("");
   }
 
   function handleAdd(e: React.FormEvent) {
@@ -119,6 +147,30 @@ export function MySpotsManager({ spots, currentLat, currentLon, currentName, onA
               ) : (
                 <form onSubmit={handleAdd} className="flex flex-col gap-2">
                   <p className="text-[#ff6b35] text-xs font-bold uppercase tracking-wider">New Spot</p>
+                  <p className="text-[#7a9bb5] text-xs">Search a place worldwide, or enter your own name and coordinates below.</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="search" value={placeQuery} onChange={e => setPlaceQuery(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); searchPlaces(); } }}
+                      placeholder="Find a place, harbour, island…"
+                      className="min-w-0 flex-1 bg-[#0a1628] border border-[#1e3a5f] text-white text-sm rounded px-3 py-2 focus:border-[#ff6b35] focus:outline-none min-h-[44px]"
+                    />
+                    <button type="button" onClick={searchPlaces} disabled={searching || placeQuery.trim().length < 2}
+                      className="min-h-[44px] rounded bg-[#1e3a5f] px-3 text-sm font-bold text-white disabled:opacity-50">
+                      {searching ? "…" : "Find"}
+                    </button>
+                  </div>
+                  {matches.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto rounded border border-[#1e3a5f] bg-[#0a1628]">
+                      {matches.map((match) => (
+                        <button type="button" key={`${match.lat},${match.lon}`} onClick={() => chooseMatch(match)}
+                          className="w-full border-b border-[#1e3a5f] px-3 py-2 text-left text-sm text-white last:border-b-0 hover:bg-[#1e3a5f]">
+                          <span className="block font-semibold">{match.name}</span>
+                          <span className="block text-[11px] text-[#7a9bb5]">{match.description} · {match.lat.toFixed(4)}, {match.lon.toFixed(4)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <input
                     type="text" value={newName} onChange={e => setNewName(e.target.value)}
                     placeholder="Spot name (e.g. Dave's Secret Reef)"
@@ -220,9 +272,9 @@ export function MySpotsManager({ spots, currentLat, currentLon, currentName, onA
                               </button>
                               <button
                                 onClick={() => handleDelete(spot.id)}
-                                className="bg-[#1e3a5f] text-[#e05c5c] text-[10px] px-2 py-1 rounded hover:bg-[#e05c5c]/20 transition-colors min-w-[36px] min-h-[36px]"
-                                title="Delete">
-                                🗑️
+                                className="bg-[#1e3a5f] text-[#e05c5c] text-[10px] font-bold px-2 py-1 rounded hover:bg-[#e05c5c]/20 transition-colors min-w-[44px] min-h-[36px]"
+                                title="Delete this saved location">
+                                Delete
                               </button>
                             </div>
                           </div>

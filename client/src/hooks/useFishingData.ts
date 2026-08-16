@@ -99,8 +99,8 @@ export function useFishingData() {
     setState(s => ({ ...s, vis: { ...s.vis, [key]: !s.vis[key] } }));
   }, []);
 
-  const setCustomLocation = useCallback((lat: number, lon: number) => {
-    const loc: Location = { name: `Custom (${lat.toFixed(3)}, ${lon.toFixed(3)})`, lat, lon };
+  const setCustomLocation = useCallback((lat: number, lon: number, name?: string) => {
+    const loc: Location = { name: name?.trim() || `Custom (${lat.toFixed(3)}, ${lon.toFixed(3)})`, lat, lon };
     setState(s => ({ ...s, location: loc, hourlyDay: null }));
     loadData(loc, state.days);
   }, [loadData, state.days]);

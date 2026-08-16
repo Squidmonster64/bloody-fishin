@@ -10,22 +10,22 @@ interface Props {
   spots: MySpot[];
   onLocationChange: (loc: Location) => void;
   onDaysChange: (days: number) => void;
-  onCustomLocation: (lat: number, lon: number) => void;
+  onCustomLocation: (lat: number, lon: number, name?: string) => void;
   onAddSpot: (name: string, lat: number, lon: number, notes?: string) => void;
   onUpdateSpot: (id: string, updates: Partial<Pick<MySpot, "name" | "lat" | "lon" | "notes">>) => void;
   onDeleteSpot: (id: string) => void;
   onPrint: () => void;
-  onAIData: () => void;
   onBrief: () => void;
   onCompare: () => void;
   onRefresh: () => void;
 }
 
-export function Controls({ state, spots, onLocationChange, onDaysChange, onCustomLocation, onAddSpot, onUpdateSpot, onDeleteSpot, onPrint, onAIData, onBrief, onCompare, onRefresh }: Props) {
+export function Controls({ state, spots, onLocationChange, onDaysChange, onCustomLocation, onAddSpot, onUpdateSpot, onDeleteSpot, onPrint, onBrief, onCompare, onRefresh }: Props) {
   const [showCustom, setShowCustom] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [latStr, setLatStr] = useState("");
   const [lonStr, setLonStr] = useState("");
+  const [customName, setCustomName] = useState("");
   const [customErr, setCustomErr] = useState("");
 
   function handleCustomSubmit(e: React.FormEvent) {
@@ -38,7 +38,7 @@ export function Controls({ state, spots, onLocationChange, onDaysChange, onCusto
     }
     setCustomErr("");
     setShowCustom(false);
-    onCustomLocation(lat, lon);
+    onCustomLocation(lat, lon, customName);
   }
 
   const allGroups = Object.entries(LOCATIONS);
@@ -126,14 +126,6 @@ export function Controls({ state, spots, onLocationChange, onDaysChange, onCusto
         <button onClick={onBrief} className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-sm font-semibold text-[#7a9bb5] transition-all duration-150 hover:border-[#ff6b35] hover:text-white" title="Share fishing briefing">
           <span>📤</span><span className="hidden lg:inline">Brief</span>
         </button>
-        <button
-          onClick={onAIData}
-          className="flex min-h-[44px] items-center gap-1.5 rounded border border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-sm font-semibold text-[#7a9bb5] transition-all duration-150 hover:border-[#ff6b35] hover:text-white"
-          title="AI data links"
-        >
-          <span>🤖</span>
-          <span className="hidden md:inline">AI Data</span>
-        </button>
         {/* Print button */}
         <button
           onClick={onPrint}
@@ -208,6 +200,12 @@ export function Controls({ state, spots, onLocationChange, onDaysChange, onCusto
           <div className="bg-[#0d1f3c] border border-[#1e3a5f] rounded-xl p-5 w-full max-w-sm shadow-2xl">
             <h3 className="text-[#ff6b35] font-bold text-lg mb-4">Custom Location</h3>
             <form onSubmit={handleCustomSubmit} className="flex flex-col gap-3">
+              <div>
+                <label className="text-sm text-[#7a9bb5] block mb-1">Location name (optional)</label>
+                <input type="text" value={customName} onChange={e => setCustomName(e.target.value)}
+                  placeholder="e.g. North Reef"
+                  className="w-full bg-[#0a1628] border border-[#1e3a5f] text-white text-sm rounded px-3 py-2.5 focus:border-[#ff6b35] focus:outline-none min-h-[44px]" />
+              </div>
               <div>
                 <label className="text-sm text-[#7a9bb5] block mb-1">Latitude (decimal, e.g. -32.06)</label>
                 <input type="number" step="any" value={latStr} onChange={e => setLatStr(e.target.value)}

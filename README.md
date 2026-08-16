@@ -21,7 +21,9 @@ A production-grade fishing and boating conditions planner for serious anglers. C
 | **International** | Works anywhere in the world — auto-detects timezone from lat/lon |
 | **Saved Spots** | Pre-loaded with Fremantle Offshore, Johnny Big Boy (Shark Bay), and 30+ locations |
 | **Custom Lat/Lon** | Manual coordinate entry for any location worldwide |
+| **Worldwide Place Search** | Search a town, harbour, island, or landmark and save the resolved position under your own name |
 | **iPhone SE Optimised** | Responsive down to 375px — all touch targets ≥ 44px |
+| **Public LLM Briefing URLs** | Plain-English Markdown and JSON forecasts for browsing-enabled LLMs—no app key required |
 
 ---
 
@@ -101,6 +103,24 @@ cp .env.example .env
 6. Done — Railway provides a public URL automatically.
 
 For the custom-domain handoff and independent-deployment details, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
+## Ask an LLM About a Forecast
+
+After Railway is connected to this repository, paste one of these public URLs into ChatGPT, Claude, or another LLM with web browsing enabled. The Markdown route is the best default because it contains a plain-English window summary and an hourly table.
+
+| Need | URL pattern |
+|---|---|
+| Built-in spot | `/brief?spot=freo&days=5` or `/brief?spot=johnny&days=5` |
+| Worldwide place | `/brief?place=Fremantle%20WA&days=5` |
+| Named coordinates | `/brief?name=My%20Reef&lat=-32.0600&lon=115.6500&days=5` |
+| Next 3-hour window ≤5 kt | `/brief?place=Fremantle%20WA&mode=wind&maxWind=5&minHours=3&days=7` (add `&daylight=true` if required) |
+| Machine-readable result | Replace `/brief` with `/brief.json` |
+
+For example, use `https://weather.bloodydaves.com/brief?place=Fremantle%20WA&mode=wind&maxWind=5&minHours=3&days=7`, then ask: “Which is the first qualifying window, and is it daylight?”
+
+Personal spots saved in **My Spots** remain private in that browser's local storage. To ask an LLM about one, use its saved coordinates in the `name`, `lat`, and `lon` version of the URL.
 
 ### Manual Railway CLI
 
