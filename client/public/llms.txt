@@ -22,4 +22,6 @@ Example: https://weather.bloodydaves.com/brief?place=Fremantle&mode=wind&maxWind
 
 Golden Window defaults: daylight, wind at or below 10 kt, swell below 1.0 m, zero rain chance, 4★+ fishing, and a minimum three consecutive hours. SL20 wind bands are Go below 15 kt, Marginal from 15–20 kt, and Avoid above 20 kt; short-period swell and wind chop can downgrade the wind band, while clean long-period swell is discounted.
 
+Forecast horizon: request up to `days=14`. Marine data, SL20 vessel assessments and Sickie windows are available through day 8 only. Days 9–14 still include weather and sun/moon/tide fishing scores/stars in `dailyOutlook`, with `weatherAndFishingOnly=true` and `marineDataWarning` clearly set. Do not use the later days for boating decisions.
+
 Forecast scores are planning aids only. Always check official marine warnings, local conditions, and vessel limits.

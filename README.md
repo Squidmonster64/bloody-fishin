@@ -118,6 +118,8 @@ After Railway is connected to this repository, paste one of these public URLs in
 | Next 3-hour window ≤5 kt | `/brief?place=Fremantle%20WA&mode=wind&maxWind=5&minHours=3&days=7` (add `&daylight=true` if required) |
 | Machine-readable result | Replace `/brief` with `/brief.json` |
 
+The briefing supports up to 14 days. Boating and Sickie assessment is limited to the first eight days because that is the marine-data horizon. For days 9–14, `dailyOutlook` retains weather and fishing stars and sets `weatherAndFishingOnly: true`; it is an outlook, not a vessel decision.
+
 For example, use `https://weather.bloodydaves.com/brief?place=Fremantle%20WA&mode=wind&maxWind=5&minHours=3&days=7`, then ask: “Which is the first qualifying window, and is it daylight?”
 
 Personal spots saved in **My Spots** remain private in that browser's local storage. To ask an LLM about one, use its saved coordinates in the `name`, `lat`, and `lon` version of the URL.
