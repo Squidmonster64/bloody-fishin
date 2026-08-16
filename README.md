@@ -4,7 +4,7 @@
 
 A production-grade fishing and boating conditions planner for serious anglers. Combines SL20 boating safety ratings with solunar fishing scores, moon phases, tides, and a **Sickie Forecast** — so you always know the perfect excuse to call in sick.
 
-![Bloody Dave's Fishing Planner](https://d2xsxph8kpxj0f.cloudfront.net/310519663684424569/Zf3NoHKqXnmETZGgVva2ZL/bloody_dave_logo-SGaET4JxvYRo7MAjVdoiG8.webp)
+![Bloody Dave's Fishing Planner](client/public/bloody-dave-logo.svg)
 
 ---
 
@@ -47,8 +47,8 @@ A production-grade fishing and boating conditions planner for serious anglers. C
 
 ```bash
 # Clone
-git clone https://github.com/your-username/bloody-daves-fishing-planner.git
-cd bloody-daves-fishing-planner
+git clone https://github.com/Squidmonster64/bloody-fishin.git
+cd bloody-fishin
 
 # Install dependencies (verify this succeeds from a clean clone)
 pnpm install
@@ -83,10 +83,7 @@ cp .env.example .env
 |---|---|---|
 | `PORT` | No | Server port (default: 3000). Railway injects this automatically. |
 | `NODE_ENV` | No | Set to `production` in deployment. |
-| `VITE_ANALYTICS_ENDPOINT` | No | Umami analytics endpoint (leave blank to disable). |
-| `VITE_ANALYTICS_WEBSITE_ID` | No | Umami website ID. |
-
-**No API keys are required.** Open-Meteo and TimeAPI.io are both free and keyless.
+**No API keys or third-party secrets are required.** Open-Meteo and TimeAPI.io are both free and keyless. The only runtime environment variable used is Railway's standard `PORT`; see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -102,6 +99,8 @@ cp .env.example .env
    - **Start**: `node dist/index.js`
 5. Set any optional environment variables in the Railway dashboard → **Variables**.
 6. Done — Railway provides a public URL automatically.
+
+For the custom-domain handoff and independent-deployment details, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Manual Railway CLI
 

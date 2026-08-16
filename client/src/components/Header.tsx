@@ -5,7 +5,7 @@ export function Header() {
   return (
     <header className="bg-[#0d1f3c] border-b border-[#1e3a5f] px-3 py-2 flex items-center gap-3 sticky top-0 z-50 shadow-lg">
       <img
-        src="https://d2xsxph8kpxj0f.cloudfront.net/310519663684424569/Zf3NoHKqXnmETZGgVva2ZL/bloody_dave_logo-SGaET4JxvYRo7MAjVdoiG8.webp"
+        src="/bloody-dave-logo.svg"
         alt="Bloody Dave"
         className="h-12 w-12 sm:h-14 sm:w-14 rounded-full object-cover border-2 border-[#ff6b35] flex-shrink-0"
       />
