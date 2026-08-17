@@ -11,6 +11,7 @@ import {
 } from "chart.js";
 import type { AppData } from "@/lib/fishingEngine";
 import type { FishingState } from "@/hooks/useFishingData";
+import { openStandaloneForecastPrint } from "@/lib/standalonePrint";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend);
 
@@ -34,6 +35,8 @@ export function PrintView({ data, vis, onClose }: Props) {
   const chartRef = useRef<Chart | null>(null);
   const [printImage, setPrintImage] = useState("");
   const [ready, setReady] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState("");
   const rangeStart = data.daily[0]?.date ?? "";
   const rangeEnd = data.daily[data.daily.length - 1]?.date ?? "";
   const rangeLabel = `${new Date(`${rangeStart}T12:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(`${rangeEnd}T12:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}`;
@@ -71,6 +74,8 @@ export function PrintView({ data, vis, onClose }: Props) {
 
     setReady(false);
     setPrintImage("");
+    setOpening(false);
+    setError("");
     chartRef.current = new Chart(canvasRef.current, {
       type: "line",
       data: { labels: buildLabels(data), datasets },
@@ -112,17 +117,24 @@ export function PrintView({ data, vis, onClose }: Props) {
     };
   }, [data, vis]);
 
-  useEffect(() => {
+  const openPrintDocument = () => {
     if (!ready || !printImage) return;
-    const timer = window.setTimeout(() => window.print(), 250);
-    return () => window.clearTimeout(timer);
-  }, [ready, printImage]);
-
-  useEffect(() => {
-    const afterPrint = () => onClose();
-    window.addEventListener("afterprint", afterPrint);
-    return () => window.removeEventListener("afterprint", afterPrint);
-  }, [onClose]);
+    setOpening(true);
+    setError("");
+    const opened = openStandaloneForecastPrint({
+      image: printImage,
+      locationName: data.location.name,
+      timezone: data.timezone,
+      rangeLabel,
+      generatedAt: new Date().toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" }),
+    });
+    if (!opened) {
+      setOpening(false);
+      setError("Safari blocked the print document. Allow pop-ups for this site, then try again.");
+      return;
+    }
+    window.setTimeout(onClose, 100);
+  };
 
   return (
     <>
@@ -130,37 +142,16 @@ export function PrintView({ data, vis, onClose }: Props) {
         <div className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
           <p className="mb-2 text-3xl">🖨️</p>
           <h3 className="text-lg font-bold text-gray-900">{ready ? "Your forecast graph is ready" : "Preparing your forecast graph"}</h3>
-          <p className="mt-2 text-sm text-gray-600">Your selected variables will print across the complete loaded range: <strong>{rangeLabel}</strong>.</p>
-          <p className="mt-2 text-xs text-gray-500">White, landscape layout. Golden hours are shaded lightly. No hourly table.</p>
+          <p className="mt-2 text-sm text-gray-600">Your selected variables will open in a separate white print document across <strong>{rangeLabel}</strong>.</p>
+          <p className="mt-2 text-xs text-gray-500">This prevents iPhone Safari from losing the graph during final print preparation. The document stays available if you cancel the native print dialog.</p>
+          {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-left text-xs font-medium text-red-700">{error}</p>}
           <div className="mt-5 flex gap-2">
-            <button disabled={!ready} onClick={() => window.print()} className="min-h-[44px] flex-1 rounded-lg bg-orange-500 px-3 py-2 font-bold text-white hover:bg-orange-600 disabled:cursor-wait disabled:bg-orange-300">{ready ? "Print now" : "Rendering graph…"}</button>
+            <button disabled={!ready || opening} onClick={openPrintDocument} className="min-h-[44px] flex-1 rounded-lg bg-orange-500 px-3 py-2 font-bold text-white hover:bg-orange-600 disabled:cursor-wait disabled:bg-orange-300">{opening ? "Opening…" : ready ? "Open print document" : "Rendering graph…"}</button>
             <button onClick={onClose} className="min-h-[44px] flex-1 rounded-lg bg-gray-100 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
           </div>
         </div>
       </div>
 
-      <section className="print-sheet" aria-hidden="true">
-        <header className="print-header">
-          <div>
-            <h1>BLOODY DAVE'S FISHING PLANNER</h1>
-            <p>📍 {data.location.name} · {data.location.lat.toFixed(4)}, {data.location.lon.toFixed(4)} · 🌐 {data.timezone}</p>
-          </div>
-          <div className="print-meta">
-            <strong>{rangeLabel}</strong>
-            <span>Generated {new Date().toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}</span>
-          </div>
-        </header>
-        <div className="print-legend">
-          <span><b>Excellent</b> = calm wind / minimal chop</span>
-          <span><b>Go</b> = manageable runabout conditions</span>
-          <span><b>Marginal</b> = caution advised</span>
-          <span><b>⭐ Golden shade</b> = SL20 Go+ and 4★ fishing</span>
-        </div>
-        <div className="print-chart-wrap">
-          {printImage ? <img src={printImage} alt="Selected forecast graph" /> : <span>Rendering selected forecast graph…</span>}
-        </div>
-        <footer>SL20 is a planning guide only. Check official marine warnings, local conditions and your vessel limits before departure.</footer>
-      </section>
       <canvas ref={canvasRef} className="print-source-canvas" aria-hidden="true" />
     </>
   );
