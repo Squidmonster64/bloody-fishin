@@ -21,8 +21,9 @@ import {
 type Location = { name: string; lat: number; lon: number };
 type Hour = {
   time: string; date: string; hour: number; windKt: number | null; gustKt: number | null;
+  windDirDeg: number | null;
   rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
-  swellP: number | null; windWaveH: number | null; tideRate: number | null; daylight: boolean;
+  swellP: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
   sunrise: string; sunset: string;
   fishScore: number; fishStars: number; sl20: SL20Rating; marineDataAvailable: boolean;
 };
@@ -45,6 +46,8 @@ const PLACE_ALIASES: Record<string, string> = {
   bali: "Bali, Indonesia",
   rottnest: "Rottnest Island, Australia",
   "rottnest island": "Rottnest Island, Australia",
+  denham: "Denham, Australia",
+  broome: "Broome, Australia",
 };
 
 const VESSELS: Record<string, Criteria> = {
@@ -96,7 +99,7 @@ async function resolvePlace(place: string): Promise<Location> {
       ? "ID"
       : /canada|vancouver/.test(lower)
         ? "CA"
-        : /australia|rottnest|fremantle/.test(lower)
+        : /australia|rottnest|fremantle|denham|broome/.test(lower) || alias?.includes("Australia")
           ? "AU"
           : null;
   const match =
@@ -176,7 +179,7 @@ function makeWindows(hours: Hour[], criteria: Criteria, mode: "wind" | "vessel")
 
 async function forecast(location: Location, days: number): Promise<{ timezone: string; hours: Hour[]; marineDataAvailableThrough: string | null }> {
   const weather = new URL("https://api.open-meteo.com/v1/forecast");
-  weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,wind_speed_10m,wind_gusts_10m,precipitation_probability", daily: "sunrise,sunset", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
+  weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability", daily: "sunrise,sunset", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
   const marine = new URL("https://marine-api.open-meteo.com/v1/marine");
   marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
   const [weatherResponse, marineResponse] = await Promise.all([fetchWithTimeout(weather.toString(), { timeoutMs: 12_000 }), fetchWithTimeout(marine.toString(), { timeoutMs: 12_000 }).catch(() => null)]);
@@ -192,7 +195,7 @@ async function forecast(location: Location, days: number): Promise<{ timezone: s
   const dailyByDate = new Map<string, { sunrise: string; sunset: string }>((weatherData.daily?.time ?? []).map((date: string, index: number) => [date, { sunrise: weatherData.daily.sunrise?.[index] ?? "", sunset: weatherData.daily.sunset?.[index] ?? "" }]));
   const raw = wh.time.map((time: string, index: number) => {
     const marineAt = marineIndex.get(time);
-    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: wh.wind_speed_10m?.[index] ?? null, gustKt: wh.wind_gusts_10m?.[index] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
+    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: wh.wind_speed_10m?.[index] ?? null, gustKt: wh.wind_gusts_10m?.[index] ?? null, windDirDeg: wh.wind_direction_10m?.[index] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
   });
   return {
     timezone: weatherData.timezone ?? "auto",
@@ -273,15 +276,19 @@ export async function buildBrief(request: Request) {
       marineDataAvailable: hour.marineDataAvailable,
       tempC: hour.temp,
       windKt: hour.windKt,
+      windDirDeg: hour.windDirDeg,
       gustKt: hour.gustKt,
       swellM: hour.swellH,
       swellPeriodS: hour.swellP,
       windChopM: hour.windWaveH,
+      seaLevelM: hour.seaLevel,
       rainChance: hour.rainProb,
       tideRate: hour.tideRate,
       fishScore: hour.fishScore,
       fishStars: hour.fishStars,
       sl20: hour.marineDataAvailable ? hour.sl20.label : null,
+      sunrise: hour.sunrise || null,
+      sunset: hour.sunset || null,
     })),
   };
 }

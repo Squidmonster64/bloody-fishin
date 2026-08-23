@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { briefMarkdown, buildBrief, resolveLocation } from "./briefing.js";
 import { clientKey, consumeRateLimit, getCached, setCached } from "./ops.js";
 import { READER_VERSION, prefersMachineReadable, renderIndexHtml, serveRoot } from "./spaShell.js";
+import { MCP_SERVER_VERSION, mcpNodeHandler, mcpRateLimitMiddleware } from "./mcp.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,7 @@ async function startServer() {
       service: "bloody-fishin",
       stage: "beta",
       readerVersion: READER_VERSION,
+      mcp: { path: "/mcp", version: MCP_SERVER_VERSION, transport: "streamable-http" },
       ts: new Date().toISOString(),
     });
   });
@@ -105,7 +107,7 @@ async function startServer() {
     // Cloudflare prepends managed Disallow for GPTBot/ClaudeBot/etc.
     // Explicit Allow rules for the same user-agents override path-level access
     // for clients that use longest-match robots semantics (machine API paths only).
-    const machinePaths = ["/brief", "/brief.json", "/locations", "/health", "/snapshot"];
+    const machinePaths = ["/brief", "/brief.json", "/locations", "/health", "/snapshot", "/mcp"];
     const aiAgents = [
       "GPTBot",
       "ChatGPT-User",
@@ -129,6 +131,7 @@ async function startServer() {
       "",
       "# Public read-only forecast API — intended for automated clients:",
       "# https://weather.bloodydaves.com/brief.json?place=Bali&days=5",
+      "# https://weather.bloodydaves.com/mcp  (Model Context Protocol)",
       "# https://weather.bloodydaves.com/brief?spot=freo&days=7",
       "# Content-Signal: search=yes, ai-input=yes, ai-train=no, use=reference",
       "",
@@ -141,6 +144,29 @@ async function startServer() {
     res.setHeader("Cache-Control", "no-store");
     res.type("text/plain").send(lines.join("\n"));
   });
+
+  // Remote MCP (Streamable HTTP) — read-only tools over existing briefing authority
+  app.all(
+    "/mcp",
+    express.json({ limit: "1mb" }),
+    (req, res, next) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Accept, Mcp-Session-Id, MCP-Protocol-Version",
+      );
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+      if (req.method === "OPTIONS") {
+        res.status(204).end();
+        return;
+      }
+      next();
+    },
+    mcpRateLimitMiddleware as express.RequestHandler,
+    (req, res) => {
+      void mcpNodeHandler(req, res, req.body);
+    },
+  );
 
   // Serve static files from dist/public in production
   const staticPath =
