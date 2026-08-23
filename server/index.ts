@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { briefMarkdown, buildBrief, resolveLocation } from "./briefing.js";
 import { clientKey, consumeRateLimit, getCached, setCached } from "./ops.js";
-import { renderIndexHtml, serveRoot } from "./spaShell.js";
+import { READER_VERSION, prefersMachineReadable, renderIndexHtml, serveRoot } from "./spaShell.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +39,7 @@ async function startServer() {
       ok: true,
       service: "bloody-fishin",
       stage: "beta",
+      readerVersion: READER_VERSION,
       ts: new Date().toISOString(),
     });
   });
@@ -127,11 +128,17 @@ async function startServer() {
 
   app.use(express.static(staticPath, { index: false }));
 
-  // Handle client-side routing - serve index.html with embedded reader snapshot
+  // Handle client-side routing — bots get markdown, browsers get injected HTML
   app.get("*", async (req, res, next) => {
     try {
+      if (prefersMachineReadable(req)) {
+        await serveRoot(req, res, staticPath);
+        return;
+      }
       const html = await renderIndexHtml(staticPath, true);
       res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Reader-Injected", "1");
+      res.setHeader("X-Reader-Version", READER_VERSION);
       res.type("text/html; charset=utf-8").send(html);
     } catch (error) {
       next(error);

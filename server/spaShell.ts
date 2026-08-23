@@ -4,6 +4,8 @@ import type { Request, Response } from "express";
 import { briefMarkdown, buildBrief } from "./briefing.js";
 import { getCached, setCached } from "./ops.js";
 
+export const READER_VERSION = "2";
+
 const PLACEHOLDER = "<!--READER_BRIEF-->";
 
 const READER_STYLES = `<style id="reader-shell-styles">
@@ -150,14 +152,20 @@ export async function serveRoot(req: Request, res: Response, staticPath: string)
     return true;
   }
 
-  if (prefersMachineReadable(req) && !/text\/html/.test(accept)) {
+  // Automated readers and bots always get markdown on / — not an empty SPA shell.
+  if (prefersMachineReadable(req)) {
     const md = await defaultBriefMarkdown();
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Reader-Format", "markdown");
+    res.setHeader("X-Reader-Version", READER_VERSION);
     res.type("text/markdown; charset=utf-8").send(md);
     return true;
   }
 
   const html = await renderIndexHtml(staticPath, true);
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Reader-Injected", "1");
+  res.setHeader("X-Reader-Version", READER_VERSION);
   res.type("text/html; charset=utf-8").send(html);
   return true;
 }
