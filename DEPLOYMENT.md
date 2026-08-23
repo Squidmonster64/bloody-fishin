@@ -25,5 +25,26 @@ The Express app also exposes a keyless, LLM-readable briefing service:
 | `/brief` | Plain-English Markdown forecast, qualifying windows, and the next 36 hours. |
 | `/brief.json` | The same response as structured JSON. |
 | `/locations?place=Broome` | Resolves a worldwide place name to coordinates. |
+| `/mcp` | Remote **Model Context Protocol** (Streamable HTTP) read-only tools. |
+
+### Remote MCP (ChatGPT / MCP clients)
+
+Production URL:
+
+```text
+https://weather.bloodydaves.com/mcp
+```
+
+Transport: Streamable HTTP (stateless). Tools are read-only and reuse the same briefing/scoring authority as `/brief.json`.
+
+| Tool | Purpose |
+|---|---|
+| `resolve_place` | Named place → coordinates |
+| `get_forecast` | Structured weather/marine/fishing forecast |
+| `find_windows` | Next continuous windows (e.g. wind ≤ 10 kt for 3 h) |
+
+**Engineering check:** any independent MCP client can `initialize`, `tools/list`, and `tools/call` against that URL.
+
+**ChatGPT product connection:** only if your ChatGPT plan exposes custom MCP / connector / app settings. When available, add a remote MCP server with URL `https://weather.bloodydaves.com/mcp` (no API key required for this public read-only service). Plan availability varies — successful `/mcp` engineering does not imply every ChatGPT account can attach custom MCP apps.
 
 Use `spot=freo` or `spot=johnny` for built-in spots, `place=Fremantle%20WA` for worldwide name lookup, or `name=My%20Reef&lat=-32.06&lon=115.65` for a personal coordinate. Add `mode=wind&maxWind=5&minHours=3` to retrieve the next continuous three-hour wind window at or below five knots. These endpoints contain no private user spots and require no API key.
