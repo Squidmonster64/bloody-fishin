@@ -71,6 +71,8 @@ export interface AppData {
   daily: DayData[];
   location: Location;
   timezone: string;
+  /** ISO timestamp when this forecast was successfully fetched (live or cache). */
+  fetchedAt?: string;
 }
 
 export interface SL20Rating {
@@ -509,5 +511,5 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     };
   });
 
-  return { merged, daily, location: loc, timezone };
+  return { merged, daily, location: loc, timezone, fetchedAt: new Date().toISOString() };
 }

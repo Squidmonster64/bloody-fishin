@@ -2,10 +2,11 @@
 import type { ViewType } from "@/hooks/useFishingData";
 
 const TABS: { id: ViewType; label: string; emoji: string }[] = [
-  { id: "graph",   label: "Graph",   emoji: "📈" },
-  { id: "summary", label: "Summary", emoji: "📋" },
-  { id: "table",   label: "Table",   emoji: "🗂️" },
-  { id: "sickie",  label: "Sickie",  emoji: "🎣" },
+  { id: "decision", label: "Now",     emoji: "🧭" },
+  { id: "graph",    label: "Graph",   emoji: "📈" },
+  { id: "summary",  label: "Summary", emoji: "📋" },
+  { id: "table",    label: "Table",   emoji: "🗂️" },
+  { id: "sickie",   label: "Sickie",  emoji: "🎣" },
 ];
 
 interface Props {

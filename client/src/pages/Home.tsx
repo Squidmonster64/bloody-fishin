@@ -8,6 +8,7 @@ import { useFishingData } from "@/hooks/useFishingData";
 import { useMySpots } from "@/hooks/useMySpots";
 import { Header } from "@/components/Header";
 import { Controls } from "@/components/Controls";
+import { DecisionView } from "@/components/DecisionView";
 import { GraphView } from "@/components/GraphView";
 import { SummaryView } from "@/components/SummaryView";
 import { TableView } from "@/components/TableView";
@@ -57,6 +58,15 @@ export default function Home() {
         {state.error && <ErrorState error={state.error} onRetry={() => loadData(state.location, state.days)} />}
         {!state.error && state.data && (
           <>
+            {state.view === "decision" && (
+              <DecisionView
+                data={state.data}
+                fetchedAt={state.data.fetchedAt}
+                cacheSavedAt={state.cacheSavedAt}
+                onOpenView={setView}
+                onRefresh={refresh}
+              />
+            )}
             {state.view === "graph" && (
               <GraphView
                 data={state.data}

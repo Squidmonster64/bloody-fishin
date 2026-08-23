@@ -8,7 +8,7 @@ import {
 } from "@/lib/fishingEngine";
 import { clearForecastCache, loadForecastCache, saveForecastCache } from "@/lib/forecastCache";
 
-export type ViewType = "graph" | "summary" | "table" | "sickie";
+export type ViewType = "decision" | "graph" | "summary" | "table" | "sickie";
 
 export interface FishingState {
   location: Location;
@@ -37,7 +37,7 @@ export function useFishingData() {
     location: DEFAULT_LOCATION,
     days: 5,
     hourlyDay: null,
-    view: "graph",
+    view: "decision",
     data: null,
     loading: false,
     error: null,
