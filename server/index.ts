@@ -117,8 +117,6 @@ async function startServer() {
       ? path.resolve(__dirname, "public")
       : path.resolve(__dirname, "..", "dist", "public");
 
-  app.use(express.static(staticPath));
-
   app.get("/", async (req, res, next) => {
     try {
       await serveRoot(req, res, staticPath);
@@ -126,6 +124,8 @@ async function startServer() {
       next(error);
     }
   });
+
+  app.use(express.static(staticPath, { index: false }));
 
   // Handle client-side routing - serve index.html with embedded reader snapshot
   app.get("*", async (req, res, next) => {
