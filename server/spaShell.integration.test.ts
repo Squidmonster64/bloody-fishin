@@ -163,4 +163,63 @@ describe("serveRoot format=markdown", () => {
     expect(body).toContain("Fremantle Offshore");
     vi.unstubAllGlobals();
   });
+
+  it("returns markdown for bot user agents even with text/html accept", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).includes("marine-api")) {
+          return new Response(JSON.stringify({ hourly: { time: [] } }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            timezone: "Australia/Perth",
+            hourly: {
+              time: ["2026-08-23T06:00"],
+              temperature_2m: [18],
+              wind_speed_10m: [8],
+              wind_gusts_10m: [12],
+              precipitation_probability: [0],
+            },
+            daily: { time: ["2026-08-23"], sunrise: ["2026-08-23T06:30"], sunset: ["2026-08-23T18:00"] },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+
+    const { serveRoot } = await import("./spaShell.js");
+    let body = "";
+    let contentType = "";
+    let readerFormat = "";
+    const req = {
+      query: {},
+      headers: {
+        accept: "text/html,application/xhtml+xml",
+        "user-agent": "GPTBot/1.0",
+      },
+    } as any;
+    const res = {
+      type(t: string) {
+        contentType = t;
+        return this;
+      },
+      send(payload: string) {
+        body = payload;
+      },
+      json() {},
+      setHeader(name: string, value: string) {
+        if (name === "X-Reader-Format") readerFormat = value;
+      },
+    } as any;
+    const handled = await serveRoot(req, res, path.resolve(__dirname, "..", "client"));
+    expect(handled).toBe(true);
+    expect(contentType).toContain("markdown");
+    expect(readerFormat).toBe("markdown");
+    expect(body).toContain("Fremantle Offshore");
+    vi.unstubAllGlobals();
+  });
 });
