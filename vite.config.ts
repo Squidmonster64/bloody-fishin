@@ -1,7 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 /**
  * Independent Vite configuration for local development and Railway builds.
@@ -25,5 +25,9 @@ export default defineConfig({
     host: true,
     port: 3000,
     allowedHosts: true,
+  },
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts", "../server/**/*.test.ts", "../shared/**/*.test.ts"],
   },
 });

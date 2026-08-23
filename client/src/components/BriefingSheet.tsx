@@ -14,7 +14,15 @@ function formatBriefing(data: AppData) {
   const goldenLine = golden
     ? `Best highlighted hour: ${golden.label} — ${golden.fishScore}% (${golden.fishStars}★), SL20 rank ${golden.slRank}/3, wind ${golden.windKt?.toFixed(0) ?? "—"}kt, swell ${golden.swellH?.toFixed(1) ?? "—"}m.`
     : "No highlighted daylight hour in the currently loaded forecast.";
-  return `BLOODY DAVE'S FISHING BRIEF\n\nSpot: ${data.location.name}\nForecast: ${rangeStart} to ${rangeEnd} (${data.timezone})\nToday: max wind ${maxWind} · max swell ${maxSwell} · peak fishing ${today?.peakFish ?? "—"}% (${today?.bestFishStars ?? "—"}★)\n${goldenLine}\n\nPlanning aid only — check official warnings, local bar conditions, and your vessel limits before departure.`;
+  const fetched = data.fetchedAt
+    ? new Date(data.fetchedAt).toLocaleString("en-AU")
+    : "unknown";
+  const marineNote = data.marineUnavailable
+    ? "Marine feed unavailable — boat rating may be wind-led only."
+    : data.marineThrough
+      ? `Marine data through ${data.marineThrough}.`
+      : "Marine coverage not stated.";
+  return `BLOODY DAVE'S FISHING BRIEF\n\nSpot: ${data.location.name}\nForecast: ${rangeStart} to ${rangeEnd} (${data.timezone})\nData fetched: ${fetched}\n${marineNote}\nToday: max wind ${maxWind} · max swell ${maxSwell} · peak fishing ${today?.peakFish ?? "—"}% (${today?.bestFishStars ?? "—"}★)\n${goldenLine}\n\nPlanning aid only — not a substitute for Bureau of Meteorology marine warnings, local bar knowledge, or skipper judgement.`;
 }
 
 export function BriefingSheet({ data, onClose }: { data: AppData; onClose: () => void }) {

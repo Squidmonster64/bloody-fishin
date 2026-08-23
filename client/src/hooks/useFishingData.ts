@@ -8,7 +8,7 @@ import {
 } from "@/lib/fishingEngine";
 import { clearForecastCache, loadForecastCache, saveForecastCache } from "@/lib/forecastCache";
 
-export type ViewType = "graph" | "summary" | "table" | "sickie";
+export type ViewType = "decision" | "graph" | "summary" | "table" | "sickie";
 
 export interface FishingState {
   location: Location;
@@ -20,6 +20,8 @@ export interface FishingState {
   error: string | null;
   timezone: string;
   cacheSavedAt: string | null;
+  /** True when live refresh failed and a saved copy is still shown. */
+  refreshFailed: boolean;
   vis: {
     wind: boolean;
     swell: boolean;
@@ -37,12 +39,13 @@ export function useFishingData() {
     location: DEFAULT_LOCATION,
     days: 5,
     hourlyDay: null,
-    view: "graph",
+    view: "decision",
     data: null,
     loading: false,
     error: null,
     timezone: "Australia/Perth",
     cacheSavedAt: null,
+    refreshFailed: false,
     vis: { wind: true, swell: true, fish: true, tide: true, temp: false, rain: false },
   });
 
@@ -54,6 +57,7 @@ export function useFishingData() {
       error: null,
       data: cached?.data ?? null,
       cacheSavedAt: cached?.savedAt ?? null,
+      refreshFailed: false,
       timezone: cached?.data.timezone ?? s.timezone,
       hourlyDay: cached?.data.daily[0]?.date ?? s.hourlyDay,
     }));
@@ -67,12 +71,21 @@ export function useFishingData() {
         data,
         timezone: tz,
         cacheSavedAt: null,
+        refreshFailed: false,
         hourlyDay: s.hourlyDay || (data.daily[0]?.date ?? null),
       }));
     } catch (e: unknown) {
       setState(s => {
-        if (s.data) return { ...s, loading: false, error: null };
-        return { ...s, loading: false, error: e instanceof Error ? e.message : "Unknown error" };
+        if (s.data) {
+          return {
+            ...s,
+            loading: false,
+            error: null,
+            refreshFailed: true,
+            cacheSavedAt: s.cacheSavedAt ?? s.data.fetchedAt ?? new Date().toISOString(),
+          };
+        }
+        return { ...s, loading: false, error: e instanceof Error ? e.message : "Unknown error", refreshFailed: false };
       });
     }
   }, []);
@@ -111,7 +124,7 @@ export function useFishingData() {
 
   const clearCache = useCallback(() => {
     clearForecastCache(state.location, state.days);
-    setState(s => ({ ...s, data: null, cacheSavedAt: null, error: null, hourlyDay: null }));
+    setState(s => ({ ...s, data: null, cacheSavedAt: null, error: null, refreshFailed: false, hourlyDay: null }));
   }, [state.location, state.days]);
 
   return { state, loadData, refresh, clearCache, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation };

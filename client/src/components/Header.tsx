@@ -14,9 +14,12 @@ export function Header() {
             style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif" }}>
           Bloody Dave's Fishing Planner
         </h1>
-        <p className="text-[10px] sm:text-xs text-[#7a9bb5] mt-0.5 truncate">
-          SL20 Boating + Fishing Conditions · Powered by Open-Meteo
-        </p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-2">
+          <span className="rounded border border-[#ff6b35]/50 bg-[#ff6b35]/15 px-1.5 py-0.5 text-[9px] font-black tracking-[0.14em] text-[#ffb093]">BETA</span>
+          <p className="text-[10px] sm:text-xs text-[#7a9bb5] truncate">
+            Outdoor weather instrument · SL20 boating + fishing · Open-Meteo
+          </p>
+        </div>
       </div>
       <div className="ml-auto flex-shrink-0 text-right hidden sm:block">
         <p className="text-[10px] text-[#7a9bb5]">
