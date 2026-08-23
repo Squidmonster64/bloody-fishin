@@ -180,10 +180,8 @@ export async function serveRoot(req: Request, res: Response, staticPath: string)
     return true;
   }
 
-  const html = await renderIndexHtml(staticPath, true);
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("X-Reader-Injected", "1");
+  // Fast path for browsers and health checks — static shell includes reader links.
   res.setHeader("X-Reader-Version", READER_VERSION);
-  res.type("text/html; charset=utf-8").send(html);
+  res.sendFile(path.join(staticPath, "index.html"));
   return true;
 }

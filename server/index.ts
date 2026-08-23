@@ -104,6 +104,7 @@ async function startServer() {
         "Allow: /brief.json",
         "Allow: /locations",
         "Allow: /health",
+        "Allow: /snapshot",
         "",
         "# Machine-readable forecast (no JavaScript required):",
         "# https://weather.bloodydaves.com/brief?spot=freo&days=7",
@@ -122,28 +123,36 @@ async function startServer() {
     try {
       await serveRoot(req, res, staticPath);
     } catch {
-      res.setHeader("Cache-Control", "no-store");
-      res.status(200).type("text/plain").send("Bloody Dave's Fishing Planner — use /brief.json?spot=freo&days=7");
+      res.sendFile(path.join(staticPath, "index.html"));
     }
   });
 
   app.use(express.static(staticPath, { index: false }));
 
-  // Handle client-side routing — bots get markdown, browsers get injected HTML
-  app.get("*", async (req, res) => {
+  // Optional full HTML injection with live forecast snapshot
+  app.get("/snapshot", async (req, res) => {
     try {
-      if (prefersMachineReadable(req)) {
-        await serveRoot(req, res, staticPath);
-        return;
-      }
       const html = await renderIndexHtml(staticPath, true);
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-Reader-Injected", "1");
       res.setHeader("X-Reader-Version", READER_VERSION);
       res.type("text/html; charset=utf-8").send(html);
     } catch {
-      res.setHeader("Cache-Control", "no-store");
-      res.redirect(302, "/brief?spot=freo&days=7");
+      res.sendFile(path.join(staticPath, "index.html"));
+    }
+  });
+
+  // Handle client-side routing — bots get markdown, browsers get static shell
+  app.get("*", async (req, res) => {
+    try {
+      if (prefersMachineReadable(req)) {
+        await serveRoot(req, res, staticPath);
+        return;
+      }
+      res.setHeader("X-Reader-Version", READER_VERSION);
+      res.sendFile(path.join(staticPath, "index.html"));
+    } catch {
+      res.sendFile(path.join(staticPath, "index.html"));
     }
   });
 
