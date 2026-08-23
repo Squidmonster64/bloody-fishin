@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { briefMarkdown, buildBrief, resolveLocation } from "./briefing.js";
 import { clientKey, consumeRateLimit, getCached, setCached } from "./ops.js";
+import { renderIndexHtml, serveRoot } from "./spaShell.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -93,6 +94,23 @@ async function startServer() {
     }
   });
 
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send(
+      [
+        "User-agent: *",
+        "Allow: /",
+        "Allow: /brief",
+        "Allow: /brief.json",
+        "Allow: /locations",
+        "Allow: /health",
+        "",
+        "# Machine-readable forecast (no JavaScript required):",
+        "# https://weather.bloodydaves.com/brief?spot=freo&days=7",
+        "# https://weather.bloodydaves.com/brief.json?spot=freo&days=7",
+      ].join("\n"),
+    );
+  });
+
   // Serve static files from dist/public in production
   const staticPath =
     process.env.NODE_ENV === "production"
@@ -101,9 +119,22 @@ async function startServer() {
 
   app.use(express.static(staticPath));
 
-  // Handle client-side routing - serve index.html for all routes
-  app.get("*", (_req, res) => {
-    res.sendFile(path.join(staticPath, "index.html"));
+  app.get("/", async (req, res, next) => {
+    try {
+      await serveRoot(req, res, staticPath);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Handle client-side routing - serve index.html with embedded reader snapshot
+  app.get("*", async (req, res, next) => {
+    try {
+      const html = await renderIndexHtml(staticPath, true);
+      res.type("text/html; charset=utf-8").send(html);
+    } catch (error) {
+      next(error);
+    }
   });
 
   const port = process.env.PORT || 3000;
