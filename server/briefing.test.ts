@@ -79,19 +79,22 @@ describe("provider failure surfaces", () => {
 
   it("buildBrief continues when marine fails but weather succeeds", async () => {
     vi.resetModules();
+    const day = new Date();
+    day.setUTCDate(day.getUTCDate() + 1);
+    const date = day.toISOString().slice(0, 10);
     const weatherBody = {
       timezone: "Australia/Perth",
       hourly: {
-        time: ["2026-08-23T06:00", "2026-08-23T07:00", "2026-08-23T08:00"],
+        time: [`${date}T06:00`, `${date}T07:00`, `${date}T08:00`],
         temperature_2m: [18, 19, 20],
         wind_speed_10m: [8, 9, 10],
         wind_gusts_10m: [12, 13, 14],
         precipitation_probability: [0, 0, 10],
       },
       daily: {
-        time: ["2026-08-23"],
-        sunrise: ["2026-08-23T06:30"],
-        sunset: ["2026-08-23T18:00"],
+        time: [date],
+        sunrise: [`${date}T06:30`],
+        sunset: [`${date}T18:00`],
       },
     };
     vi.stubGlobal(
