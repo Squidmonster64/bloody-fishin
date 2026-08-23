@@ -118,18 +118,19 @@ async function startServer() {
       ? path.resolve(__dirname, "public")
       : path.resolve(__dirname, "..", "dist", "public");
 
-  app.get("/", async (req, res, next) => {
+  app.get("/", async (req, res) => {
     try {
       await serveRoot(req, res, staticPath);
-    } catch (error) {
-      next(error);
+    } catch {
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).type("text/plain").send("Bloody Dave's Fishing Planner — use /brief.json?spot=freo&days=7");
     }
   });
 
   app.use(express.static(staticPath, { index: false }));
 
   // Handle client-side routing — bots get markdown, browsers get injected HTML
-  app.get("*", async (req, res, next) => {
+  app.get("*", async (req, res) => {
     try {
       if (prefersMachineReadable(req)) {
         await serveRoot(req, res, staticPath);
@@ -140,8 +141,9 @@ async function startServer() {
       res.setHeader("X-Reader-Injected", "1");
       res.setHeader("X-Reader-Version", READER_VERSION);
       res.type("text/html; charset=utf-8").send(html);
-    } catch (error) {
-      next(error);
+    } catch {
+      res.setHeader("Cache-Control", "no-store");
+      res.redirect(302, "/brief?spot=freo&days=7");
     }
   });
 

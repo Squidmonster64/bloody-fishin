@@ -51,11 +51,24 @@ async function defaultBriefMarkdown(): Promise<string> {
   const key = "reader:default-brief-md";
   const cached = getCached<string>(key);
   if (cached) return cached;
-  const req = { query: { spot: "freo", days: "7", mode: "wind" } } as unknown as Request;
-  const brief = await buildBrief(req);
-  const md = briefMarkdown(brief);
-  setCached(key, md, 5 * 60_000);
-  return md;
+  try {
+    const req = { query: { spot: "freo", days: "7", mode: "wind" } } as unknown as Request;
+    const brief = await buildBrief(req);
+    const md = briefMarkdown(brief);
+    setCached(key, md, 5 * 60_000);
+    return md;
+  } catch {
+    return [
+      "# Bloody Dave's Fishing Planner — Public Forecast Brief",
+      "",
+      "Live forecast snapshot is temporarily unavailable.",
+      "",
+      "Use these machine-readable endpoints:",
+      "- /brief?spot=freo&days=7",
+      "- /brief.json?spot=freo&days=7",
+      "- /health",
+    ].join("\n");
+  }
 }
 
 function readerBriefBlock(markdown: string): string {
@@ -94,7 +107,12 @@ export async function loadIndexTemplate(staticPath: string): Promise<string> {
 
 /** Inject reader content into legacy or current index.html shells. */
 export async function renderIndexHtml(staticPath: string, injectBrief = true): Promise<string> {
-  let html = await loadIndexTemplate(staticPath);
+  let html: string;
+  try {
+    html = await loadIndexTemplate(staticPath);
+  } catch {
+    return `<!doctype html><html><body><h1>Bloody Dave's Fishing Planner</h1><p><a href="/brief.json?spot=freo&amp;days=7">JSON forecast</a> · <a href="/brief?spot=freo&amp;days=7">Markdown forecast</a></p></body></html>`;
+  }
   if (!injectBrief) return html;
 
   const md = await defaultBriefMarkdown();
