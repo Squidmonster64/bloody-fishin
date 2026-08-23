@@ -138,6 +138,7 @@ async function startServer() {
       for (const p of machinePaths) lines.push(`Allow: ${p}`);
       lines.push("");
     }
+    res.setHeader("Cache-Control", "no-store");
     res.type("text/plain").send(lines.join("\n"));
   });
 
