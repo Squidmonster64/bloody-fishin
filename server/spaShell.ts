@@ -157,6 +157,7 @@ export async function serveRoot(req: Request, res: Response, staticPath: string)
   }
 
   const html = await renderIndexHtml(staticPath, true);
+  res.setHeader("Cache-Control", "no-store");
   res.type("text/html; charset=utf-8").send(html);
   return true;
 }

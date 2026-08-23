@@ -131,6 +131,7 @@ async function startServer() {
   app.get("*", async (req, res, next) => {
     try {
       const html = await renderIndexHtml(staticPath, true);
+      res.setHeader("Cache-Control", "no-store");
       res.type("text/html; charset=utf-8").send(html);
     } catch (error) {
       next(error);
