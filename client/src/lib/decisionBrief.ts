@@ -275,7 +275,8 @@ export function buildDecisionBrief(
     ? rateSL20(current.windKt, current.swellH, current.swellP, current.waveH, current.windWaveH)
     : null;
   const conditions = snapFromRow(current);
-  const marineMissing = data.merged.slice(0, 24).every(r => r.swellH == null && r.waveH == null && r.seaLevel == null);
+  const marineMissing = Boolean(data.marineUnavailable) || data.merged.slice(0, 24).every(r => r.swellH == null && r.waveH == null && r.seaLevel == null);
+  const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
   const bestWindows = buildBestWindows(data);
   const nextUseful =
     bestWindows.find(w => {
@@ -286,8 +287,19 @@ export function buildDecisionBrief(
   const goNoGo = assessGoNoGo(currentSl, current, marineMissing);
   const { headline, supporting } = buildHeadline(goNoGo, currentSl, current, nextUseful);
   const local = localParts(data.timezone, when);
-  const fetchedAt = opts?.fetchedAt ?? opts?.cacheSavedAt ?? data.fetchedAt ?? null;
+  // If we are showing a saved copy, never claim "Live" from the embedded fetch time.
+  const fetchedAt = opts?.cacheSavedAt
+    ? opts.cacheSavedAt
+    : (opts?.fetchedAt ?? data.fetchedAt ?? null);
   const freshness = freshnessFromFetchedAt(fetchedAt, when);
+
+  const risks = buildRisks(current, currentSl, conditions, marineMissing);
+  if (marineHorizonShort) {
+    risks.push("Days 9–14 are weather/fishing outlook only — no swell, chop or SL20 vessel call.");
+  }
+  if (opts?.cacheSavedAt) {
+    risks.unshift("Showing a saved forecast copy — refresh before you leave the ramp.");
+  }
 
   return {
     locationName: data.location.name,
@@ -299,7 +311,7 @@ export function buildDecisionBrief(
     headline,
     supporting,
     why: buildWhy(current, currentSl, conditions),
-    risks: buildRisks(current, currentSl, conditions, marineMissing),
+    risks,
     conditions,
     nextTide: nextTideAfter(data, current),
     bestWindows,

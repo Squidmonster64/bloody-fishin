@@ -54,7 +54,18 @@ export default function Home() {
       <main className="flex-1 overflow-hidden">
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && <div className="border-b border-[#1e3a5f] bg-[#0d1f3c] px-3 py-2 text-center text-xs text-[#7a9bb5]">Refreshing live conditions… showing the latest saved forecast meanwhile.</div>}
-        {state.cacheSavedAt && !state.loading && <div className="flex flex-wrap items-center justify-center gap-2 border-b border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-center text-xs text-yellow-200"><span>📡 Saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. It could be stale.</span><button onClick={refresh} className="min-h-[32px] rounded border border-yellow-300/50 px-2 font-bold text-yellow-100 hover:bg-yellow-300/15">↻ Refresh now</button><button onClick={clearCache} className="min-h-[32px] rounded border border-yellow-300/30 px-2 font-semibold text-yellow-100 hover:bg-yellow-300/15">Clear saved copy</button></div>}
+        {state.refreshFailed && state.data && !state.loading && (
+          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-orange-400/40 bg-orange-400/10 px-3 py-2 text-center text-xs text-orange-100">
+            <span>Live refresh failed — showing the saved forecast. Check signal and try again before you leave.</span>
+            <button onClick={refresh} className="min-h-[32px] rounded border border-orange-200/50 px-2 font-bold text-orange-50 hover:bg-orange-300/15">↻ Retry refresh</button>
+          </div>
+        )}
+        {state.cacheSavedAt && !state.loading && !state.refreshFailed && <div className="flex flex-wrap items-center justify-center gap-2 border-b border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-center text-xs text-yellow-200"><span>📡 Saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. It could be stale.</span><button onClick={refresh} className="min-h-[32px] rounded border border-yellow-300/50 px-2 font-bold text-yellow-100 hover:bg-yellow-300/15">↻ Refresh now</button><button onClick={clearCache} className="min-h-[32px] rounded border border-yellow-300/30 px-2 font-semibold text-yellow-100 hover:bg-yellow-300/15">Clear saved copy</button></div>}
+        {state.data && (state.days > 8 || state.data.requestedDays && state.data.requestedDays > 8) && !state.loading && (
+          <div className="border-b border-sky-400/30 bg-sky-400/10 px-3 py-2 text-center text-xs text-sky-100">
+            Days 9–14 are weather and fishing outlook only — marine swell/chop/SL20 vessel calls stop after day 8{state.data.marineThrough ? ` (marine through ${state.data.marineThrough})` : ""}.
+          </div>
+        )}
         {state.error && <ErrorState error={state.error} onRetry={() => loadData(state.location, state.days)} />}
         {!state.error && state.data && (
           <>
@@ -98,6 +109,10 @@ export default function Home() {
       )}
       {showBrief && state.data && <BriefingSheet data={state.data} onClose={() => setShowBrief(false)} />}
       {showCompare && state.data && <CompareSpotsSheet baseData={state.data} savedSpots={spots} onClose={() => setShowCompare(false)} />}
+      <footer className="border-t border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-center text-[10px] leading-relaxed text-[#7a9bb5]">
+        Planning aid for Australian fishing and small-boat decisions. Always check official Bureau of Meteorology marine warnings, local knowledge and skipper judgement before you go.
+      </footer>
     </div>
   );
 }
+

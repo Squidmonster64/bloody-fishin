@@ -73,6 +73,12 @@ export interface AppData {
   timezone: string;
   /** ISO timestamp when this forecast was successfully fetched (live or cache). */
   fetchedAt?: string;
+  /** Inclusive ISO date (YYYY-MM-DD) of last hour with marine fields, if any. */
+  marineThrough?: string | null;
+  /** True when the marine request failed or returned no usable hours. */
+  marineUnavailable?: boolean;
+  /** Requested forecast days (weather horizon). */
+  requestedDays?: number;
 }
 
 export interface SL20Rating {
@@ -404,6 +410,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
 
   if (!wRes.ok) throw new Error(`Weather API: HTTP ${wRes.status}`);
   const w = await wRes.json();
+  const marineUnavailable = !(mRes && mRes.ok);
   const m = mRes && mRes.ok ? await mRes.json() : { hourly: {} };
 
   const wh = w.hourly || {};
@@ -511,5 +518,18 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     };
   });
 
-  return { merged, daily, location: loc, timezone, fetchedAt: new Date().toISOString() };
+  const marineTimes: string[] = (mh.time || []) as string[];
+  const marineThrough = marineTimes.length ? String(marineTimes[marineTimes.length - 1]).slice(0, 10) : null;
+
+  return {
+    merged,
+    daily,
+    location: loc,
+    timezone,
+    fetchedAt: new Date().toISOString(),
+    marineThrough,
+    marineUnavailable,
+    requestedDays: days,
+  };
 }
+

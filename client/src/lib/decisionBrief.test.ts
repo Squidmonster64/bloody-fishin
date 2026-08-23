@@ -161,6 +161,18 @@ describe("buildDecisionBrief", () => {
   });
 });
 
+
+  it("cacheSavedAt forces stale freshness even if fetchedAt is recent", () => {
+    const data = fixture({ fetchedAt: "2026-08-23T01:55:00Z" });
+    const brief = buildDecisionBrief(data, {
+      when: new Date("2026-08-23T02:00:00Z"),
+      fetchedAt: "2026-08-23T01:55:00Z",
+      cacheSavedAt: "2026-08-22T20:00:00Z",
+    });
+    expect(brief.freshnessTone).toBe("stale");
+    expect(brief.risks.some(r => /saved forecast copy/i.test(r))).toBe(true);
+  });
+
 describe("formatters", () => {
   it("formats wind, swell and tide lines", () => {
     expect(formatWindLine({ windKt: 10, gustKt: 15, windDir: 180, swellH: null, swellP: null, swellDir: null, rainProb: null, temp: null, waveH: null, seaLevel: null, tideRate: null })).toContain("10 kt");
