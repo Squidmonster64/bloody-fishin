@@ -23,6 +23,7 @@ type Hour = {
   time: string; date: string; hour: number; windKt: number | null; gustKt: number | null;
   rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
   swellP: number | null; windWaveH: number | null; tideRate: number | null; daylight: boolean;
+  sunrise: string; sunset: string;
   fishScore: number; fishStars: number; sl20: SL20Rating; marineDataAvailable: boolean;
 };
 
@@ -37,6 +38,13 @@ const KNOWN_SPOTS: Record<string, Location> = {
   "fremantle offshore": { name: "Fremantle Offshore", lat: -32.06, lon: 115.65 },
   johnny: { name: "Johnny Big Boy", lat: -25.50945, lon: 113.4971 },
   "johnny big boy": { name: "Johnny Big Boy", lat: -25.50945, lon: 113.4971 },
+};
+
+/** Prefer unambiguous fishing destinations when Open-Meteo returns ambiguous hits. */
+const PLACE_ALIASES: Record<string, string> = {
+  bali: "Bali, Indonesia",
+  rottnest: "Rottnest Island, Australia",
+  "rottnest island": "Rottnest Island, Australia",
 };
 
 const VESSELS: Record<string, Criteria> = {
@@ -59,24 +67,45 @@ const optionalNumberParam = (value: unknown, min: number, max: number) => {
 
 const formatHour = (time: string) => `${time.slice(0, 10)} ${time.slice(11, 16)}`;
 async function resolvePlace(place: string): Promise<Location> {
+  const alias = PLACE_ALIASES[place.trim().toLowerCase()];
+  const searchTerm = alias ?? place;
   const search = async (term: string) => {
     const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
     url.searchParams.set("name", term);
-    url.searchParams.set("count", "1");
+    url.searchParams.set("count", "5");
     url.searchParams.set("language", "en");
     url.searchParams.set("format", "json");
     const response = await fetchWithTimeout(url.toString(), { timeoutMs: 10_000 });
     if (!response.ok) throw new Error("Place lookup is temporarily unavailable.");
-    return response.json() as Promise<{ results?: Array<{ name: string; latitude: number; longitude: number; admin1?: string; country?: string }> }>;
+    return response.json() as Promise<{
+      results?: Array<{ name: string; latitude: number; longitude: number; admin1?: string; country?: string; country_code?: string }>;
+    }>;
   };
-  let data = await search(place);
+  let data = await search(searchTerm);
   if (!data.results?.length) {
-    const simplerPlace = place.replace(/[\s,]+(?:WA|NSW|VIC|QLD|SA|TAS|NT|ACT|Australia|United States|USA|UK)$/i, "").trim();
+    const simplerPlace = place.replace(/[\s,]+(?:WA|NSW|VIC|QLD|SA|TAS|NT|ACT|Australia|United States|USA|UK|Indonesia|Canada)$/i, "").trim();
     if (simplerPlace && simplerPlace !== place) data = await search(simplerPlace);
   }
-  const match = data.results?.[0];
-  if (!match) throw new Error(`No location was found for “${place}”. Use latitude and longitude instead.`);
-  return { name: [match.name, match.admin1, match.country].filter(Boolean).join(", "), lat: match.latitude, lon: match.longitude };
+  const results = data.results ?? [];
+  if (!results.length) throw new Error(`No location was found for “${place}”. Use latitude and longitude instead.`);
+
+  // Prefer coastal / requested-country matches over inland namesakes (e.g. Bali India).
+  const lower = place.toLowerCase();
+  const preferCountry =
+    /indonesia|bali/.test(lower) || alias?.includes("Indonesia")
+      ? "ID"
+      : /canada|vancouver/.test(lower)
+        ? "CA"
+        : /australia|rottnest|fremantle/.test(lower)
+          ? "AU"
+          : null;
+  const match =
+    (preferCountry ? results.find((r) => r.country_code === preferCountry) : undefined) ?? results[0];
+  return {
+    name: [match.name, match.admin1, match.country].filter(Boolean).join(", "),
+    lat: match.latitude,
+    lon: match.longitude,
+  };
 }
 
 export async function resolveLocation(query: Request["query"]): Promise<Location> {
@@ -186,7 +215,7 @@ async function forecast(location: Location, days: number): Promise<{ timezone: s
       });
       const marineDataAvailable = hasMarineForVessel(item);
       const sl20 = rateSL20(item.windKt, item.swellH, item.swellP, item.waveH, item.windWaveH);
-      return { ...item, tideRate, daylight, fishScore: solunar.score, fishStars: solunar.stars, sl20, marineDataAvailable } as Hour;
+      return { ...item, tideRate, daylight, sunrise: sun.sunrise, sunset: sun.sunset, fishScore: solunar.score, fishStars: solunar.stars, sl20, marineDataAvailable } as Hour;
     }),
   };
 }
@@ -206,18 +235,55 @@ export async function buildBrief(request: Request) {
   const dailyOutlook = Array.from(new Set(futureHours.map((hour) => hour.date))).map((date) => {
     const rows = futureHours.filter((hour) => hour.date === date);
     const marineDataAvailable = rows.some((hour) => hour.marineDataAvailable);
+    const temps = rows.map((hour) => hour.temp).filter((t): t is number => t !== null && Number.isFinite(t));
     return {
       date,
       marineDataAvailable,
       maxWindKt: Math.max(...rows.map((hour) => hour.windKt ?? 0)),
       maxGustKt: Math.max(...rows.map((hour) => hour.gustKt ?? 0)),
+      maxTempC: temps.length ? Math.max(...temps) : null,
+      minTempC: temps.length ? Math.min(...temps) : null,
+      sunrise: rows[0]?.sunrise || null,
+      sunset: rows[0]?.sunset || null,
       bestFishScore: Math.max(...rows.map((hour) => hour.fishScore)),
       bestFishStars: Math.max(...rows.map((hour) => hour.fishStars)),
       weatherAndFishingOnly: !marineDataAvailable,
     };
   });
   const marineDataWarning = days > 8 ? "Days 9–14 include weather, sun/moon/tide fishing scores and fishing stars, but no swell, chop, tide-height or SL20 vessel assessment. Do not use them for boating or Sickie decisions." : null;
-  return { generatedAt: now.toISOString(), location, timezone: data.timezone, days, marineDataAvailableThrough: data.marineDataAvailableThrough, marineDataWarning, query: { mode, vessel, criteria }, nextWindows: windows, dailyOutlook, upcomingHours: futureHours.slice(0, 36).map((hour) => ({ time: formatHour(hour.time), daylight: hour.daylight, marineDataAvailable: hour.marineDataAvailable, windKt: hour.windKt, gustKt: hour.gustKt, swellM: hour.swellH, windChopM: hour.windWaveH, rainChance: hour.rainProb, fishScore: hour.fishScore, fishStars: hour.fishStars, sl20: hour.marineDataAvailable ? hour.sl20.label : null })) };
+  const nextUsable = windows[0] ?? null;
+  const bestUpcoming = windows.length
+    ? [...windows].sort((a, b) => b.bestFishScore - a.bestFishScore || b.durationHours - a.durationHours)[0]
+    : null;
+  return {
+    generatedAt: now.toISOString(),
+    location,
+    timezone: data.timezone,
+    days,
+    marineDataAvailableThrough: data.marineDataAvailableThrough,
+    marineDataWarning,
+    query: { mode, vessel, criteria },
+    nextWindows: windows,
+    nextUsable,
+    bestUpcoming,
+    dailyOutlook,
+    upcomingHours: futureHours.slice(0, 36).map((hour) => ({
+      time: formatHour(hour.time),
+      daylight: hour.daylight,
+      marineDataAvailable: hour.marineDataAvailable,
+      tempC: hour.temp,
+      windKt: hour.windKt,
+      gustKt: hour.gustKt,
+      swellM: hour.swellH,
+      swellPeriodS: hour.swellP,
+      windChopM: hour.windWaveH,
+      rainChance: hour.rainProb,
+      tideRate: hour.tideRate,
+      fishScore: hour.fishScore,
+      fishStars: hour.fishStars,
+      sl20: hour.marineDataAvailable ? hour.sl20.label : null,
+    })),
+  };
 }
 
 export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {

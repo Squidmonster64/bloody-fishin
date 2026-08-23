@@ -117,6 +117,50 @@ describe("provider failure surfaces", () => {
     expect(brief.marineDataAvailableThrough).toBeNull();
     expect(brief.upcomingHours.every(h => h.sl20 === null)).toBe(true);
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
+    expect(brief.upcomingHours[0]).toHaveProperty("tempC");
+    expect(brief.dailyOutlook[0]).toHaveProperty("sunrise");
+    expect(brief).toHaveProperty("nextUsable");
+    expect(brief).toHaveProperty("bestUpcoming");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("named place aliases for AI clients", () => {
+  it("resolves Bali to Indonesia, not inland namesakes", async () => {
+    vi.resetModules();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        expect(String(url)).toMatch(/Bali/);
+        return new Response(
+          JSON.stringify({
+            results: [
+              { name: "Bāli", latitude: 22.65, longitude: 88.34, country: "India", country_code: "IN", admin1: "West Bengal" },
+              { name: "Bali", latitude: -8.33, longitude: 115, country: "Indonesia", country_code: "ID", admin1: "Bali" },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+    const { resolveLocation } = await import("./briefing");
+    const loc = await resolveLocation(fakeReq({ place: "Bali" }).query);
+    expect(loc.name).toMatch(/Indonesia/i);
+    expect(loc.lat).toBeLessThan(0);
+    vi.unstubAllGlobals();
+  });
+
+  it("does not silently fall back to Fremantle for unknown place", async () => {
+    vi.resetModules();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ results: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })),
+    );
+    const { resolveLocation } = await import("./briefing");
+    await expect(resolveLocation(fakeReq({ place: "ZzNotARealPlace999" }).query)).rejects.toThrow(/No location/);
     vi.unstubAllGlobals();
   });
 });
