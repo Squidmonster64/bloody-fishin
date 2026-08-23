@@ -5,6 +5,7 @@
 import {
   degToCompass,
   fmt,
+  hasMarineForVessel,
   rateSL20,
   type AppData,
   type HourRow,
@@ -37,6 +38,8 @@ export interface DecisionWindow {
   peakFish: number;
   peakStars: number;
   sl: SL20Rating;
+  /** False when the window lacks marine fields for an authoritative vessel call. */
+  vesselAssessment: boolean;
   minWind: number | null;
   maxSwell: number | null;
   reason: string;
@@ -124,74 +127,109 @@ function nextTideAfter(data: AppData, current: HourRow | null): TideExtreme | nu
 
 function isUsefulHour(row: HourRow): boolean {
   // Useful planning hour: daylight-friendly boat rating or strong fishing signal.
-  return row.slRank >= 2 || (row.fishStars >= 4 && row.slRank >= 1);
+  // Vessel usefulness requires marine fields; fishing-only usefulness can still count.
+  const marineOk = hasMarineForVessel(row);
+  if (marineOk && row.slRank >= 2) return true;
+  if (row.fishStars >= 4 && (!marineOk || row.slRank >= 1)) return true;
+  return false;
 }
 
-export function buildBestWindows(data: AppData, limit = 4): DecisionWindow[] {
+function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
+  if (bucket.length < 2) return null;
+  const first = bucket[0];
+  const last = bucket[bucket.length - 1];
+  const winds = bucket.map(h => h.windKt).filter((v): v is number => v != null);
+  const swells = bucket.map(h => h.swellH).filter((v): v is number => v != null);
+  const marineOk = bucket.some(h => hasMarineForVessel(h));
+  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH);
+  const peakFish = Math.max(...bucket.map(h => h.fishScore));
+  const peakStars = Math.max(...bucket.map(h => h.fishStars));
+  const dt = new Date(first.dateStr + "T12:00:00");
+  const dateLabel = dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
+  const drivers: string[] = [];
+  if (marineOk && sl.rank >= 2) drivers.push(`${sl.label} boat rating`);
+  else if (!marineOk) drivers.push("fishing outlook (marine incomplete)");
+  if (peakStars >= 4) drivers.push(`${peakStars}★ fishing`);
+  if (winds.length && Math.max(...winds) <= 12) drivers.push("lighter wind");
+  return {
+    date: first.dateStr,
+    dateLabel,
+    startHour: first.hourLabel,
+    endHour: last.hourLabel,
+    hours: bucket.length,
+    peakFish,
+    peakStars,
+    sl,
+    vesselAssessment: marineOk,
+    minWind: winds.length ? Math.min(...winds) : null,
+    maxSwell: swells.length ? Math.max(...swells) : null,
+    reason: drivers.join(" · ") || "Better than surrounding hours",
+  };
+}
+
+/** Chronological useful windows (unsorted by strength). */
+export function buildChronologicalWindows(data: AppData): DecisionWindow[] {
   const windows: DecisionWindow[] = [];
   let bucket: HourRow[] = [];
-
   const flush = () => {
-    if (bucket.length < 2) {
-      bucket = [];
-      return;
-    }
-    const first = bucket[0];
-    const last = bucket[bucket.length - 1];
-    const winds = bucket.map(h => h.windKt).filter((v): v is number => v != null);
-    const swells = bucket.map(h => h.swellH).filter((v): v is number => v != null);
-    const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH);
-    const peakFish = Math.max(...bucket.map(h => h.fishScore));
-    const peakStars = Math.max(...bucket.map(h => h.fishStars));
-    const dt = new Date(first.dateStr + "T12:00:00");
-    const dateLabel = dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
-    const drivers: string[] = [];
-    if (sl.rank >= 2) drivers.push(`${sl.label} boat rating`);
-    if (peakStars >= 4) drivers.push(`${peakStars}★ fishing`);
-    if (winds.length && Math.max(...winds) <= 12) drivers.push("lighter wind");
-    windows.push({
-      date: first.dateStr,
-      dateLabel,
-      startHour: first.hourLabel,
-      endHour: last.hourLabel,
-      hours: bucket.length,
-      peakFish,
-      peakStars,
-      sl,
-      minWind: winds.length ? Math.min(...winds) : null,
-      maxSwell: swells.length ? Math.max(...swells) : null,
-      reason: drivers.join(" · ") || "Better than surrounding hours",
-    });
+    const w = windowFromBucket(bucket);
     bucket = [];
+    if (w) windows.push(w);
   };
-
   for (const row of data.merged) {
     if (isUsefulHour(row)) bucket.push(row);
     else flush();
   }
   flush();
+  return windows;
+}
 
-  return windows
+/** Ranked strongest upcoming windows — not necessarily next chronological. */
+export function buildBestWindows(data: AppData, limit = 4): DecisionWindow[] {
+  return buildChronologicalWindows(data)
     .sort((a, b) => {
-      const score = (w: DecisionWindow) => w.sl.rank * 20 + w.peakStars * 8 + Math.min(w.hours, 6);
+      const score = (w: DecisionWindow) =>
+        (w.vesselAssessment ? w.sl.rank * 20 : 0) + w.peakStars * 8 + Math.min(w.hours, 6);
       return score(b) - score(a) || a.date.localeCompare(b.date) || a.startHour.localeCompare(b.startHour);
     })
     .slice(0, limit);
 }
 
+/** First chronological future useful window at/after `current`. */
+export function findNextUsefulWindow(data: AppData, current: HourRow | null): DecisionWindow | null {
+  const chronological = buildChronologicalWindows(data);
+  if (!current) return chronological[0] ?? null;
+  return (
+    chronological.find(w => {
+      const start = `${w.date}T${w.startHour}:00`;
+      return start >= current.time.slice(0, 16);
+    }) ?? null
+  );
+}
+
 function assessGoNoGo(sl: SL20Rating | null, row: HourRow | null, marineMissing: boolean): GoNoGo {
-  if (!sl || !row) return "outlook";
+  if (!row) return "outlook";
+  if (marineMissing || !sl) return "outlook";
   if (sl.label === "Avoid") return "no-go";
-  if (sl.label === "Marginal" || (row.gustKt != null && row.gustKt >= 22) || marineMissing) return "caution";
+  if (sl.label === "Marginal" || (row.gustKt != null && row.gustKt >= 22)) return "caution";
   if (sl.rank >= 2) return "go";
   return "caution";
 }
 
 function buildHeadline(goNoGo: GoNoGo, sl: SL20Rating | null, row: HourRow | null, nextUseful: DecisionWindow | null): { headline: string; supporting: string } {
-  if (!row || !sl) {
+  if (!row) {
     return {
       headline: "Waiting on conditions",
       supporting: "Load a spot to see the next fishing and boating window.",
+    };
+  }
+  if (goNoGo === "outlook" || !sl) {
+    const next = nextUseful
+      ? ` Next usable window: ${nextUseful.dateLabel} ${nextUseful.startHour}–${nextUseful.endHour}.`
+      : "";
+    return {
+      headline: "Outlook only — vessel call unavailable",
+      supporting: `Marine detail is incomplete for a full SL20 vessel assessment.${next} Weather and fishing outlook may still help planning.`,
     };
   }
   if (goNoGo === "go") {
@@ -202,7 +240,7 @@ function buildHeadline(goNoGo: GoNoGo, sl: SL20Rating | null, row: HourRow | nul
   }
   if (goNoGo === "no-go") {
     const next = nextUseful
-      ? `Next useful window: ${nextUseful.dateLabel} ${nextUseful.startHour}–${nextUseful.endHour}.`
+      ? `Next usable window: ${nextUseful.dateLabel} ${nextUseful.startHour}–${nextUseful.endHour}.`
       : "No clear useful window in this forecast range.";
     return {
       headline: "Stay ashore for now",
@@ -211,23 +249,27 @@ function buildHeadline(goNoGo: GoNoGo, sl: SL20Rating | null, row: HourRow | nul
   }
   if (goNoGo === "caution") {
     const next = nextUseful
-      ? `Better window looks like ${nextUseful.dateLabel} ${nextUseful.startHour}–${nextUseful.endHour}.`
+      ? `Next usable window: ${nextUseful.dateLabel} ${nextUseful.startHour}–${nextUseful.endHour}.`
       : "Watch the hourly trend before committing.";
     return {
       headline: "Marginal — pick your hour",
       supporting: `Conditions are workable only with care. ${next}`,
     };
   }
+  const next = nextUseful
+    ? ` Next usable window: ${nextUseful.dateLabel} ${nextUseful.startHour}–${nextUseful.endHour}.`
+    : "";
   return {
-    headline: "Outlook only",
-    supporting: "Marine detail is limited this far out — treat later days as weather and fishing guidance, not a vessel decision.",
+    headline: "Outlook only — vessel call unavailable",
+    supporting: `Marine detail is incomplete for a full SL20 vessel assessment.${next} Weather and fishing outlook may still help planning.`,
   };
 }
 
-function buildWhy(row: HourRow | null, sl: SL20Rating | null, conditions: ConditionSnap): string[] {
+function buildWhy(row: HourRow | null, sl: SL20Rating | null, conditions: ConditionSnap, marineOk: boolean): string[] {
   const why: string[] = [];
-  if (!row || !sl) return why;
-  why.push(`SL20 ${sl.label} from wind ${fmt(conditions.windKt, 0)} kt and period-aware swell.`);
+  if (!row) return why;
+  if (sl && marineOk) why.push(`SL20 ${sl.label} from wind ${fmt(conditions.windKt, 0)} kt and period-aware swell.`);
+  else why.push(`Vessel SL20 not authoritative this hour — marine swell/chop fields are incomplete.`);
   why.push(`Fishing ${row.fishStars}★ (${row.fishScore}%) from moon, sun and tide-rate timing.`);
   if (conditions.gustKt != null && conditions.windKt != null && conditions.gustKt - conditions.windKt >= 8) {
     why.push(`Gust spread is ${Math.round(conditions.gustKt - conditions.windKt)} kt — expect a bumpier ride than mean wind suggests.`);
@@ -240,7 +282,7 @@ function buildWhy(row: HourRow | null, sl: SL20Rating | null, conditions: Condit
 
 function buildRisks(row: HourRow | null, sl: SL20Rating | null, conditions: ConditionSnap, marineMissing: boolean): string[] {
   const risks: string[] = [];
-  if (marineMissing) risks.push("Marine swell/tide feed is incomplete — boat rating may be wind-led only.");
+  if (marineMissing) risks.push("Marine swell/tide feed is incomplete — vessel assessment unavailable (not a complete SL20 call).");
   if (sl?.label === "Avoid") risks.push("Avoid rating: wind, chop or steep short-period swell is outside small-boat comfort.");
   if (sl?.label === "Marginal") risks.push("Marginal: only for experienced skippers and suitable vessels.");
   if (conditions.gustKt != null && conditions.gustKt >= 25) risks.push(`Gusts near ${Math.round(conditions.gustKt)} kt — ramp and open-water risk.`);
@@ -271,20 +313,18 @@ export function buildDecisionBrief(
 ): DecisionBrief {
   const when = opts?.when ?? new Date();
   const current = findCurrentHour(data, when);
-  const currentSl = current
+  const conditions = snapFromRow(current);
+  const marineMissing = Boolean(data.marineUnavailable) || data.merged.slice(0, 24).every(r => !hasMarineForVessel(r));
+  const currentMarineOk = current ? hasMarineForVessel(current) : false;
+  // Compute SL20 for diagnostics, but do not present an authoritative vessel call without marine fields.
+  const computedSl = current
     ? rateSL20(current.windKt, current.swellH, current.swellP, current.waveH, current.windWaveH)
     : null;
-  const conditions = snapFromRow(current);
-  const marineMissing = Boolean(data.marineUnavailable) || data.merged.slice(0, 24).every(r => r.swellH == null && r.waveH == null && r.seaLevel == null);
+  const currentSl = currentMarineOk ? computedSl : null;
   const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
   const bestWindows = buildBestWindows(data);
-  const nextUseful =
-    bestWindows.find(w => {
-      if (!current) return true;
-      const start = `${w.date}T${w.startHour}:00`;
-      return start >= current.time.slice(0, 16);
-    }) ?? bestWindows[0] ?? null;
-  const goNoGo = assessGoNoGo(currentSl, current, marineMissing);
+  const nextUseful = findNextUsefulWindow(data, current);
+  const goNoGo = assessGoNoGo(currentSl, current, marineMissing || !currentMarineOk);
   const { headline, supporting } = buildHeadline(goNoGo, currentSl, current, nextUseful);
   const local = localParts(data.timezone, when);
   // If we are showing a saved copy, never claim "Live" from the embedded fetch time.
@@ -310,7 +350,7 @@ export function buildDecisionBrief(
     goNoGo,
     headline,
     supporting,
-    why: buildWhy(current, currentSl, conditions),
+    why: buildWhy(current, currentSl ?? computedSl, conditions, currentMarineOk),
     risks,
     conditions,
     nextTide: nextTideAfter(data, current),

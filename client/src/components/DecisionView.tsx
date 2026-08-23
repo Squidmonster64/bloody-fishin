@@ -101,9 +101,13 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span className={FRESH_STYLES[brief.freshnessTone]}>{brief.freshnessLabel}</span>
-            {brief.currentSl && (
+            {brief.currentSl ? (
               <span className="font-bold px-2 py-0.5 rounded" style={{ backgroundColor: brief.currentSl.bg, color: brief.currentSl.fg }}>
                 SL20 {brief.currentSl.label}
+              </span>
+            ) : (
+              <span className="font-bold px-2 py-0.5 rounded bg-[#7a9bb5]/15 text-[#7a9bb5] border border-[#7a9bb5]/30">
+                SL20 unavailable
               </span>
             )}
             {brief.current && (
@@ -126,12 +130,12 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         </div>
       </section>
 
-      {/* BEST WINDOWS */}
-      <section className="px-4 pt-5 pb-2 border-b border-[#1e3a5f]/80" aria-label="Best windows">
+      {/* NEXT USABLE + BEST UPCOMING */}
+      <section className="px-4 pt-5 pb-2 border-b border-[#1e3a5f]/80" aria-label="Windows">
         <div className="flex items-end justify-between gap-2 mb-3">
           <div>
-            <h3 className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold">Best windows</h3>
-            <p className="text-sm text-[#c5d6e8] mt-1">Next useful fishing / boating stretches</p>
+            <h3 className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold">Windows</h3>
+            <p className="text-sm text-[#c5d6e8] mt-1">Next usable is chronological; best upcoming is strength-ranked</p>
           </div>
           <button
             type="button"
@@ -141,8 +145,32 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
             Sickie →
           </button>
         </div>
+
+        <div className="mb-3 rounded-lg border border-[#1e3a5f] bg-[#0d1f3c]/50 px-3 py-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#7eb8f7] font-bold">Next usable</p>
+          {brief.nextUseful ? (
+            <div className="mt-1 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold text-white text-sm">{brief.nextUseful.dateLabel} · {brief.nextUseful.startHour}–{brief.nextUseful.endHour}</p>
+                <p className="text-xs text-[#7a9bb5] mt-0.5 truncate">{brief.nextUseful.reason}</p>
+              </div>
+              <div className="text-right shrink-0">
+                {brief.nextUseful.vesselAssessment ? (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: brief.nextUseful.sl.bg, color: brief.nextUseful.sl.fg }}>{brief.nextUseful.sl.label}</span>
+                ) : (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#7a9bb5]/15 text-[#7a9bb5] border border-[#7a9bb5]/30">SL20 n/a</span>
+                )}
+                <p className="text-xs text-[#ff6b35] font-bold mt-1">{brief.nextUseful.peakStars}★ · {brief.nextUseful.hours}h</p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-[#7a9bb5]">No clear useful window left in this forecast range.</p>
+          )}
+        </div>
+
+        <p className="text-[10px] uppercase tracking-[0.14em] text-[#7a9bb5] font-bold mb-1">Best upcoming</p>
         {brief.bestWindows.length === 0 ? (
-          <p className="text-sm text-[#7a9bb5] pb-3">No clear useful window in this range. Check the graph for the least-bad hours.</p>
+          <p className="text-sm text-[#7a9bb5] pb-3">No ranked windows in this range.</p>
         ) : (
           <ul className="space-y-0 divide-y divide-[#1e3a5f]/80">
             {brief.bestWindows.map(w => (
@@ -154,9 +182,13 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
                   <p className="text-xs text-[#7a9bb5] mt-0.5 truncate">{w.reason}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: w.sl.bg, color: w.sl.fg }}>
-                    {w.sl.label}
-                  </span>
+                  {w.vesselAssessment ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: w.sl.bg, color: w.sl.fg }}>
+                      {w.sl.label}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#7a9bb5]/15 text-[#7a9bb5] border border-[#7a9bb5]/30">SL20 n/a</span>
+                  )}
                   <p className="text-xs text-[#ff6b35] font-bold mt-1">{w.peakStars}★ · {w.hours}h</p>
                 </div>
               </li>

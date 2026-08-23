@@ -159,8 +159,6 @@ describe("buildDecisionBrief", () => {
     expect(brief.goNoGo).toBe("no-go");
     expect(brief.risks.length).toBeGreaterThan(0);
   });
-});
-
 
   it("cacheSavedAt forces stale freshness even if fetchedAt is recent", () => {
     const data = fixture({ fetchedAt: "2026-08-23T01:55:00Z" });
@@ -172,6 +170,13 @@ describe("buildDecisionBrief", () => {
     expect(brief.freshnessTone).toBe("stale");
     expect(brief.risks.some(r => /saved forecast copy/i.test(r))).toBe(true);
   });
+
+  it("flags days 9–14 marine horizon risk", () => {
+    const data = { ...fixture(), requestedDays: 14, marineThrough: "2026-08-30" };
+    const brief = buildDecisionBrief(data, { when: new Date("2026-08-22T22:10:00Z") });
+    expect(brief.risks.some(r => /Days 9–14/i.test(r))).toBe(true);
+  });
+});
 
 describe("formatters", () => {
   it("formats wind, swell and tide lines", () => {

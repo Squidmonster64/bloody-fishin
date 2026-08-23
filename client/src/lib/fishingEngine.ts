@@ -1,3 +1,41 @@
+import {
+  fishingScore,
+  hasMarineForVessel,
+  isDaylightHour,
+  isGolden,
+  moonIllumination,
+  moonPhase,
+  moonPhaseEmoji,
+  moonPhaseName,
+  moonTransitTimes,
+  parseHM,
+  rateSL20,
+  type FishingOpts,
+  type SL20Rating,
+} from "@shared/scoring";
+import {
+  assertArray,
+  fetchWithTimeout,
+  HttpError,
+  validateCoordinates,
+  validateForecastDays,
+} from "@shared/http";
+
+export {
+  fishingScore,
+  hasMarineForVessel,
+  isDaylightHour,
+  isGolden,
+  moonIllumination,
+  moonPhase,
+  moonPhaseEmoji,
+  moonPhaseName,
+  moonTransitTimes,
+  parseHM,
+  rateSL20,
+};
+export type { FishingOpts, SL20Rating };
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface Location {
@@ -81,12 +119,6 @@ export interface AppData {
   requestedDays?: number;
 }
 
-export interface SL20Rating {
-  label: "Excellent" | "Go" | "Marginal" | "Avoid";
-  bg: string;
-  fg: string;
-  rank: number;
-}
 
 // ─── Locations ───────────────────────────────────────────────────────────────
 
@@ -179,172 +211,7 @@ export function swellColor(h: number | null): string {
   return "#e05c5c";
 }
 
-/**
- * SL20 boating rating.
- *
- * Wind sets the primary band: Go below 15 kt, Marginal from 15–20 kt and
- * Avoid above 20 kt. Swell is a separate period-aware modifier: short-period
- * swell and wind chop can downgrade a rating, while clean long-period swell
- * is treated more gently than total wave height. It is a small-boat planning
- * guide, not a substitute for skipper judgement or official marine warnings.
- */
-export function rateSL20(
-  windKt: number | null,
-  swellH: number | null,
-  swellP: number | null,
-  waveH: number | null,
-  windWaveH: number | null = null,
-): SL20Rating {
-  const wind = Math.max(0, windKt ?? 0);
-  const swell = Math.max(0, swellH ?? 0);
-  const period = Math.max(1, swellP ?? 9);
-  const totalWave = Math.max(0, waveH ?? 0);
-
-  // Long-period groundswell is generally more orderly than short-period chop.
-  // The factor represents the portion of swell height that affects a 20 ft
-  // runabout's ride. Short-period swell gets the full penalty; 13+ sec swell
-  // is discounted to 45%.
-  const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
-  // Prefer marine API's wind-wave value. If unavailable, infer chop conservatively
-  // from the portion of total wave not accounted for by the primary swell.
-  const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
-  const windChop = Math.max(0, windWaveH ?? inferredWindChop);
-  const shortPeriodSwell = swell * periodFactor;
-
-  // Wind is the clear primary classification. Severe chop or steep, short swell
-  // can still override a calm wind rating, but clean groundswell alone cannot.
-  if (wind > 20 || windChop > 1.5 || (period < 8 && swell > 2.0)) {
-    return { label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0 };
-  }
-  if (wind >= 15 || windChop > 1.1 || (period < 8 && swell > 1.2) || (period < 10 && shortPeriodSwell > 1.35)) {
-    return { label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1 };
-  }
-  if (wind <= 10 && windChop <= 0.35 && swell < 1.0) {
-    return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
-  }
-  return { label: "Go", bg: "rgba(126,184,247,0.2)", fg: "#7eb8f7", rank: 2 };
-}
-
-export function isGolden(input: { windKt: number | null; swellH: number | null; rainProb: number | null; fishStars: number; daylight: boolean }): boolean {
-  return input.daylight && (input.windKt ?? Infinity) <= 10 && (input.swellH ?? Infinity) < 1.0 && input.rainProb === 0 && input.fishStars >= 4;
-}
-
-// ─── Moon & Solunar ──────────────────────────────────────────────────────────
-
-export function moonPhase(date: Date): number {
-  const ref = new Date("2000-01-06T18:14:00Z").getTime();
-  const synodic = 29.53058867;
-  const diff = (date.getTime() - ref) / (1000 * 60 * 60 * 24);
-  let p = (diff / synodic) % 1;
-  if (p < 0) p += 1;
-  return p;
-}
-
-export function moonIllumination(phase: number): number {
-  return (1 - Math.cos(2 * Math.PI * phase)) / 2;
-}
-
-export function moonPhaseName(phase: number): string {
-  if (phase < 0.03 || phase > 0.97) return "New Moon";
-  if (phase < 0.22) return "Waxing Crescent";
-  if (phase < 0.28) return "First Quarter";
-  if (phase < 0.47) return "Waxing Gibbous";
-  if (phase < 0.53) return "Full Moon";
-  if (phase < 0.72) return "Waning Gibbous";
-  if (phase < 0.78) return "Last Quarter";
-  return "Waning Crescent";
-}
-
-export function moonPhaseEmoji(phase: number): string {
-  if (phase < 0.03 || phase > 0.97) return "🌑";
-  if (phase < 0.22) return "🌒";
-  if (phase < 0.28) return "🌓";
-  if (phase < 0.47) return "🌔";
-  if (phase < 0.53) return "🌕";
-  if (phase < 0.72) return "🌖";
-  if (phase < 0.78) return "🌗";
-  return "🌘";
-}
-
-function parseHM(s: string): number | null {
-  if (!s) return null;
-  const [h, m] = s.split(":").map(Number);
-  return h + m / 60;
-}
-
-function isDaylightHour(hour: number, sunrise: string, sunset: string): boolean {
-  const sr = parseHM(sunrise);
-  const ss = parseHM(sunset);
-  return sr == null || ss == null || (hour >= sr && hour <= ss);
-}
-
-export function moonTransitTimes(date: Date, sunriseStr: string, sunsetStr: string) {
-  const sr = parseHM(sunriseStr);
-  const ss = parseHM(sunsetStr);
-  if (sr == null || ss == null) return { transit: 12, underfoot: 0, phase: moonPhase(date) };
-  const solarNoon = (sr + ss) / 2;
-  const phase = moonPhase(date);
-  const transit = (solarNoon + phase * 24) % 24;
-  const underfoot = (transit + 12) % 24;
-  return { transit, underfoot, phase };
-}
-
-// ─── Fishing Score ────────────────────────────────────────────────────────────
-
-interface FishingOpts {
-  hour: number;
-  seaLevelRate: number | null;
-  sunrise: string;
-  sunset: string;
-  moonTimes: { transit: number; underfoot: number; phase: number };
-}
-
-export function fishingScore(opts: FishingOpts): { score: number; stars: number } {
-  const { hour, seaLevelRate, sunrise, sunset, moonTimes } = opts;
-  let score = 35;
-
-  const illum = moonIllumination(moonTimes.phase);
-  if (illum > 0.97 || illum < 0.03) score += 20;
-  else if (illum > 0.85 || illum < 0.15) score += 13;
-  else if (illum > 0.65 || illum < 0.35) score += 5;
-
-  const hrDiff = (a: number, b: number) => {
-    let d = Math.abs(a - b);
-    if (d > 12) d = 24 - d;
-    return d;
-  };
-  const dMajor = Math.min(hrDiff(hour, moonTimes.transit), hrDiff(hour, moonTimes.underfoot));
-  if (dMajor < 0.5)      score += 22;
-  else if (dMajor < 1)   score += 17;
-  else if (dMajor < 1.5) score += 10;
-  else if (dMajor < 2)   score += 5;
-
-  const sr = parseHM(sunrise);
-  const ss = parseHM(sunset);
-  const dMinor = Math.min(
-    sr != null ? hrDiff(hour, sr) : 99,
-    ss != null ? hrDiff(hour, ss) : 99
-  );
-  if (dMinor < 0.5)      score += 15;
-  else if (dMinor < 1)   score += 10;
-  else if (dMinor < 1.5) score += 4;
-
-  const tr = Math.abs(seaLevelRate || 0);
-  if (tr > 0.20)      score += 12;
-  else if (tr > 0.12) score += 10;
-  else if (tr > 0.06) score += 5;
-  else if (tr < 0.01) score -= 4;
-
-  score = Math.max(5, Math.min(100, score));
-
-  let stars = 1;
-  if (score >= 82) stars = 5;
-  else if (score >= 70) stars = 4;
-  else if (score >= 55) stars = 3;
-  else if (score >= 40) stars = 2;
-
-  return { score: Math.round(score), stars };
-}
+// Scoring authority lives in @shared/scoring (re-exported above).
 
 // ─── Tide Extremes ────────────────────────────────────────────────────────────
 
@@ -367,9 +234,12 @@ export function findTideExtremes(rows: HourRow[]): TideExtreme[] {
 // ─── Timezone lookup ─────────────────────────────────────────────────────────
 
 export async function getTimezone(lat: number, lon: number): Promise<string> {
+  const coordErr = validateCoordinates(lat, lon);
+  if (coordErr) throw new Error(coordErr);
   try {
-    const res = await fetch(
-      `https://timeapi.io/api/timezone/coordinate?latitude=${lat}&longitude=${lon}`
+    const res = await fetchWithTimeout(
+      `https://timeapi.io/api/timezone/coordinate?latitude=${lat}&longitude=${lon}`,
+      { timeoutMs: 8_000 },
     );
     if (res.ok) {
       const data = await res.json();
@@ -383,9 +253,12 @@ export async function getTimezone(lat: number, lon: number): Promise<string> {
   return `Etc/GMT${offset >= 0 ? "-" : "+"}${Math.abs(offset)}`;
 }
 
-// ─── Data Fetch ───────────────────────────────────────────────────────────────
-
 export async function fetchFishingData(loc: Location, days: number, timezone: string): Promise<AppData> {
+  const coordErr = validateCoordinates(loc.lat, loc.lon);
+  if (coordErr) throw new Error(coordErr);
+  const daysErr = validateForecastDays(days);
+  if (daysErr) throw new Error(daysErr);
+
   const { lat, lon } = loc;
   const marineDays = Math.min(days, 8);
 
@@ -403,21 +276,33 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     `&hourly=wave_height,wave_period,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,sea_level_height_msl` +
     `&timezone=${encodeURIComponent(timezone)}&forecast_days=${marineDays}&cell_selection=sea`;
 
-  const [wRes, mRes] = await Promise.all([
-    fetch(weatherUrl),
-    fetch(marineUrl).catch(() => null),
-  ]);
+  let wRes: Response;
+  let mRes: Response | null;
+  try {
+    const pair = await Promise.all([
+      fetchWithTimeout(weatherUrl, { timeoutMs: 12_000 }),
+      fetchWithTimeout(marineUrl, { timeoutMs: 12_000 }).catch(() => null),
+    ]);
+    wRes = pair[0];
+    mRes = pair[1];
+  } catch (error) {
+    if (error instanceof HttpError) throw new Error(`Weather API: ${error.message}`);
+    throw error;
+  }
 
   if (!wRes.ok) throw new Error(`Weather API: HTTP ${wRes.status}`);
   const w = await wRes.json();
+  if (!w || typeof w !== "object") throw new Error("Weather API: malformed JSON body.");
   const marineUnavailable = !(mRes && mRes.ok);
   const m = mRes && mRes.ok ? await mRes.json() : { hourly: {} };
 
   const wh = w.hourly || {};
   const mh = m.hourly || {};
-  const times: string[] = wh.time || [];
+  if (!wh.time) throw new HttpError("Malformed provider data: weather.hourly.time is missing.");
+  const times: string[] = assertArray<string>(wh.time, "weather.hourly.time");
   const marineTimeIdx: Record<string, number> = {};
-  (mh.time || []).forEach((t: string, i: number) => { marineTimeIdx[t] = i; });
+  const marineTimesRaw = Array.isArray(mh.time) ? mh.time as string[] : [];
+  marineTimesRaw.forEach((t: string, i: number) => { marineTimeIdx[t] = i; });
 
   const merged: HourRow[] = times.map((t, i) => {
     const dt = new Date(t);
