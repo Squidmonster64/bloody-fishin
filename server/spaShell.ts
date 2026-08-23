@@ -6,6 +6,17 @@ import { getCached, setCached } from "./ops.js";
 
 const PLACEHOLDER = "<!--READER_BRIEF-->";
 
+const READER_STYLES = `<style id="reader-shell-styles">
+#reader-shell{font-family:Inter,system-ui,sans-serif;background:#0a1628;color:#c5d6e8;padding:1rem 1.25rem 2rem;line-height:1.5}
+#reader-shell h1{color:#ff6b35;font-size:1.25rem;margin:0 0 .5rem}
+#reader-shell a{color:#7eb8f7}
+#reader-shell pre{white-space:pre-wrap;word-break:break-word;background:#0d1f3c;border:1px solid #1e3a5f;border-radius:.5rem;padding:.75rem;font-size:.75rem;max-height:70vh;overflow:auto}
+.js #reader-shell{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>`;
+
+const READER_LINKS = `<link rel="alternate" type="application/json" href="/brief.json?spot=freo&amp;days=7" title="Forecast JSON" />
+<link rel="alternate" type="text/markdown" href="/brief?spot=freo&amp;days=7" title="Forecast Markdown" />`;
+
 let indexTemplate: string | null = null;
 
 function escapeHtml(text: string): string {
@@ -53,6 +64,25 @@ function readerBriefBlock(markdown: string): string {
 </section>`;
 }
 
+function readerShellHeader(): string {
+  return `<div id="reader-shell">
+<header>
+<h1>Bloody Dave's Fishing Planner</h1>
+<p>Interactive planner for SL20 boating and fishing conditions. The full app needs JavaScript. Automated readers should use the server endpoints below.</p>
+<ul>
+<li><a href="/brief?spot=freo&amp;days=7">Markdown forecast — /brief</a></li>
+<li><a href="/brief.json?spot=freo&amp;days=7">JSON forecast — /brief.json</a></li>
+<li><a href="/?format=markdown">This page as markdown — ?format=markdown</a></li>
+<li><a href="/health">Health — /health</a></li>
+</ul>
+</header>`;
+}
+
+function readerShellFooter(): string {
+  return `<noscript><p><strong>JavaScript is disabled.</strong> Use the links above or the forecast snapshot below.</p></noscript>
+</div>`;
+}
+
 export async function loadIndexTemplate(staticPath: string): Promise<string> {
   if (!indexTemplate) {
     indexTemplate = await fs.readFile(path.join(staticPath, "index.html"), "utf8");
@@ -60,11 +90,39 @@ export async function loadIndexTemplate(staticPath: string): Promise<string> {
   return indexTemplate;
 }
 
+/** Inject reader content into legacy or current index.html shells. */
 export async function renderIndexHtml(staticPath: string, injectBrief = true): Promise<string> {
-  const template = await loadIndexTemplate(staticPath);
-  if (!injectBrief || !template.includes(PLACEHOLDER)) return template;
+  let html = await loadIndexTemplate(staticPath);
+  if (!injectBrief) return html;
+
   const md = await defaultBriefMarkdown();
-  return template.replace(PLACEHOLDER, readerBriefBlock(md));
+  const brief = readerBriefBlock(md);
+
+  if (html.includes(PLACEHOLDER)) {
+    return html.replace(PLACEHOLDER, brief);
+  }
+
+  if (!html.includes('id="reader-shell"')) {
+    if (!html.includes("reader-shell-styles")) {
+      html = html.includes("</head>")
+        ? html.replace("</head>", `${READER_LINKS}\n${READER_STYLES}\n<script>document.documentElement.classList.add("js");</script>\n</head>`)
+        : html;
+    }
+    const shell = `${readerShellHeader()}${brief}${readerShellFooter()}`;
+    html = html.includes('<div id="root"></div>')
+      ? html.replace('<div id="root"></div>', `${shell}\n<div id="root"></div>`)
+      : html.replace("</body>", `${shell}\n</body>`);
+  } else if (!html.includes('id="reader-brief"')) {
+    html = html.replace(
+      "<!--READER_BRIEF-->",
+      brief,
+    ).replace(
+      "</header>",
+      `</header>${brief}`,
+    );
+  }
+
+  return html;
 }
 
 export async function serveRoot(req: Request, res: Response, staticPath: string): Promise<boolean> {

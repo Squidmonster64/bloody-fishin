@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resetOpsState } from "./ops.js";
@@ -58,6 +59,49 @@ describe("renderIndexHtml", () => {
     expect(html).toContain('id="reader-brief"');
     expect(html).toContain("Fremantle Offshore");
     expect(html).not.toContain("<!--READER_BRIEF-->");
+    vi.unstubAllGlobals();
+  });
+
+  it("injects into legacy shells without READER_BRIEF placeholder", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).includes("marine-api")) {
+          return new Response(JSON.stringify({ hourly: { time: [] } }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            timezone: "Australia/Perth",
+            hourly: {
+              time: ["2026-08-23T06:00"],
+              temperature_2m: [18],
+              wind_speed_10m: [8],
+              wind_gusts_10m: [12],
+              precipitation_probability: [0],
+            },
+            daily: { time: ["2026-08-23"], sunrise: ["2026-08-23T06:30"], sunset: ["2026-08-23T18:00"] },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+
+    const legacyPath = path.resolve(__dirname, "..", "tmp-legacy-shell");
+    await fs.mkdir(legacyPath, { recursive: true });
+    await fs.writeFile(
+      path.join(legacyPath, "index.html"),
+      '<!doctype html><html><head><title>legacy</title></head><body><div id="root"></div></body></html>',
+      "utf8",
+    );
+
+    const { renderIndexHtml } = await import("./spaShell.js");
+    const html = await renderIndexHtml(legacyPath, true);
+    expect(html).toContain('id="reader-shell"');
+    expect(html).toContain('id="reader-brief"');
+    expect(html).toContain("Fremantle Offshore");
     vi.unstubAllGlobals();
   });
 });
