@@ -26,7 +26,7 @@ export function TabBar({ view, onViewChange, placement = "top" }: Props) {
       className={
         isBottom
           ? "fixed bottom-0 inset-x-0 z-50 bg-[var(--surface)] border-t border-[var(--border)] flex print:hidden pb-[env(safe-area-inset-bottom)]"
-          : "bg-[var(--surface)] border-b border-[var(--border)] flex overflow-x-auto sticky top-0 z-40 scrollbar-hide print:hidden"
+            : "bg-[var(--surface)] border-b border-[var(--border)] flex overflow-x-auto sticky top-[3.75rem] z-40 scrollbar-hide print:hidden"
       }
       aria-label="Primary views"
     >
