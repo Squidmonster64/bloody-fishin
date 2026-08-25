@@ -224,11 +224,11 @@ button, select, input {
   header h1 { font-size: 1.15rem !important; }
   header p  { font-size: 10px !important; }
 
-  /* Tab bar — full-width tabs, big text */
+  /* Tab bar — full-width tabs, big text (top or bottom) */
   nav button {
-    font-size: 13px !important;
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
+    font-size: 12px !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
     min-height: 52px !important;
   }
 

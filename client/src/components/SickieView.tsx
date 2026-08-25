@@ -148,65 +148,65 @@ function CriteriaPanel({
   ].filter(Boolean).join(" · ");
 
   return (
-    <div className="bg-[#0d1f3c] border border-[#1e3a5f] rounded-xl overflow-hidden">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
       {/* Toggle header */}
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#1e3a5f]/30 transition-colors min-h-[52px]"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-raised)]/30 transition-colors min-h-[52px]"
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2">
           <span className="text-xl">{activeEmoji}</span>
           <div className="text-left">
-            <p className="text-white font-bold text-sm">{activeLabel}</p>
-            <p className="text-[#7a9bb5] text-[10px]">{activeDescription}</p>
+            <p className="text-[var(--text)] font-bold text-sm">{activeLabel}</p>
+            <p className="text-[var(--text-muted)] text-[10px]">{activeDescription}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-[#7a9bb5]">{criteriaSummary}</span>
-          <span className="text-[#7a9bb5] text-xs">{open ? "▲" : "▼"}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{criteriaSummary}</span>
+          <span className="text-[var(--text-muted)] text-xs">{open ? "▲" : "▼"}</span>
         </div>
       </button>
 
       {open && (
-        <div className="px-4 pb-4 border-t border-[#1e3a5f] space-y-4">
+        <div className="px-4 pb-4 border-t border-[var(--border)] space-y-4">
           {/* Vessel preset buttons */}
           <div>
-            <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider mt-3 mb-2">Vessel Type</p>
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-3 mb-2">Vessel Type</p>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(VESSEL_PRESETS) as VesselPreset[]).map(p => (
                 <button key={p} onClick={() => onPresetChange(p)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold border transition-all min-h-[36px]
-                    ${preset === p ? "bg-[#ff6b35] border-[#ff6b35] text-white" : "bg-[#0a1628] border-[#1e3a5f] text-[#7a9bb5] hover:border-[#ff6b35] hover:text-white"}`}>
+                    ${preset === p ? "bg-[var(--action)] border-[var(--action)] text-white" : "bg-[var(--app-bg)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--action)] hover:text-[var(--text)]"}`}>
                   {VESSEL_PRESETS[p].emoji} {VESSEL_PRESETS[p].label}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="border-t border-[#1e3a5f] pt-3">
+          <div className="border-t border-[var(--border)] pt-3">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div>
-                <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">My Vessel Profiles</p>
-                <p className="text-[10px] text-[#3a5a7a] mt-0.5">Your saved profiles stay on this device. Edits to an active profile save automatically.</p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">My Vessel Profiles</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Your saved profiles stay on this device. Edits to an active profile save automatically.</p>
               </div>
-              <button onClick={() => setShowSave(v => !v)} className="min-h-[36px] flex-shrink-0 rounded border border-[#ff6b35] px-2.5 text-xs font-bold text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white">+ Save current</button>
+              <button onClick={() => setShowSave(v => !v)} className="min-h-[36px] flex-shrink-0 rounded border border-[var(--action)] px-2.5 text-xs font-bold text-[var(--action)] hover:bg-[var(--action)] hover:text-white">+ Save current</button>
             </div>
             {profiles.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {profiles.map(profile => (
-                  <div key={profile.id} className={`flex items-center overflow-hidden rounded border ${activeProfileId === profile.id ? "border-[#ff6b35] bg-[#ff6b35]/15" : "border-[#1e3a5f] bg-[#0a1628]"}`}>
-                    <button onClick={() => onProfileChange(profile)} className="min-h-[38px] px-3 text-xs font-semibold text-white">{profile.emoji} {profile.name}</button>
-                    <button onClick={() => onDeleteProfile(profile.id)} className="min-h-[38px] px-2 text-sm text-[#7a9bb5] hover:text-red-400" title={`Delete ${profile.name}`} aria-label={`Delete ${profile.name}`}>×</button>
+                  <div key={profile.id} className={`flex items-center overflow-hidden rounded border ${activeProfileId === profile.id ? "border-[var(--action)] bg-[var(--action)]/15" : "border-[var(--border)] bg-[var(--app-bg)]"}`}>
+                    <button onClick={() => onProfileChange(profile)} className="min-h-[38px] px-3 text-xs font-semibold text-[var(--text)]">{profile.emoji} {profile.name}</button>
+                    <button onClick={() => onDeleteProfile(profile.id)} className="min-h-[38px] px-2 text-sm text-[var(--text-muted)] hover:text-red-400" title={`Delete ${profile.name}`} aria-label={`Delete ${profile.name}`}>×</button>
                   </div>
                 ))}
               </div>
-            ) : <p className="text-xs text-[#7a9bb5]">Set your comfort limits, then save a named profile for each vessel.</p>}
+            ) : <p className="text-xs text-[var(--text-muted)]">Set your comfort limits, then save a named profile for each vessel.</p>}
             {showSave && (
-              <div className="grid grid-cols-1 sm:grid-cols-[68px_1fr] gap-2 mt-3 rounded-lg border border-[#1e3a5f] bg-[#0a1628] p-3">
-                <input value={profileEmoji} onChange={e => setProfileEmoji(e.target.value)} maxLength={4} aria-label="Vessel emoji" className="min-h-[44px] rounded border border-[#1e3a5f] bg-[#0d1f3c] px-3 text-lg text-white" />
-                <input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Vessel name, e.g. Dave's 5.5m centre console" className="min-h-[44px] rounded border border-[#1e3a5f] bg-[#0d1f3c] px-3 text-sm text-white placeholder:text-[#3a5a7a]" />
-                <input value={profileNotes} onChange={e => setProfileNotes(e.target.value)} placeholder="Optional notes: hull, crew or comfort limits" className="min-h-[44px] rounded border border-[#1e3a5f] bg-[#0d1f3c] px-3 text-sm text-white placeholder:text-[#3a5a7a] sm:col-span-2" />
-                <div className="flex gap-2 sm:col-span-2"><button onClick={saveProfile} className="min-h-[42px] rounded bg-[#ff6b35] px-4 text-sm font-bold text-white">Save vessel</button><button onClick={() => setShowSave(false)} className="min-h-[42px] rounded border border-[#1e3a5f] px-4 text-sm font-semibold text-[#7a9bb5]">Cancel</button></div>
+              <div className="grid grid-cols-1 sm:grid-cols-[68px_1fr] gap-2 mt-3 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] p-3">
+                <input value={profileEmoji} onChange={e => setProfileEmoji(e.target.value)} maxLength={4} aria-label="Vessel emoji" className="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 text-lg text-[var(--text)]" />
+                <input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Vessel name, e.g. Dave's 5.5m centre console" className="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)]" />
+                <input value={profileNotes} onChange={e => setProfileNotes(e.target.value)} placeholder="Optional notes: hull, crew or comfort limits" className="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] sm:col-span-2" />
+                <div className="flex gap-2 sm:col-span-2"><button onClick={saveProfile} className="min-h-[42px] rounded bg-[var(--action)] px-4 text-sm font-bold text-white">Save vessel</button><button onClick={() => setShowSave(false)} className="min-h-[42px] rounded border border-[var(--border)] px-4 text-sm font-semibold text-[var(--text-muted)]">Cancel</button></div>
               </div>
             )}
           </div>
@@ -226,19 +226,19 @@ function CriteriaPanel({
             <OptionalSlider label="Max Wind Chop" value={criteria.maxWindWaveH} min={0.1} max={1.8} step={0.1} unit="m" color="#38bdf8" onChange={v => set("maxWindWaveH", v)} />
             <OptionalSlider label="Max Rain Chance" value={criteria.maxRainProb} min={0} max={100} step={5} unit="%" color="#60a5fa" onChange={v => set("maxRainProb", v)} />
             <div>
-              <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider mb-1">Min Fishing Stars</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Min Fishing Stars</p>
               <div className="flex gap-1">
                 {([1,2,3,4,5] as const).map(s => (
                   <button key={s} onClick={() => set("minFishStars", s as SickieCriteria["minFishStars"])}
                     className={`flex-1 py-1.5 rounded text-sm font-bold border transition-all min-h-[36px]
-                      ${criteria.minFishStars === s ? "bg-yellow-400 border-yellow-400 text-[#0a1628]" : "bg-[#0a1628] border-[#1e3a5f] text-[#7a9bb5] hover:border-yellow-400"}`}>
+                      ${criteria.minFishStars === s ? "bg-yellow-400 border-yellow-400 text-[var(--app-bg)]" : "bg-[var(--app-bg)] border-[var(--border)] text-[var(--text-muted)] hover:border-yellow-400"}`}>
                     {"★".repeat(s)}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider mb-1">Min SL20 Rating</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Min SL20 Rating</p>
               <div className="flex gap-1">
                 {([
                   { rank: 1 as const, label: "Marginal", color: "#f5a623" },
@@ -247,7 +247,7 @@ function CriteriaPanel({
                 ]).map(({ rank, label, color }) => (
                   <button key={rank} onClick={() => set("minSL20Rank", rank)}
                     className={`flex-1 py-1.5 rounded text-[10px] font-bold border transition-all min-h-[36px]
-                      ${criteria.minSL20Rank === rank ? "text-[#0a1628]" : "bg-[#0a1628] border-[#1e3a5f] text-[#7a9bb5] hover:border-white"}`}
+                      ${criteria.minSL20Rank === rank ? "text-[var(--app-bg)]" : "bg-[var(--app-bg)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text)]"}`}
                     style={criteria.minSL20Rank === rank ? { backgroundColor: color, borderColor: color } : {}}>
                     {label}
                   </button>
@@ -263,7 +263,7 @@ function CriteriaPanel({
               onChange={v => set("minWindowHours", v)}
             />
             <button onClick={() => set("daylightOnly", !criteria.daylightOnly)}
-              className={`min-h-[64px] rounded-lg border px-3 text-left transition-colors ${criteria.daylightOnly ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-200" : "border-[#1e3a5f] bg-[#0a1628] text-[#7a9bb5]"}`}>
+              className={`min-h-[64px] rounded-lg border px-3 text-left transition-colors ${criteria.daylightOnly ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-200" : "border-[var(--border)] bg-[var(--app-bg)] text-[var(--text-muted)]"}`}>
               <span className="block text-[10px] uppercase tracking-wider">Daylight-only windows</span>
               <span className="mt-1 block text-sm font-bold">{criteria.daylightOnly ? "☀️ On — night hours excluded" : "🌙 Off — night hours allowed"}</span>
             </button>
@@ -271,15 +271,15 @@ function CriteriaPanel({
 
           {/* Algorithm explanation */}
           <details className="mt-2">
-            <summary className="text-[10px] text-[#7a9bb5] cursor-pointer hover:text-white transition-colors">
+            <summary className="text-[10px] text-[var(--text-muted)] cursor-pointer hover:text-[var(--text)] transition-colors">
               📖 How the algorithm works
             </summary>
-            <div className="mt-2 text-[10px] text-[#7a9bb5] space-y-1 leading-relaxed bg-[#0a1628] rounded p-3 border border-[#1e3a5f]">
-              <p><strong className="text-white">SL20 Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
-              <p><strong className="text-white">Fishing Score (0–100%)</strong> — Fishing is calculated only from sun, moon and tide: moon phase, moon transit/underfoot, sunrise/sunset and tide movement. Weather is kept separate, so a rain or wind forecast cannot quietly alter the fishing score.</p>
-              <p><strong className="text-white">Golden Window</strong> — The SL20 default is daylight, wind≤10kt, swell&lt;1.0m, rain chance 0%, fishing≥4★, and at least three consecutive qualifying hours.</p>
-              <p><strong className="text-white">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>
-              <p><strong className="text-white">Window</strong> — Consecutive hours where ALL active criteria are met. Windows shorter than "Min Window Length" are discarded. With daylight-only enabled, night hours cannot qualify.</p>
+            <div className="mt-2 text-[10px] text-[var(--text-muted)] space-y-1 leading-relaxed bg-[var(--app-bg)] rounded p-3 border border-[var(--border)]">
+              <p><strong className="text-[var(--text)]">SL20 Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
+              <p><strong className="text-[var(--text)]">Fishing Score (0–100%)</strong> — Fishing is calculated only from sun, moon and tide: moon phase, moon transit/underfoot, sunrise/sunset and tide movement. Weather is kept separate, so a rain or wind forecast cannot quietly alter the fishing score.</p>
+              <p><strong className="text-[var(--text)]">Golden Window</strong> — The SL20 default is daylight, wind≤10kt, swell&lt;1.0m, rain chance 0%, fishing≥4★, and at least three consecutive qualifying hours.</p>
+              <p><strong className="text-[var(--text)]">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>
+              <p><strong className="text-[var(--text)]">Window</strong> — Consecutive hours where ALL active criteria are met. Windows shorter than "Min Window Length" are discarded. With daylight-only enabled, night hours cannot qualify.</p>
             </div>
           </details>
         </div>
@@ -295,7 +295,7 @@ function SliderField({ label, value, min, max, step, unit, color, onChange }: {
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
-        <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{label}</p>
         <span className="text-sm font-bold" style={{ color }}>{value}{unit}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
@@ -303,7 +303,7 @@ function SliderField({ label, value, min, max, step, unit, color, onChange }: {
         className="w-full h-2 rounded-full appearance-none cursor-pointer"
         style={{ accentColor: color }}
       />
-      <div className="flex justify-between text-[9px] text-[#3a5a7a] mt-0.5">
+      <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
         <span>{min}{unit}</span><span>{max}{unit}</span>
       </div>
     </div>
@@ -318,18 +318,18 @@ function OptionalSlider({ label, value, min, max, step, unit, color, onChange }:
     return (
       <div>
         <div className="flex items-center justify-between mb-1">
-          <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">{label}</p>
-          <button onClick={() => onChange(min)} className="rounded border border-[#1e3a5f] px-2 py-0.5 text-[10px] font-semibold text-[#7a9bb5] hover:border-[#ff6b35] hover:text-white">No limit · Add</button>
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{label}</p>
+          <button onClick={() => onChange(min)} className="rounded border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-muted)] hover:border-[var(--action)] hover:text-[var(--text)]">No limit · Add</button>
         </div>
-        <div className="min-h-[44px] rounded border border-dashed border-[#1e3a5f] bg-[#0a1628] px-3 py-3 text-xs text-[#7a9bb5]">Not used by this vessel profile</div>
+        <div className="min-h-[44px] rounded border border-dashed border-[var(--border)] bg-[var(--app-bg)] px-3 py-3 text-xs text-[var(--text-muted)]">Not used by this vessel profile</div>
       </div>
     );
   }
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <p className="text-[10px] text-[#7a9bb5] uppercase tracking-wider">{label}</p>
-        <button onClick={() => onChange(null)} className="rounded border border-[#1e3a5f] px-2 py-0.5 text-[10px] font-semibold text-[#7a9bb5] hover:border-[#ff6b35] hover:text-white">Remove limit</button>
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{label}</p>
+        <button onClick={() => onChange(null)} className="rounded border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-muted)] hover:border-[var(--action)] hover:text-[var(--text)]">Remove limit</button>
       </div>
       <SliderField label="" value={value} min={min} max={max} step={step} unit={unit} color={color} onChange={onChange} />
     </div>
@@ -354,10 +354,10 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
   }
   return (
     <div className={`rounded-xl border overflow-hidden
-      ${isNext ? "border-yellow-400 shadow-lg shadow-yellow-400/20" : "border-[#1e3a5f]"}`}>
+      ${isNext ? "border-yellow-400 shadow-lg shadow-yellow-400/20" : "border-[var(--border)]"}`}>
       {/* Header */}
       <div className={`px-4 py-3 flex items-center justify-between gap-2 flex-wrap
-        ${isNext ? "bg-yellow-400/15" : "bg-[#0d1f3c]"}`}>
+        ${isNext ? "bg-yellow-400/15" : "bg-[var(--surface)]"}`}>
         <div>
           {isNext && (
             <div className="text-yellow-400 text-xs font-bold uppercase tracking-wider mb-0.5">
@@ -365,18 +365,18 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
             </div>
           )}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white font-bold text-sm">{win.dateLabel}</span>
-            {win.allNight && <span className="text-[#7a9bb5] text-[10px] bg-[#0a1628] px-1.5 py-0.5 rounded">🌙 Night only</span>}
-            {win.hasDaylight && !win.allNight && <span className="text-yellow-300 text-[10px] bg-[#0a1628] px-1.5 py-0.5 rounded">☀️ Includes daylight</span>}
+            <span className="text-[var(--text)] font-bold text-sm">{win.dateLabel}</span>
+            {win.allNight && <span className="text-[var(--text-muted)] text-[10px] bg-[var(--app-bg)] px-1.5 py-0.5 rounded">🌙 Night only</span>}
+            {win.hasDaylight && !win.allNight && <span className="text-yellow-300 text-[10px] bg-[var(--app-bg)] px-1.5 py-0.5 rounded">☀️ Includes daylight</span>}
           </div>
-          <div className="text-[#7a9bb5] text-xs mt-0.5">
+          <div className="text-[var(--text-muted)] text-xs mt-0.5">
             {win.startHour} – {win.endHour}
             <span className="ml-2">({win.hours.length} hr{win.hours.length > 1 ? "s" : ""})</span>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-[#ff6b35] font-bold text-lg">{win.peakFish}%</span>
+            <span className="text-[var(--action)] font-bold text-lg">{win.peakFish}%</span>
             <span className="text-yellow-400 text-sm">{"★".repeat(win.peakStars)}</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: win.slBg, color: win.slFg }}>
@@ -386,23 +386,23 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
       </div>
 
       {/* Conditions */}
-      <div className="px-4 py-2 bg-[#0a1628] flex flex-wrap gap-3 text-xs border-t border-[#1e3a5f]">
+      <div className="px-4 py-2 bg-[var(--app-bg)] flex flex-wrap gap-3 text-xs border-t border-[var(--border)]">
         {win.minWind != null && <span style={{ color: windColor(win.minWind) }}>💨 Wind {Math.round(win.minWind)}kt</span>}
         {win.maxSwell != null && <span style={{ color: swellColor(win.maxSwell) }}>🌊 Swell {fmt(win.maxSwell)}m</span>}
         {win.hours[0].seaLevel != null && <span className="text-[#a78bfa]">Tide {fmt(win.hours[0].seaLevel)}m</span>}
-        <button onClick={addToCalendar} className="ml-auto min-h-[32px] rounded border border-[#1e3a5f] px-2.5 text-xs font-bold text-[#7eb8f7] hover:border-[#ff6b35] hover:text-white">📅 Calendar</button>
+        <button onClick={addToCalendar} className="ml-auto min-h-[32px] rounded border border-[var(--border)] px-2.5 text-xs font-bold text-[var(--action)] hover:border-[var(--action)] hover:text-[var(--text)]">📅 Calendar</button>
       </div>
 
       {/* Hourly strip */}
-      <div className="overflow-x-auto px-3 py-2 bg-[#0d1f3c] scrollbar-hide">
+      <div className="overflow-x-auto px-3 py-2 bg-[var(--surface)] scrollbar-hide">
         <div className="flex gap-1 min-w-max">
           {win.hours.map(row => {
             const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
             return (
               <div key={row.time}
                 className="flex flex-col items-center gap-0.5 bg-yellow-400/10 ring-1 ring-yellow-400/40 rounded px-1.5 py-1 min-w-[44px]">
-                <span className="text-[9px] text-[#7a9bb5] font-mono">{row.hourLabel}</span>
-                <span className="text-[11px] font-bold" style={{ color: "#ff6b35" }}>{row.fishScore}%</span>
+                <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
+                <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
                 <span className="text-yellow-400 text-[9px]">{"★".repeat(row.fishStars)}</span>
                 <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
                   {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
@@ -470,18 +470,18 @@ export function SickieView({ data }: Props) {
   return (
     <div className="overflow-y-auto p-3 flex flex-col gap-3 pb-8">
       {/* Header */}
-      <div className="bg-[#0d1f3c] border border-[#1e3a5f] rounded-xl p-4">
-        <h2 className="text-[#ff6b35] font-black text-lg" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+        <h2 className="text-[var(--action)] font-black text-lg" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>
           🎣 Sickie Forecast
         </h2>
-        <p className="text-[#7a9bb5] text-xs mt-1">
+        <p className="text-[var(--text-muted)] text-xs mt-1">
           Upcoming windows where boating and fishing conditions both meet your vessel's thresholds.
           Windows shorter than the minimum are discarded.
         </p>
         <div className="flex flex-wrap gap-2 mt-2 text-xs">
-          <span className="text-[#7a9bb5]">📍 {data.location.name}</span>
-          <span className="text-[#7a9bb5]">·</span>
-          <span className="text-[#7a9bb5]">🌐 {data.timezone}</span>
+          <span className="text-[var(--text-muted)]">📍 {data.location.name}</span>
+          <span className="text-[var(--text-muted)]">·</span>
+          <span className="text-[var(--text-muted)]">🌐 {data.timezone}</span>
         </div>
       </div>
 
@@ -502,12 +502,12 @@ export function SickieView({ data }: Props) {
       {windows.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
           <p className="text-4xl">😢</p>
-          <p className="text-[#7a9bb5] text-sm">No qualifying windows in the forecast period.</p>
-          <p className="text-[#7a9bb5] text-xs">Try relaxing the criteria above, extending the forecast range, or checking another location.</p>
+          <p className="text-[var(--text-muted)] text-sm">No qualifying windows in the forecast period.</p>
+          <p className="text-[var(--text-muted)] text-xs">Try relaxing the criteria above, extending the forecast range, or checking another location.</p>
         </div>
       ) : (
         <>
-          <div className="text-xs text-[#7a9bb5] px-1">
+          <div className="text-xs text-[var(--text-muted)] px-1">
             Found <strong className="text-yellow-400">{windows.length}</strong> window{windows.length > 1 ? "s" : ""} ≥ {criteria.minWindowHours}hr in the next {data.daily.length} days
           </div>
           {windows.map((win, i) => (
