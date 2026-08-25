@@ -31,7 +31,8 @@ const VIS_KEYS: { key: keyof FishingState["vis"]; label: string; color: string }
   { key: "fish",  label: "Fish %",     color: "#f59e0b" },
   { key: "tide",  label: "Tide (m)",   color: "#a78bfa" },
   { key: "temp",  label: "Temp (°C)",  color: "#fbbf24" },
-  { key: "rain",  label: "Rain %",     color: "#60a5fa" },
+  // Cyan — must stay distinct from wind action-blue (#3b82f6)
+  { key: "rain",  label: "Rain %",     color: "#22d3ee" },
 ];
 
 export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Props) {
@@ -94,7 +95,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
     if (vis.rain) datasets.push({
       label: "Rain %", yAxisID: "y3",
       data: allRows.map(r => r.rainProb),
-      borderColor: "#60a5fa", backgroundColor: "rgba(96,165,250,0.06)",
+      borderColor: "#22d3ee", backgroundColor: "rgba(34,211,238,0.08)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
 
@@ -143,6 +144,35 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
               title: (items) => {
                 const row = allRows[items[0].dataIndex];
                 return row ? row.label : "";
+              },
+              label: (item) => {
+                const row = allRows[item.dataIndex];
+                const raw = item.parsed.y;
+                const num = raw == null || Number.isNaN(raw) ? null : Number(raw);
+                const label = item.dataset.label ?? "";
+
+                if (label.startsWith("Wind")) {
+                  const speed = num == null ? "—" : `${Math.round(num)} kt`;
+                  const dir = degToCompass(row?.windDir ?? null);
+                  const gust =
+                    row?.gustKt != null ? ` · gust ${Math.round(row.gustKt)} kt` : "";
+                  return dir && dir !== "—"
+                    ? `Wind: ${speed} ${dir}${gust}`
+                    : `Wind: ${speed}${gust}`;
+                }
+                if (label.startsWith("Swell") && row) {
+                  const h = num == null ? "—" : `${fmt(num)} m`;
+                  const period = row.swellP != null ? ` @ ${Math.round(row.swellP)}s` : "";
+                  const dir = degToCompass(row.swellDir);
+                  const dirPart = dir && dir !== "—" ? ` ${dir}` : "";
+                  return `Swell: ${h}${period}${dirPart}`;
+                }
+                if (num == null) return `${label}: —`;
+                if (label.startsWith("Fish")) return `Fish: ${Math.round(num)}%`;
+                if (label.startsWith("Tide")) return `Tide: ${fmt(num)} m`;
+                if (label.startsWith("Temp")) return `Temp: ${fmt(num, 0)}°C`;
+                if (label.startsWith("Rain")) return `Rain: ${Math.round(num)}%`;
+                return `${label}: ${num}`;
               },
             },
           },
