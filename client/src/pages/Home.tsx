@@ -33,7 +33,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a1628] text-white font-sans">
+    <div className="min-h-screen flex flex-col bg-[var(--app-bg)] text-[var(--text)] font-sans">
       <Header />
       <Controls
         state={state}
@@ -109,7 +109,7 @@ export default function Home() {
       )}
       {showBrief && state.data && <BriefingSheet data={state.data} onClose={() => setShowBrief(false)} />}
       {showCompare && state.data && <CompareSpotsSheet baseData={state.data} savedSpots={spots} onClose={() => setShowCompare(false)} />}
-      <footer className="border-t border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-center text-[10px] leading-relaxed text-[#7a9bb5]">
+      <footer className="border-t border-[var(--border)] bg-[var(--app-bg)] px-3 py-2 text-center text-[10px] leading-relaxed text-[var(--text-muted)]">
         Planning aid for Australian fishing and small-boat decisions. Always check official Bureau of Meteorology marine warnings, local knowledge and skipper judgement before you go.
       </footer>
     </div>

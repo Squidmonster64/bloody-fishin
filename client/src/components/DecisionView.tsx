@@ -1,6 +1,7 @@
 /**
  * DecisionView — mobile-first go/no-go home.
- * Progressive disclosure: decision → windows → conditions → detail links → why/raw.
+ * Progressive disclosure: decision → conditions → windows → detail → why/raw.
+ * Visual port to Figma marine-instrument aesthetic; data from buildDecisionBrief only.
  */
 import { useMemo, useState } from "react";
 import type { AppData } from "@/lib/fishingEngine";
@@ -22,44 +23,111 @@ interface Props {
   onRefresh: () => void;
 }
 
-const GO_STYLES: Record<GoNoGo, { bar: string; badge: string; label: string }> = {
-  go: { bar: "from-[#0d2a22] via-[#0a1628] to-[#0a1628]", badge: "bg-[#3ecf8e]/20 text-[#3ecf8e] border-[#3ecf8e]/40", label: "GO" },
-  caution: { bar: "from-[#2a2210] via-[#0a1628] to-[#0a1628]", badge: "bg-[#f5a623]/20 text-[#f5a623] border-[#f5a623]/40", label: "CAUTION" },
-  "no-go": { bar: "from-[#2a1212] via-[#0a1628] to-[#0a1628]", badge: "bg-[#e05c5c]/20 text-[#e05c5c] border-[#e05c5c]/40", label: "NO-GO" },
-  outlook: { bar: "from-[#12202a] via-[#0a1628] to-[#0a1628]", badge: "bg-[#7eb8f7]/15 text-[#7eb8f7] border-[#7eb8f7]/30", label: "OUTLOOK" },
+const GO_STYLES: Record<
+  GoNoGo,
+  { badge: string; border: string; label: string }
+> = {
+  go: {
+    badge: "bg-[color-mix(in_srgb,var(--success)_15%,transparent)] text-[var(--success)]",
+    border: "border-[var(--success)]",
+    label: "GO",
+  },
+  caution: {
+    badge: "bg-[color-mix(in_srgb,var(--warning)_15%,transparent)] text-[var(--warning)]",
+    border: "border-[var(--warning)]",
+    label: "CAUTION",
+  },
+  "no-go": {
+    badge: "bg-[color-mix(in_srgb,var(--danger)_15%,transparent)] text-[var(--danger)]",
+    border: "border-[var(--danger)]",
+    label: "NO-GO",
+  },
+  outlook: {
+    badge: "bg-[color-mix(in_srgb,var(--action)_15%,transparent)] text-[var(--action)]",
+    border: "border-[var(--action)]",
+    label: "OUTLOOK",
+  },
 };
 
 const FRESH_STYLES = {
-  live: "text-[#3ecf8e]",
-  recent: "text-[#7eb8f7]",
-  stale: "text-[#f5a623]",
-  unknown: "text-[#7a9bb5]",
+  live: "text-[var(--success)]",
+  recent: "text-[var(--action)]",
+  stale: "text-[var(--warning)]",
+  unknown: "text-[var(--text-muted)]",
 } as const;
 
-function Metric({
+function MetricTile({
   label,
   value,
   color,
+  accent,
 }: {
   label: string;
   value: string;
   color?: string;
+  accent?: boolean;
 }) {
   return (
-    <div className="min-w-0 py-2">
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[#7a9bb5] font-semibold">{label}</p>
-      <p className="mt-1 text-base font-bold tabular-nums truncate" style={{ color: color ?? "#f0f6fc" }}>
+    <div
+      className={`min-w-0 rounded-lg bg-[var(--surface)] border p-3 sm:p-4 ${
+        accent ? "border-[var(--success)]" : "border-[var(--border)]"
+      }`}
+    >
+      <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)] font-normal">
+        {label}
+      </p>
+      <p
+        className="mt-2 text-lg sm:text-xl font-bold tabular-nums leading-tight truncate text-[var(--text)]"
+        style={color ? { color } : undefined}
+      >
         {value}
       </p>
     </div>
   );
 }
 
-export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefresh }: Props) {
+function SlPill({
+  label,
+  bg,
+  fg,
+}: {
+  label: string;
+  bg: string;
+  fg: string;
+}) {
+  return (
+    <span
+      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+      style={{ backgroundColor: bg, color: fg }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function SlUnavailable() {
+  return (
+    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)] text-[var(--text-muted)] border border-[color-mix(in_srgb,var(--text-muted)_30%,transparent)]">
+      SL20 n/a
+    </span>
+  );
+}
+
+export function DecisionView({
+  data,
+  fetchedAt,
+  cacheSavedAt,
+  onOpenView,
+  onRefresh,
+}: Props) {
   const [showWhy, setShowWhy] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
   const brief = useMemo(
-    () => buildDecisionBrief(data, { fetchedAt: fetchedAt ?? data.fetchedAt, cacheSavedAt }),
+    () =>
+      buildDecisionBrief(data, {
+        fetchedAt: fetchedAt ?? data.fetchedAt,
+        cacheSavedAt,
+      }),
     [data, fetchedAt, cacheSavedAt],
   );
   const style = GO_STYLES[brief.goNoGo];
@@ -67,129 +135,220 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
 
   return (
     <div className="overflow-y-auto pb-10">
-      {/* DECISION SUMMARY */}
-      <section
-        className={`relative overflow-hidden border-b border-[#1e3a5f] bg-gradient-to-b ${style.bar} px-4 pt-4 pb-5`}
-        aria-label="Decision summary"
-      >
+      {/* 1. DECISION STATE + HEADLINE */}
+      <section className="px-4 pt-4 pb-4" aria-label="Decision summary">
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 0%, #7eb8f7 0%, transparent 45%), radial-gradient(circle at 90% 30%, #ff6b35 0%, transparent 35%)",
-          }}
-        />
-        <div className="relative space-y-3">
+          className={`relative rounded-lg bg-[var(--surface)] border ${style.border} p-4 sm:p-5 space-y-3`}
+        >
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#7a9bb5] font-semibold">Now · {brief.nowLabel}</p>
-              <h2 className="mt-1 text-xl font-black text-white leading-tight truncate" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: "0.04em", fontSize: "1.65rem" }}>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)] font-semibold">
+                Now · {brief.nowLabel}
+              </p>
+              <h2 className="mt-1 text-base sm:text-lg font-bold text-[var(--text)] leading-tight truncate">
                 {brief.locationName}
               </h2>
             </div>
-            <span className={`shrink-0 rounded border px-2.5 py-1 text-xs font-black tracking-wider ${style.badge}`}>
+            <span
+              className={`shrink-0 rounded-xl px-2.5 py-1 text-xs font-bold tracking-wider ${style.badge}`}
+            >
               {style.label}
             </span>
           </div>
 
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-white leading-tight" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: "0.03em" }}>
+            <p className="text-xl sm:text-2xl font-bold text-[var(--text)] leading-snug tracking-tight">
               {brief.headline}
             </p>
-            <p className="mt-2 text-sm text-[#c5d6e8] leading-relaxed max-w-xl">{brief.supporting}</p>
+            <p className="mt-2 text-sm text-[var(--warm-text)] leading-relaxed max-w-xl">
+              {brief.supporting}
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            <span className={FRESH_STYLES[brief.freshnessTone]}>{brief.freshnessLabel}</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+            <span className={FRESH_STYLES[brief.freshnessTone]}>
+              {brief.freshnessLabel}
+            </span>
             {brief.currentSl ? (
-              <span className="font-bold px-2 py-0.5 rounded" style={{ backgroundColor: brief.currentSl.bg, color: brief.currentSl.fg }}>
-                SL20 {brief.currentSl.label}
-              </span>
+              <SlPill
+                label={`SL20 ${brief.currentSl.label}`}
+                bg={brief.currentSl.bg}
+                fg={brief.currentSl.fg}
+              />
             ) : (
-              <span className="font-bold px-2 py-0.5 rounded bg-[#7a9bb5]/15 text-[#7a9bb5] border border-[#7a9bb5]/30">
+              <span className="font-bold px-2 py-0.5 rounded bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)] text-[var(--text-muted)] border border-[color-mix(in_srgb,var(--text-muted)_30%,transparent)]">
                 SL20 unavailable
               </span>
             )}
             {brief.current && (
-              <span className="text-[#ff6b35] font-bold">{brief.current.fishStars}★ fish · {brief.current.fishScore}%</span>
+              <span className="text-[var(--warning)] font-bold">
+                {brief.current.fishStars}★ fish · {brief.current.fishScore}%
+              </span>
             )}
             <button
               type="button"
               onClick={onRefresh}
-              className="ml-auto min-h-[36px] rounded border border-[#1e3a5f] px-2.5 text-[#7eb8f7] hover:border-[#ff6b35] hover:text-white"
+              className="ml-auto min-h-[36px] rounded border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[var(--text)] hover:border-[var(--action)] hover:text-[var(--action)] transition-colors"
             >
               Refresh
             </button>
           </div>
 
           {(brief.risks[0] || brief.marineMissing) && (
-            <p className="text-xs leading-relaxed text-[#f5c16c] border-l-2 border-[#f5a623]/70 pl-3">
-              {brief.risks[0] ?? "Marine swell/tide feed is incomplete for this hour."}
+            <p className="text-xs leading-relaxed text-[var(--warning)] border-l-2 border-[var(--warning)] pl-3">
+              {brief.risks[0] ??
+                "Marine swell/tide feed is incomplete for this hour."}
             </p>
           )}
         </div>
       </section>
 
-      {/* NEXT USABLE + BEST UPCOMING */}
-      <section className="px-4 pt-5 pb-2 border-b border-[#1e3a5f]/80" aria-label="Windows">
-        <div className="flex items-end justify-between gap-2 mb-3">
-          <div>
-            <h3 className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold">Windows</h3>
-            <p className="text-sm text-[#c5d6e8] mt-1">Next usable is chronological; best upcoming is strength-ranked</p>
-          </div>
+      {/* 2. KEY CONDITIONS */}
+      <section className="px-4 pb-5" aria-label="Key conditions">
+        <h3 className="text-[11px] uppercase tracking-[0.12em] text-[var(--warm-text)] font-bold mb-1">
+          Key conditions
+        </h3>
+        <p className="text-sm text-[var(--text-muted)] mb-3">
+          What matters for the ramp and the first hour offshore
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <MetricTile
+            label="Wind"
+            value={formatWindLine(c)}
+            color={windColor(c.windKt)}
+            accent={brief.goNoGo === "go"}
+          />
+          <MetricTile
+            label="Gusts"
+            value={c.gustKt != null ? `${Math.round(c.gustKt)} kt` : "—"}
+            color={windColor(c.gustKt)}
+            accent={brief.goNoGo === "go"}
+          />
+          <MetricTile
+            label="Swell"
+            value={formatSwellLine(c)}
+            color={swellColor(c.swellH)}
+            accent={brief.goNoGo === "go"}
+          />
+          <MetricTile
+            label="Rain"
+            value={c.rainProb != null ? `${Math.round(c.rainProb)}%` : "—"}
+          />
+          <MetricTile
+            label="Air temp"
+            value={c.temp != null ? `${fmt(c.temp, 0)}°C` : "—"}
+          />
+          <MetricTile label="Next tide" value={formatTideLine(brief.nextTide)} />
+        </div>
+        {brief.risks.length > 1 && (
+          <ul className="mt-3 space-y-1.5">
+            {brief.risks.slice(1).map(risk => (
+              <li
+                key={risk}
+                className="text-xs text-[var(--warning)] leading-relaxed"
+              >
+                · {risk}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* 3. NEXT USABLE */}
+      <section className="px-4 pb-4" aria-label="Next usable window">
+        <div className="flex items-end justify-between gap-2 mb-2">
+          <h3 className="text-[11px] uppercase tracking-[0.12em] text-[var(--warm-text)] font-bold">
+            Next usable
+          </h3>
           <button
             type="button"
             onClick={() => onOpenView("sickie")}
-            className="text-xs font-semibold text-[#ff6b35] min-h-[36px] px-1"
+            className="text-xs font-semibold text-[var(--action)] min-h-[36px] px-1"
           >
             Sickie →
           </button>
         </div>
-
-        <div className="mb-3 rounded-lg border border-[#1e3a5f] bg-[#0d1f3c]/50 px-3 py-3">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#7eb8f7] font-bold">Next usable</p>
+        <p className="text-xs text-[var(--text-muted)] mb-2">
+          Chronological next useful window — not strength-ranked
+        </p>
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3.5">
           {brief.nextUseful ? (
-            <div className="mt-1 flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-bold text-white text-sm">{brief.nextUseful.dateLabel} · {brief.nextUseful.startHour}–{brief.nextUseful.endHour}</p>
-                <p className="text-xs text-[#7a9bb5] mt-0.5 truncate">{brief.nextUseful.reason}</p>
+                <p className="font-bold text-[var(--text)] text-sm">
+                  {brief.nextUseful.dateLabel} · {brief.nextUseful.startHour}–
+                  {brief.nextUseful.endHour}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                  {brief.nextUseful.reason}
+                </p>
               </div>
-              <div className="text-right shrink-0">
+              <div className="text-right shrink-0 space-y-1">
                 {brief.nextUseful.vesselAssessment ? (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: brief.nextUseful.sl.bg, color: brief.nextUseful.sl.fg }}>{brief.nextUseful.sl.label}</span>
+                  <SlPill
+                    label={brief.nextUseful.sl.label}
+                    bg={brief.nextUseful.sl.bg}
+                    fg={brief.nextUseful.sl.fg}
+                  />
                 ) : (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#7a9bb5]/15 text-[#7a9bb5] border border-[#7a9bb5]/30">SL20 n/a</span>
+                  <SlUnavailable />
                 )}
-                <p className="text-xs text-[#ff6b35] font-bold mt-1">{brief.nextUseful.peakStars}★ · {brief.nextUseful.hours}h</p>
+                <p className="text-xs text-[var(--warning)] font-bold">
+                  {brief.nextUseful.peakStars}★ · {brief.nextUseful.hours}h
+                </p>
               </div>
             </div>
           ) : (
-            <p className="mt-1 text-sm text-[#7a9bb5]">No clear useful window left in this forecast range.</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              No clear useful window left in this forecast range.
+            </p>
           )}
         </div>
+      </section>
 
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[#7a9bb5] font-bold mb-1">Best upcoming</p>
+      {/* 4. BEST UPCOMING */}
+      <section
+        className="px-4 pb-5 border-b border-[var(--border)]"
+        aria-label="Best upcoming windows"
+      >
+        <h3 className="text-[11px] uppercase tracking-[0.12em] text-[var(--warm-text)] font-bold mb-1">
+          Best upcoming
+        </h3>
+        <p className="text-xs text-[var(--text-muted)] mb-2">
+          Strength-ranked — distinct from next usable
+        </p>
         {brief.bestWindows.length === 0 ? (
-          <p className="text-sm text-[#7a9bb5] pb-3">No ranked windows in this range.</p>
+          <p className="text-sm text-[var(--text-muted)] pb-1">
+            No ranked windows in this range.
+          </p>
         ) : (
-          <ul className="space-y-0 divide-y divide-[#1e3a5f]/80">
+          <ul className="space-y-2">
             {brief.bestWindows.map(w => (
-              <li key={`${w.date}-${w.startHour}`} className="py-3 flex items-start gap-3">
+              <li
+                key={`${w.date}-${w.startHour}`}
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3 flex items-start gap-3"
+              >
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white text-sm">
+                  <p className="font-bold text-[var(--text)] text-sm">
                     {w.dateLabel} · {w.startHour}–{w.endHour}
                   </p>
-                  <p className="text-xs text-[#7a9bb5] mt-0.5 truncate">{w.reason}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
+                    {w.reason}
+                  </p>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 space-y-1">
                   {w.vesselAssessment ? (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: w.sl.bg, color: w.sl.fg }}>
-                      {w.sl.label}
-                    </span>
+                    <SlPill
+                      label={w.sl.label}
+                      bg={w.sl.bg}
+                      fg={w.sl.fg}
+                    />
                   ) : (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#7a9bb5]/15 text-[#7a9bb5] border border-[#7a9bb5]/30">SL20 n/a</span>
+                    <SlUnavailable />
                   )}
-                  <p className="text-xs text-[#ff6b35] font-bold mt-1">{w.peakStars}★ · {w.hours}h</p>
+                  <p className="text-xs text-[var(--warning)] font-bold">
+                    {w.peakStars}★ · {w.hours}h
+                  </p>
                 </div>
               </li>
             ))}
@@ -197,31 +356,17 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         )}
       </section>
 
-      {/* KEY CONDITIONS */}
-      <section className="px-4 pt-5 pb-4 border-b border-[#1e3a5f]/80" aria-label="Key conditions">
-        <h3 className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold mb-1">Key conditions</h3>
-        <p className="text-sm text-[#c5d6e8] mb-3">What matters for the ramp and the first hour offshore</p>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <Metric label="Wind" value={formatWindLine(c)} color={windColor(c.windKt)} />
-          <Metric label="Gusts" value={c.gustKt != null ? `${Math.round(c.gustKt)} kt` : "—"} color={windColor(c.gustKt)} />
-          <Metric label="Swell" value={formatSwellLine(c)} color={swellColor(c.swellH)} />
-          <Metric label="Rain" value={c.rainProb != null ? `${Math.round(c.rainProb)}%` : "—"} />
-          <Metric label="Air temp" value={c.temp != null ? `${fmt(c.temp, 0)}°C` : "—"} />
-          <Metric label="Next tide" value={formatTideLine(brief.nextTide)} />
-        </div>
-        {brief.risks.length > 1 && (
-          <ul className="mt-3 space-y-1.5">
-            {brief.risks.slice(1).map(risk => (
-              <li key={risk} className="text-xs text-[#f0c27a] leading-relaxed">· {risk}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* DETAIL / CHARTS */}
-      <section className="px-4 pt-5 pb-4 border-b border-[#1e3a5f]/80" aria-label="Detail and charts">
-        <h3 className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold mb-1">Detail</h3>
-        <p className="text-sm text-[#c5d6e8] mb-3">Charts, daily strips and hourly table when you need more</p>
+      {/* 5. DETAIL / CHARTS */}
+      <section
+        className="px-4 pt-5 pb-4 border-b border-[var(--border)]"
+        aria-label="Detail and charts"
+      >
+        <h3 className="text-[11px] uppercase tracking-[0.12em] text-[var(--warm-text)] font-bold mb-1">
+          Detail
+        </h3>
+        <p className="text-sm text-[var(--text-muted)] mb-3">
+          Charts, daily strips and hourly table when you need more
+        </p>
         <div className="grid grid-cols-2 gap-2">
           {(
             [
@@ -235,7 +380,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
               key={view}
               type="button"
               onClick={() => onOpenView(view)}
-              className="min-h-[48px] rounded-lg border border-[#1e3a5f] bg-[#0d1f3c]/80 px-3 text-left text-sm font-semibold text-white hover:border-[#ff6b35] transition-colors"
+              className="min-h-[48px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-sm font-semibold text-[var(--text)] hover:border-[var(--action)] transition-colors"
             >
               {label}
             </button>
@@ -243,24 +388,34 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         </div>
       </section>
 
-      {/* WHY + RAW */}
-      <section className="px-4 pt-5 pb-2" aria-label="Why and raw data">
+      {/* 6. WHY + RAW (collapsed by default) */}
+      <section className="px-4 pt-4 pb-2" aria-label="Why and raw data">
         <button
           type="button"
           onClick={() => setShowWhy(v => !v)}
           className="w-full flex items-center justify-between min-h-[44px] text-left"
           aria-expanded={showWhy}
         >
-          <span className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold">Why this call</span>
-          <span className="text-[#7a9bb5] text-xs">{showWhy ? "Hide" : "Show"}</span>
+          <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--warm-text)] font-bold">
+            Why this call
+          </span>
+          <span className="text-[var(--text-muted)] text-xs">
+            {showWhy ? "Hide" : "Show"}
+          </span>
         </button>
         {showWhy && (
-          <ul className="mt-1 mb-4 space-y-2 animate-in fade-in duration-200">
+          <ul className="mt-1 mb-4 space-y-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3.5 animate-in fade-in duration-200">
             {brief.why.map(line => (
-              <li key={line} className="text-sm text-[#c5d6e8] leading-relaxed">· {line}</li>
+              <li
+                key={line}
+                className="text-sm text-[var(--text)] leading-relaxed"
+              >
+                · {line}
+              </li>
             ))}
-            <li className="text-xs text-[#7a9bb5] leading-relaxed pt-1">
-              Planning aid only — not a substitute for official marine warnings, local knowledge or skipper judgement.
+            <li className="text-xs text-[var(--text-muted)] leading-relaxed pt-1">
+              Planning aid only — not a substitute for official marine warnings,
+              local knowledge or skipper judgement.
             </li>
           </ul>
         )}
@@ -268,20 +423,54 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         <button
           type="button"
           onClick={() => setShowRaw(v => !v)}
-          className="w-full flex items-center justify-between min-h-[44px] text-left border-t border-[#1e3a5f]/80 mt-1 pt-1"
+          className="w-full flex items-center justify-between min-h-[44px] text-left border-t border-[var(--border)] mt-1 pt-1"
           aria-expanded={showRaw}
         >
-          <span className="text-[11px] uppercase tracking-[0.16em] text-[#7a9bb5] font-bold">Raw hour</span>
-          <span className="text-[#7a9bb5] text-xs">{showRaw ? "Hide" : "Show"}</span>
+          <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--warm-text)] font-bold">
+            Raw hour
+          </span>
+          <span className="text-[var(--text-muted)] text-xs">
+            {showRaw ? "Hide" : "Show"}
+          </span>
         </button>
         {showRaw && brief.current && (
-          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs animate-in fade-in duration-200">
-            <div><dt className="text-[#7a9bb5]">Time</dt><dd className="text-white font-mono">{brief.current.label}</dd></div>
-            <div><dt className="text-[#7a9bb5]">Wave</dt><dd className="text-white font-mono">{fmt(brief.current.waveH)} m</dd></div>
-            <div><dt className="text-[#7a9bb5]">Wind wave</dt><dd className="text-white font-mono">{fmt(brief.current.windWaveH)} m</dd></div>
-            <div><dt className="text-[#7a9bb5]">Sea level</dt><dd className="text-white font-mono">{fmt(brief.current.seaLevel)} m</dd></div>
-            <div><dt className="text-[#7a9bb5]">Tide rate</dt><dd className="text-white font-mono">{fmt(brief.current.tideRate, 2)} m/h</dd></div>
-            <div><dt className="text-[#7a9bb5]">Timezone</dt><dd className="text-white font-mono truncate">{brief.timezone}</dd></div>
+          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3.5 animate-in fade-in duration-200">
+            <div>
+              <dt className="text-[var(--text-muted)]">Time</dt>
+              <dd className="text-[var(--text)] font-mono">
+                {brief.current.label}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--text-muted)]">Wave</dt>
+              <dd className="text-[var(--text)] font-mono">
+                {fmt(brief.current.waveH)} m
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--text-muted)]">Wind wave</dt>
+              <dd className="text-[var(--text)] font-mono">
+                {fmt(brief.current.windWaveH)} m
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--text-muted)]">Sea level</dt>
+              <dd className="text-[var(--text)] font-mono">
+                {fmt(brief.current.seaLevel)} m
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--text-muted)]">Tide rate</dt>
+              <dd className="text-[var(--text)] font-mono">
+                {fmt(brief.current.tideRate, 2)} m/h
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--text-muted)]">Timezone</dt>
+              <dd className="text-[var(--text)] font-mono truncate">
+                {brief.timezone}
+              </dd>
+            </div>
           </dl>
         )}
       </section>
