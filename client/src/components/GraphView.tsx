@@ -130,8 +130,26 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           if (elements.length) {
             const idx = elements[0].index;
             const row = allRows[idx];
-            if (row) onDayChange(row.dateStr);
+            if (row) {
+              onDayChange(row.dateStr);
+              // Highlight matching hour in the day strip (shows dir under speed)
+              const dayIdx = data.merged
+                .filter(r => r.dateStr === row.dateStr)
+                .findIndex(r => r.time === row.time);
+              setActiveHour(dayIdx >= 0 ? dayIdx : null);
+            }
           }
+        },
+        onClick: (_e, elements) => {
+          if (!elements.length) return;
+          const idx = elements[0].index;
+          const row = allRows[idx];
+          if (!row) return;
+          onDayChange(row.dateStr);
+          const dayIdx = data.merged
+            .filter(r => r.dateStr === row.dateStr)
+            .findIndex(r => r.time === row.time);
+          setActiveHour(dayIdx >= 0 ? dayIdx : null);
         },
         plugins: {
           legend: { display: false },
@@ -305,9 +323,19 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                 <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
                   {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
                 </span>
-                {row.windKt != null && <span className="text-[9px]" style={{ color: windColor(row.windKt) }}>{Math.round(row.windKt)}kt</span>}
+                {row.windKt != null && (
+                  <span
+                    className={`text-[9px] font-semibold ${isActive ? "text-[var(--text)]" : ""}`}
+                    style={{ color: isActive ? undefined : windColor(row.windKt) }}
+                  >
+                    {Math.round(row.windKt)}kt
+                    {row.windDir != null ? ` ${degToCompass(row.windDir)}` : ""}
+                  </span>
+                )}
                 {row.swellH != null && <span className="text-[9px]" style={{ color: swellColor(row.swellH) }}>{fmt(row.swellH)}m</span>}
-                {row.windDir != null && <span className="text-[9px] text-[var(--text-muted)]">{degToCompass(row.windDir)}</span>}
+                {row.windKt == null && row.windDir != null && (
+                  <span className="text-[9px] text-[var(--text-muted)]">{degToCompass(row.windDir)}</span>
+                )}
               </div>
             );
           })}
