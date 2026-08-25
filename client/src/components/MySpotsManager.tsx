@@ -272,7 +272,7 @@ export function MySpotsManager({ spots, currentLat, currentLon, currentName, onA
                               </button>
                               <button
                                 onClick={() => handleDelete(spot.id)}
-                                className="bg-[var(--surface-raised)] text-[var(--danger)] text-[10px] font-bold px-2 py-1 rounded hover:bg-[#e05c5c]/20 transition-colors min-w-[44px] min-h-[36px]"
+                                className="bg-[var(--surface-raised)] text-[var(--danger)] text-[10px] font-bold px-2 py-1 rounded hover:bg-[color-mix(in_srgb,var(--danger)_20%,transparent)] transition-colors min-w-[44px] min-h-[36px]"
                                 title="Delete this saved location">
                                 Delete
                               </button>
