@@ -218,11 +218,11 @@ function CriteriaPanel({
               value={criteria.maxWindKt}
               min={5} max={35} step={1}
               unit="kt"
-              color="#7eb8f7"
+              color="#3b82f6"
               onChange={v => set("maxWindKt", v)}
             />
             <OptionalSlider label="Max Wind Gust" value={criteria.maxGustKt} min={8} max={45} step={1} unit="kt" color="#60a5fa" onChange={v => set("maxGustKt", v)} />
-            <OptionalSlider label="Max Groundswell" value={criteria.maxSwellH} min={0.2} max={3} step={0.1} unit="m" color="#3ecf8e" onChange={v => set("maxSwellH", v)} />
+            <OptionalSlider label="Max Groundswell" value={criteria.maxSwellH} min={0.2} max={3} step={0.1} unit="m" color="#10b981" onChange={v => set("maxSwellH", v)} />
             <OptionalSlider label="Max Wind Chop" value={criteria.maxWindWaveH} min={0.1} max={1.8} step={0.1} unit="m" color="#38bdf8" onChange={v => set("maxWindWaveH", v)} />
             <OptionalSlider label="Max Rain Chance" value={criteria.maxRainProb} min={0} max={100} step={5} unit="%" color="#60a5fa" onChange={v => set("maxRainProb", v)} />
             <div>
@@ -242,8 +242,8 @@ function CriteriaPanel({
               <div className="flex gap-1">
                 {([
                   { rank: 1 as const, label: "Marginal", color: "#f5a623" },
-                  { rank: 2 as const, label: "Go", color: "#3ecf8e" },
-                  { rank: 3 as const, label: "Excellent", color: "#3ecf8e" },
+                  { rank: 2 as const, label: "Go", color: "#10b981" },
+                  { rank: 3 as const, label: "Excellent", color: "#10b981" },
                 ]).map(({ rank, label, color }) => (
                   <button key={rank} onClick={() => set("minSL20Rank", rank)}
                     className={`flex-1 py-1.5 rounded text-[10px] font-bold border transition-all min-h-[36px]
