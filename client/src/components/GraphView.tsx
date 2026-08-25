@@ -38,7 +38,7 @@ const VIS_KEYS: { key: keyof FishingState["vis"]; label: string; color: string }
 export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
-  const [activeHour, setActiveHour] = useState<number | null>(null);
+  const [activeTime, setActiveTime] = useState<string | null>(null);
 
   // All rows for the full range chart
   const allRows = data.merged;
@@ -132,11 +132,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
             const row = allRows[idx];
             if (row) {
               onDayChange(row.dateStr);
-              // Highlight matching hour in the day strip (shows dir under speed)
-              const dayIdx = data.merged
-                .filter(r => r.dateStr === row.dateStr)
-                .findIndex(r => r.time === row.time);
-              setActiveHour(dayIdx >= 0 ? dayIdx : null);
+              setActiveTime(row.time);
             }
           }
         },
@@ -146,10 +142,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           const row = allRows[idx];
           if (!row) return;
           onDayChange(row.dateStr);
-          const dayIdx = data.merged
-            .filter(r => r.dateStr === row.dateStr)
-            .findIndex(r => r.time === row.time);
-          setActiveHour(dayIdx >= 0 ? dayIdx : null);
+          setActiveTime(row.time);
         },
         plugins: {
           legend: { display: false },
@@ -308,15 +301,15 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       {/* Hourly strip for selected day */}
       <div className="overflow-x-auto px-2 pb-2 scrollbar-hide">
         <div className="flex gap-1 min-w-max pt-2">
-          {dayRows.map((row, i) => {
+          {dayRows.map((row) => {
             const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
-            const isActive = i === activeHour;
+            const isActive = row.time === activeTime;
             return (
               <div key={row.time}
-                onMouseEnter={() => setActiveHour(i)}
+                onMouseEnter={() => setActiveTime(row.time)}
                 className={`flex flex-col items-center gap-0.5 rounded px-1.5 py-1 cursor-pointer transition-all duration-100 min-w-[46px]
                   ${row.golden ? "ring-1 ring-[var(--warning)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)]" : ""}
-                  ${isActive ? "bg-[var(--surface-raised)]" : "bg-[var(--surface)] hover:bg-[var(--surface-raised)]/60"}`}>
+                  ${isActive ? "bg-[var(--surface-raised)] ring-1 ring-[var(--action)]" : "bg-[var(--surface)] hover:bg-[var(--surface-raised)]/60"}`}>
                 <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
                 <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
                 <span className="text-[9px]">{"★".repeat(row.fishStars)}{"☆".repeat(5 - row.fishStars)}</span>
