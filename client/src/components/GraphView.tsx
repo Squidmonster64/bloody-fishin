@@ -26,9 +26,9 @@ interface Props {
 }
 
 const VIS_KEYS: { key: keyof FishingState["vis"]; label: string; color: string }[] = [
-  { key: "wind",  label: "Wind (kt)",  color: "#7eb8f7" },
-  { key: "swell", label: "Swell (m)",  color: "#3ecf8e" },
-  { key: "fish",  label: "Fish %",     color: "#ff6b35" },
+  { key: "wind",  label: "Wind (kt)",  color: "#3b82f6" },
+  { key: "swell", label: "Swell (m)",  color: "#10b981" },
+  { key: "fish",  label: "Fish %",     color: "#f59e0b" },
   { key: "tide",  label: "Tide (m)",   color: "#a78bfa" },
   { key: "temp",  label: "Temp (°C)",  color: "#fbbf24" },
   { key: "rain",  label: "Rain %",     color: "#60a5fa" },
@@ -63,19 +63,19 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
     if (vis.wind) datasets.push({
       label: "Wind (kt)", yAxisID: "y",
       data: allRows.map(r => r.windKt),
-      borderColor: "#7eb8f7", backgroundColor: "rgba(126,184,247,0.06)",
+      borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.06)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
     if (vis.swell) datasets.push({
       label: "Swell (m)", yAxisID: "y2",
       data: allRows.map(r => r.swellH),
-      borderColor: "#3ecf8e", backgroundColor: "rgba(62,207,142,0.06)",
+      borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.06)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
     if (vis.fish) datasets.push({
       label: "Fish %", yAxisID: "y3",
       data: allRows.map(r => r.fishScore),
-      borderColor: "#ff6b35", backgroundColor: "rgba(255,107,53,0.10)",
+      borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,0.10)",
       borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true,
     });
     if (vis.tide) datasets.push({
@@ -135,9 +135,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(13,31,60,0.95)",
-            borderColor: "#1e3a5f", borderWidth: 1,
-            titleColor: "#ff6b35", bodyColor: "#c8d8e8",
+            backgroundColor: "rgba(18,27,42,0.95)",
+            borderColor: "#202e44", borderWidth: 1,
+            titleColor: "#f59e0b", bodyColor: "#d1c7bd",
             padding: 10, cornerRadius: 8,
             callbacks: {
               title: (items) => {
@@ -161,25 +161,25 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         scales: {
           x: {
             ticks: {
-              color: "#7a9bb5", font: { size: 9 }, maxRotation: 0,
+              color: "#64748b", font: { size: 9 }, maxRotation: 0,
               autoSkip: false,
               callback: (_val, idx) => labels[idx] || null,
             },
-            grid: { color: "rgba(30,58,95,0.5)" },
+            grid: { color: "rgba(32,46,68,0.55)" },
           },
           y: {
             position: "left",
-            ticks: { color: "#7eb8f7", font: { size: 10 } },
-            grid: { color: "rgba(30,58,95,0.3)" },
+            ticks: { color: "#3b82f6", font: { size: 10 } },
+            grid: { color: "rgba(32,46,68,0.35)" },
           },
           y2: {
             position: "right",
-            ticks: { color: "#3ecf8e", font: { size: 10 } },
+            ticks: { color: "#10b981", font: { size: 10 } },
             grid: { display: false },
           },
           y3: {
             position: "right",
-            ticks: { color: "#ff6b35", font: { size: 10 } },
+            ticks: { color: "#f59e0b", font: { size: 10 } },
             grid: { display: false },
             min: 0, max: 100,
             display: vis.fish || vis.rain,
@@ -195,26 +195,26 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Visibility toggles */}
-      <div className="flex flex-wrap gap-1.5 px-3 py-1.5 bg-[#0a1628] border-b border-[#1e3a5f]">
+      <div className="flex flex-wrap gap-1.5 px-3 py-1.5 bg-[var(--app-bg)] border-b border-[var(--border)]">
         {VIS_KEYS.map(({ key, label, color }) => (
           <button key={key} onClick={() => onToggleVis(key)}
             className={`px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border transition-all duration-150 min-h-[38px]
-              ${vis[key] ? "border-transparent text-white" : "border-[#1e3a5f] text-[#7a9bb5] bg-transparent"}`}
+              ${vis[key] ? "border-transparent text-[var(--text)]" : "border-[var(--border)] text-[var(--text-muted)] bg-transparent"}`}
             style={vis[key] ? { backgroundColor: color + "33", borderColor: color, color } : {}}>
             {label}
           </button>
         ))}
         <button onClick={() => chartRef.current?.resetZoom()}
-          className="px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 ml-auto min-h-[38px]">
+          className="px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--action)] transition-all duration-150 ml-auto min-h-[38px]">
           🔍 Reset Zoom
         </button>
         <button onClick={() => chartRef.current?.zoom(0.8)}
-          className="px-3 py-1.5 rounded text-sm font-bold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 min-h-[38px]"
+          className="px-3 py-1.5 rounded text-sm font-bold border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--action)] transition-all duration-150 min-h-[38px]"
           aria-label="Zoom out graph">
           −
         </button>
         <button onClick={() => chartRef.current?.zoom(1.25)}
-          className="px-3 py-1.5 rounded text-sm font-bold border border-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:border-[#ff6b35] transition-all duration-150 min-h-[38px]"
+          className="px-3 py-1.5 rounded text-sm font-bold border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--action)] transition-all duration-150 min-h-[38px]"
           aria-label="Zoom in graph">
           +
         </button>
@@ -223,14 +223,14 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       {/* Full-range chart */}
       <div className="relative px-2 py-2 chart-container" style={{ height: "260px", minHeight: "200px" }}>
         <canvas ref={canvasRef} className="forecast-canvas" />
-        <p className="absolute bottom-3 right-4 text-[9px] text-[#3a5a7a]">
+        <p className="absolute bottom-3 right-4 text-[9px] text-[var(--text-muted)]">
           Desktop: mouse-wheel zoom · Phone: use +/- then scroll normally · ⭐ = golden hour
         </p>
       </div>
 
       {/* Day selector strip */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#0d1f3c] border-t border-b border-[#1e3a5f] overflow-x-auto scrollbar-hide">
-        <span className="text-[10px] text-[#7a9bb5] uppercase tracking-wider whitespace-nowrap flex-shrink-0">📅 Hourly day:</span>
+      <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border-t border-b border-[var(--border)] overflow-x-auto scrollbar-hide">
+        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap flex-shrink-0">📅 Hourly day:</span>
         {data.daily.map(d => {
           const dt = new Date(d.date + "T12:00:00");
           const label = dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
@@ -238,7 +238,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           return (
             <button key={d.date} onClick={() => onDayChange(d.date)}
               className={`flex-shrink-0 px-2.5 py-1 rounded text-xs font-semibold transition-all duration-150 min-h-[36px] whitespace-nowrap
-                ${isSelected ? "bg-[#ff6b35] text-white" : d.isGolden ? "bg-[#3ecf8e]/20 text-[#3ecf8e] border border-[#3ecf8e]/40 hover:bg-[#3ecf8e]/30" : "bg-[#1e3a5f] text-[#7a9bb5] hover:text-white hover:bg-[#2a4f7a]"}`}>
+                ${isSelected ? "bg-[var(--action)] text-white" : d.isGolden ? "bg-[color-mix(in_srgb,var(--success)_20%,transparent)] text-[var(--success)] border border-[color-mix(in_srgb,var(--success)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--success)_30%,transparent)]" : "bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)]"}`}>
               {d.isGolden && !isSelected ? "⭐ " : ""}{label}
             </button>
           );
@@ -247,13 +247,13 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
 
       {/* Day summary strip */}
       {dayData && (
-        <div className="flex flex-wrap gap-2 px-3 py-2 bg-[#0a1628] border-b border-[#1e3a5f] text-xs">
-          <span className="text-[#7a9bb5]">{dayData.moonEmoji} {dayData.moonName} ({Math.round(dayData.moonIllum * 100)}%)</span>
-          <span className="text-[#7a9bb5]">🌅 {dayData.sunrise} / 🌇 {dayData.sunset}</span>
+        <div className="flex flex-wrap gap-2 px-3 py-2 bg-[var(--app-bg)] border-b border-[var(--border)] text-xs">
+          <span className="text-[var(--text-muted)]">{dayData.moonEmoji} {dayData.moonName} ({Math.round(dayData.moonIllum * 100)}%)</span>
+          <span className="text-[var(--text-muted)]">🌅 {dayData.sunrise} / 🌇 {dayData.sunset}</span>
           {dayData.maxWind != null && <span style={{ color: windColor(dayData.maxWind) }}>💨 Max {Math.round(dayData.maxWind)}kt</span>}
           {dayData.maxSwell != null && <span style={{ color: swellColor(dayData.maxSwell) }}>🌊 Max {fmt(dayData.maxSwell)}m</span>}
-          <span className="text-[#ff6b35]">🎣 Peak {dayData.peakFish}% ({dayData.bestFishStars}★)</span>
-          {dayData.isGolden && <span className="text-[#fbbf24] font-bold">⭐ GOLDEN DAY</span>}
+          <span className="text-[var(--action)]">🎣 Peak {dayData.peakFish}% ({dayData.bestFishStars}★)</span>
+          {dayData.isGolden && <span className="text-[var(--warning)] font-bold">⭐ GOLDEN DAY</span>}
         </div>
       )}
 
@@ -267,17 +267,17 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
               <div key={row.time}
                 onMouseEnter={() => setActiveHour(i)}
                 className={`flex flex-col items-center gap-0.5 rounded px-1.5 py-1 cursor-pointer transition-all duration-100 min-w-[46px]
-                  ${row.golden ? "ring-1 ring-[#fbbf24] bg-[#fbbf24]/10" : ""}
-                  ${isActive ? "bg-[#1e3a5f]" : "bg-[#0d1f3c] hover:bg-[#1e3a5f]/60"}`}>
-                <span className="text-[9px] text-[#7a9bb5] font-mono">{row.hourLabel}</span>
-                <span className="text-[11px] font-bold" style={{ color: "#ff6b35" }}>{row.fishScore}%</span>
+                  ${row.golden ? "ring-1 ring-[var(--warning)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)]" : ""}
+                  ${isActive ? "bg-[var(--surface-raised)]" : "bg-[var(--surface)] hover:bg-[var(--surface-raised)]/60"}`}>
+                <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
+                <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
                 <span className="text-[9px]">{"★".repeat(row.fishStars)}{"☆".repeat(5 - row.fishStars)}</span>
                 <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
                   {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
                 </span>
                 {row.windKt != null && <span className="text-[9px]" style={{ color: windColor(row.windKt) }}>{Math.round(row.windKt)}kt</span>}
                 {row.swellH != null && <span className="text-[9px]" style={{ color: swellColor(row.swellH) }}>{fmt(row.swellH)}m</span>}
-                {row.windDir != null && <span className="text-[9px] text-[#7a9bb5]">{degToCompass(row.windDir)}</span>}
+                {row.windDir != null && <span className="text-[9px] text-[var(--text-muted)]">{degToCompass(row.windDir)}</span>}
               </div>
             );
           })}
@@ -286,10 +286,10 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
 
       {/* Tide extremes */}
       {dayData && dayData.tideExtremes.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-[#1e3a5f] text-xs">
-          <span className="text-[#7a9bb5] text-[10px] uppercase tracking-wider">Tides:</span>
+        <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-[var(--border)] text-xs">
+          <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider">Tides:</span>
           {dayData.tideExtremes.map((t, i) => (
-            <span key={i} className={`font-semibold ${t.type === "High" ? "text-[#3ecf8e]" : "text-[#7eb8f7]"}`}>
+            <span key={i} className={`font-semibold ${t.type === "High" ? "text-[var(--success)]" : "text-[var(--action)]"}`}>
               {t.type === "High" ? "▲" : "▼"} {t.type} {fmt(t.height)}m @ {t.time.slice(11, 16)}
             </span>
           ))}

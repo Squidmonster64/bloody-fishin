@@ -1,7 +1,6 @@
 /**
  * Bloody Dave's Fishing Planner — Home Page
- * Design: Nautical dark-mode dashboard. Deep ocean navy (#0a1628) base,
- * coral-orange (#ff6b35) accent, seafoam green (#3ecf8e) for good conditions.
+ * Marine-instrument shell using shared design tokens.
  */
 import { useEffect, useState } from "react";
 import { useFishingData } from "@/hooks/useFishingData";
@@ -21,7 +20,18 @@ import { BriefingSheet } from "@/components/BriefingSheet";
 import { CompareSpotsSheet } from "@/components/CompareSpotsSheet";
 
 export default function Home() {
-  const { state, loadData, refresh, clearCache, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation } = useFishingData();
+  const {
+    state,
+    loadData,
+    refresh,
+    clearCache,
+    setLocation,
+    setDays,
+    setView,
+    setHourlyDay,
+    toggleVis,
+    setCustomLocation,
+  } = useFishingData();
   const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
   const [showPrint, setShowPrint] = useState(false);
   const [showBrief, setShowBrief] = useState(false);
@@ -33,7 +43,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a1628] text-white font-sans">
+    <div className="min-h-screen flex flex-col bg-[var(--app-bg)] text-[var(--text)] font-sans pb-[calc(52px+env(safe-area-inset-bottom))] sm:pb-0">
       <Header />
       <Controls
         state={state}
@@ -49,24 +59,64 @@ export default function Home() {
         onCompare={() => setShowCompare(true)}
         onRefresh={refresh}
       />
-      <TabBar view={state.view} onViewChange={setView} />
+      {/* Desktop / tablet: top tabs. Mobile: fixed bottom nav (same TabBar). */}
+      <div className="hidden sm:block">
+        <TabBar view={state.view} onViewChange={setView} placement="top" />
+      </div>
 
       <main className="flex-1 overflow-hidden">
         {state.loading && !state.data && <LoadingState />}
-        {state.loading && state.data && <div className="border-b border-[#1e3a5f] bg-[#0d1f3c] px-3 py-2 text-center text-xs text-[#7a9bb5]">Refreshing live conditions… showing the latest saved forecast meanwhile.</div>}
+        {state.loading && state.data && (
+          <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-center text-xs text-[var(--text-muted)]">
+            Refreshing live conditions… showing the latest saved forecast meanwhile.
+          </div>
+        )}
         {state.refreshFailed && state.data && !state.loading && (
-          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-orange-400/40 bg-orange-400/10 px-3 py-2 text-center text-xs text-orange-100">
-            <span>Live refresh failed — showing the saved forecast. Check signal and try again before you leave.</span>
-            <button onClick={refresh} className="min-h-[32px] rounded border border-orange-200/50 px-2 font-bold text-orange-50 hover:bg-orange-300/15">↻ Retry refresh</button>
+          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-2 text-center text-xs text-[var(--warm-text)]">
+            <span>
+              Live refresh failed — showing the saved forecast. Check signal and try again before
+              you leave.
+            </span>
+            <button
+              onClick={refresh}
+              className="min-h-[32px] rounded border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] px-2 font-bold text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
+            >
+              ↻ Retry refresh
+            </button>
           </div>
         )}
-        {state.cacheSavedAt && !state.loading && !state.refreshFailed && <div className="flex flex-wrap items-center justify-center gap-2 border-b border-yellow-400/30 bg-yellow-400/10 px-3 py-2 text-center text-xs text-yellow-200"><span>📡 Saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. It could be stale.</span><button onClick={refresh} className="min-h-[32px] rounded border border-yellow-300/50 px-2 font-bold text-yellow-100 hover:bg-yellow-300/15">↻ Refresh now</button><button onClick={clearCache} className="min-h-[32px] rounded border border-yellow-300/30 px-2 font-semibold text-yellow-100 hover:bg-yellow-300/15">Clear saved copy</button></div>}
-        {state.data && (state.days > 8 || state.data.requestedDays && state.data.requestedDays > 8) && !state.loading && (
-          <div className="border-b border-sky-400/30 bg-sky-400/10 px-3 py-2 text-center text-xs text-sky-100">
-            Days 9–14 are weather and fishing outlook only — marine swell/chop/SL20 vessel calls stop after day 8{state.data.marineThrough ? ` (marine through ${state.data.marineThrough})` : ""}.
+        {state.cacheSavedAt && !state.loading && !state.refreshFailed && (
+          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-2 text-center text-xs text-[var(--warm-text)]">
+            <span>
+              Saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. It could
+              be stale.
+            </span>
+            <button
+              onClick={refresh}
+              className="min-h-[32px] rounded border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] px-2 font-bold text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
+            >
+              ↻ Refresh now
+            </button>
+            <button
+              onClick={clearCache}
+              className="min-h-[32px] rounded border border-[color-mix(in_srgb,var(--warning)_30%,transparent)] px-2 font-semibold text-[var(--warm-text)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
+            >
+              Clear saved copy
+            </button>
           </div>
         )}
-        {state.error && <ErrorState error={state.error} onRetry={() => loadData(state.location, state.days)} />}
+        {state.data &&
+          (state.days > 8 || (state.data.requestedDays && state.data.requestedDays > 8)) &&
+          !state.loading && (
+            <div className="border-b border-[color-mix(in_srgb,var(--action)_30%,transparent)] bg-[color-mix(in_srgb,var(--action)_10%,transparent)] px-3 py-2 text-center text-xs text-[var(--text)]">
+              Days 9–14 are weather and fishing outlook only — marine swell/chop/SL20 vessel calls
+              stop after day 8
+              {state.data.marineThrough ? ` (marine through ${state.data.marineThrough})` : ""}.
+            </div>
+          )}
+        {state.error && (
+          <ErrorState error={state.error} onRetry={() => loadData(state.location, state.days)} />
+        )}
         {!state.error && state.data && (
           <>
             {state.view === "decision" && (
@@ -88,31 +138,39 @@ export default function Home() {
               />
             )}
             {state.view === "summary" && <SummaryView data={state.data} />}
-            {state.view === "table"   && <TableView   data={state.data} />}
-            {state.view === "sickie"  && <SickieView  data={state.data} />}
+            {state.view === "table" && <TableView data={state.data} />}
+            {state.view === "sickie" && <SickieView data={state.data} />}
           </>
         )}
         {!state.loading && !state.error && !state.data && (
-          <div className="flex items-center justify-center h-64 text-[#7a9bb5]">
+          <div className="flex items-center justify-center h-64 text-[var(--text-muted)]">
             <p>Select a location to load conditions</p>
           </div>
         )}
       </main>
 
-      {/* Print overlay — only rendered when triggered */}
       {showPrint && state.data && (
-        <PrintView
-          data={state.data}
-          vis={state.vis}
-          onClose={() => setShowPrint(false)}
+        <PrintView data={state.data} vis={state.vis} onClose={() => setShowPrint(false)} />
+      )}
+      {showBrief && state.data && (
+        <BriefingSheet data={state.data} onClose={() => setShowBrief(false)} />
+      )}
+      {showCompare && state.data && (
+        <CompareSpotsSheet
+          baseData={state.data}
+          savedSpots={spots}
+          onClose={() => setShowCompare(false)}
         />
       )}
-      {showBrief && state.data && <BriefingSheet data={state.data} onClose={() => setShowBrief(false)} />}
-      {showCompare && state.data && <CompareSpotsSheet baseData={state.data} savedSpots={spots} onClose={() => setShowCompare(false)} />}
-      <footer className="border-t border-[#1e3a5f] bg-[#0a1628] px-3 py-2 text-center text-[10px] leading-relaxed text-[#7a9bb5]">
-        Planning aid for Australian fishing and small-boat decisions. Always check official Bureau of Meteorology marine warnings, local knowledge and skipper judgement before you go.
+
+      <footer className="border-t border-[var(--border)] bg-[var(--app-bg)] px-3 py-2 text-center text-[10px] leading-relaxed text-[var(--text-muted)]">
+        Planning aid for Australian fishing and small-boat decisions. Always check official Bureau
+        of Meteorology marine warnings, local knowledge and skipper judgement before you go.
       </footer>
+
+      <div className="sm:hidden">
+        <TabBar view={state.view} onViewChange={setView} placement="bottom" />
+      </div>
     </div>
   );
 }
-
