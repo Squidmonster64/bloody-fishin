@@ -43,10 +43,15 @@ export function TabBar({ view, onViewChange, placement = "top" }: Props) {
                   ? "text-[var(--text)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)]"
               }`}
+            aria-label={tab.label}
             aria-current={active ? "page" : undefined}
           >
-            <span className="sm:hidden">{tab.short}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden" aria-hidden="true">
+              {tab.short}
+            </span>
+            <span className="hidden sm:inline" aria-hidden="true">
+              {tab.label}
+            </span>
             {active && (
               <span
                 aria-hidden
