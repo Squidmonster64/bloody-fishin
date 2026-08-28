@@ -102,7 +102,7 @@ export function SummaryView({ data }: Props) {
         <span>📍 {data.location.name}</span>
         <span>·</span>
         <span>🌐 {data.timezone}</span>
-        <span className="ml-auto text-yellow-400">⭐ = SL20 Go+ & 4★+ fishing</span>
+        <span className="ml-auto text-yellow-400">⭐ = Boating Go+ & 4★+ fishing</span>
       </div>
       {data.daily.map(day => (
         <DayCard key={day.date} day={day} />

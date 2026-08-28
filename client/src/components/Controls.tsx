@@ -23,7 +23,7 @@ interface Props {
 const field =
   "bg-[var(--app-bg)] border border-[var(--border)] text-[var(--text)] rounded px-3 py-2 focus:border-[var(--action)] focus:outline-none font-semibold";
 const ghostBtn =
-  "flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[var(--border)] bg-[var(--app-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--action)] hover:text-[var(--text)]";
+  "flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-1.5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--action)] hover:text-[var(--text)]";
 
 export function Controls({
   state,
@@ -75,7 +75,7 @@ export function Controls({
   }
 
   return (
-    <div className="bg-[var(--surface)] border-b border-[var(--border)] px-3 py-2.5 flex flex-wrap items-center gap-2.5">
+    <div className="bg-[var(--surface)] border-b border-[var(--border)] px-3 py-1.5 flex flex-wrap items-center gap-2">
       <div className="controls-location flex w-full items-center gap-2 sm:w-auto sm:flex-1 sm:max-w-md">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap font-semibold">
           Location
@@ -83,7 +83,7 @@ export function Controls({
         <button
           type="button"
           onClick={() => setShowLocationPicker(true)}
-          className="phone-location-trigger flex min-h-[52px] flex-1 items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--app-bg)] px-4 text-left text-base font-semibold text-[var(--text)] sm:hidden"
+          className="phone-location-trigger flex min-h-[44px] flex-1 items-center justify-between gap-3 rounded border border-[var(--border)] bg-[var(--app-bg)] px-3 text-left text-base font-semibold text-[var(--text)] min-[700px]:hidden"
           aria-label="Choose fishing location"
         >
           <span className="truncate">{state.location.name}</span>
@@ -92,7 +92,7 @@ export function Controls({
           </span>
         </button>
         <select
-          className={`hidden min-h-[48px] min-w-0 flex-1 text-base sm:block sm:w-auto ${field}`}
+          className={`hidden min-h-[40px] min-w-0 flex-1 text-sm min-[700px]:block min-[700px]:w-auto ${field}`}
           value={`${state.location.lat},${state.location.lon}`}
           onChange={e => {
             if (e.target.value === "__custom__") {
@@ -132,7 +132,7 @@ export function Controls({
           Range
         </label>
         <select
-          className={`min-h-[44px] text-sm font-medium ${field}`}
+          className={`min-h-[40px] text-sm font-medium ${field}`}
           value={state.days}
           onChange={e => onDaysChange(Number(e.target.value))}
         >
@@ -154,7 +154,7 @@ export function Controls({
         <button
           onClick={onRefresh}
           disabled={state.loading}
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[var(--action)] bg-[color-mix(in_srgb,var(--action)_15%,transparent)] px-3 py-2 text-sm font-bold text-[var(--action)] transition-colors hover:bg-[var(--action)] hover:text-white disabled:cursor-wait disabled:opacity-60"
+          className="flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded border border-[var(--action)] bg-[color-mix(in_srgb,var(--action)_15%,transparent)] px-2.5 py-1.5 text-sm font-bold text-[var(--action)] transition-colors hover:bg-[var(--action)] hover:text-[var(--app-bg)] disabled:cursor-wait disabled:opacity-60"
           title="Refresh live forecast"
           aria-label="Refresh live forecast"
         >
@@ -193,7 +193,7 @@ export function Controls({
 
       {showLocationPicker && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/65 sm:hidden"
+          className="fixed inset-0 z-50 flex items-end bg-black/65 min-[700px]:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Choose fishing location"

@@ -9,10 +9,10 @@ export const READER_VERSION = "2";
 const PLACEHOLDER = "<!--READER_BRIEF-->";
 
 const READER_STYLES = `<style id="reader-shell-styles">
-#reader-shell{font-family:Inter,system-ui,sans-serif;background:#0a1628;color:#c5d6e8;padding:1rem 1.25rem 2rem;line-height:1.5}
-#reader-shell h1{color:#ff6b35;font-size:1.25rem;margin:0 0 .5rem}
-#reader-shell a{color:#7eb8f7}
-#reader-shell pre{white-space:pre-wrap;word-break:break-word;background:#0d1f3c;border:1px solid #1e3a5f;border-radius:.5rem;padding:.75rem;font-size:.75rem;max-height:70vh;overflow:auto}
+#reader-shell{font-family:Inter,system-ui,sans-serif;background:#152018;color:#f2efe7;padding:1rem 1.25rem 2rem;line-height:1.5}
+#reader-shell h1{color:#f2efe7;font-size:1.15rem;margin:0 0 .5rem}
+#reader-shell a{color:#ef7c35}
+#reader-shell pre{white-space:pre-wrap;word-break:break-word;background:#1d2a20;border:1px solid #35463a;border-radius:.375rem;padding:.75rem;font-size:.75rem;max-height:70vh;overflow:auto}
 .js #reader-shell{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>`;
 
@@ -83,7 +83,7 @@ function readerShellHeader(): string {
   return `<div id="reader-shell">
 <header>
 <h1>Bloody Dave's Fishing Planner</h1>
-<p>Interactive planner for SL20 boating and fishing conditions. The full app needs JavaScript. Automated readers should use the server endpoints below.</p>
+<p>Interactive planner for Boating and fishing conditions. The full app needs JavaScript. Automated readers should use the server endpoints below.</p>
 <ul>
 <li><a href="/brief?spot=freo&amp;days=7">Markdown forecast — /brief</a></li>
 <li><a href="/brief.json?spot=freo&amp;days=7">JSON forecast — /brief.json</a></li>

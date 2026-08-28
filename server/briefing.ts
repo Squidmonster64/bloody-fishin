@@ -307,8 +307,8 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
   ];
   if (brief.marineDataWarning) lines.push("", `> **Marine-data warning:** ${brief.marineDataWarning}`);
   if (!brief.nextWindows.length) lines.push("No qualifying window appears in this forecast range. Loosen the limits or increase `days`.");
-  else for (const window of brief.nextWindows) lines.push(`- **${window.start} → ${window.end}** (${window.durationHours} h): avg wind ${window.averageWindKt} kt, max ${window.maxWindKt} kt, SL20 ${window.sl20}, best fishing ${window.bestFishScore}% (${window.bestFishStars}★).`);
-  lines.push("", "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain | Fish | SL20 |", "|---|---:|---:|---:|---:|---:|---:|---:|---|");
+  else for (const window of brief.nextWindows) lines.push(`- **${window.start} → ${window.end}** (${window.durationHours} h): avg wind ${window.averageWindKt} kt, max ${window.maxWindKt} kt, Boating ${window.sl20}, best fishing ${window.bestFishScore}% (${window.bestFishStars}★).`);
+  lines.push("", "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain | Fish | Boating |", "|---|---:|---:|---:|---:|---:|---:|---:|---|");
   for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.fishScore}% (${hour.fishStars}★) | ${hour.sl20} |`);
   const fishingOnly = brief.dailyOutlook.filter((day) => day.weatherAndFishingOnly);
   if (fishingOnly.length) {

@@ -238,7 +238,7 @@ function CriteriaPanel({
               </div>
             </div>
             <div>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Min SL20 Rating</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Min Boating Rating</p>
               <div className="flex gap-1">
                 {([
                   { rank: 1 as const, label: "Marginal", color: "#f5a623" },
@@ -275,7 +275,7 @@ function CriteriaPanel({
               📖 How the algorithm works
             </summary>
             <div className="mt-2 text-[10px] text-[var(--text-muted)] space-y-1 leading-relaxed bg-[var(--app-bg)] rounded p-3 border border-[var(--border)]">
-              <p><strong className="text-[var(--text)]">SL20 Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
+              <p><strong className="text-[var(--text)]">Boating Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
               <p><strong className="text-[var(--text)]">Fishing Score (0–100%)</strong> — Fishing is calculated only from sun, moon and tide: moon phase, moon transit/underfoot, sunrise/sunset and tide movement. Weather is kept separate, so a rain or wind forecast cannot quietly alter the fishing score.</p>
               <p><strong className="text-[var(--text)]">Golden Window</strong> — The SL20 default is daylight, wind≤10kt, swell&lt;1.0m, rain chance 0%, fishing≥4★, and at least three consecutive qualifying hours.</p>
               <p><strong className="text-[var(--text)]">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>

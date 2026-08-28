@@ -1,4 +1,4 @@
-@import "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap";
+@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -9,7 +9,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: "Geist", "Inter", system-ui, sans-serif;
+  --font-sans: Inter, system-ui, sans-serif;
+  --color-sand: var(--sand);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -56,29 +57,32 @@
 }
 
 :root {
-  /* ── Bloody Fishin marine instrument palette ───────────────────────────── */
-  --app-bg: #0b0f19;
-  --surface: #121b2a;
-  --surface-raised: #202e44;
-  --border: #202e44;
-  --text: #f3f4f6;
-  --text-muted: #64748b;
-  --action: #3b82f6;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --warm-text: #d1c7bd;
+  /* Bloody Dave's dark natural/marine — restrained sand/orange, light text.
+     Not 5 Million Minutes paper (#f5f1e7) or red (#c3261c). */
+  --app-bg: #152018;
+  --surface: #1d2a20;
+  --surface-raised: #243328;
+  --border: #35463a;
+  --text: #f2efe7;
+  --text-muted: #a7aa9e;
+  --action: #ef7c35;
+  --sand: #d7bd7c;
+  --success: #3ecf8e;
+  --warning: #e0b15a;
+  --danger: #e05c5c;
+  --warm-text: #d6d0c4;
+  --suite-chrome: 2.75rem;
 
   --primary: var(--action);
-  --primary-foreground: #eff6ff;
+  --primary-foreground: #152018;
   --sidebar-primary: var(--action);
-  --sidebar-primary-foreground: #eff6ff;
-  --chart-1: #93c5fd;
+  --sidebar-primary-foreground: #152018;
+  --chart-1: #d7bd7c;
   --chart-2: var(--action);
-  --chart-3: #2563eb;
-  --chart-4: #1d4ed8;
-  --chart-5: #1e40af;
-  --radius: 0.5rem;
+  --chart-3: #5b9a8a;
+  --chart-4: #3ecf8e;
+  --chart-5: #c4a574;
+  --radius: 0.375rem;
   --background: var(--app-bg);
   --foreground: var(--text);
   --card: var(--surface);
@@ -137,7 +141,9 @@
   body {
     background: var(--app-bg);
     color: var(--text);
-    font-family: "Geist", "Inter", system-ui, sans-serif;
+    font-family: Inter, system-ui, sans-serif;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -188,11 +194,14 @@
   .bg-yellow-400\/8 { background-color: rgba(251, 191, 36, 0.08); }
 }
 
-/* ── Global mobile baseline ───────────────────────────────────────────────── */
-/* Ensure all interactive elements are comfortably tappable */
-button, select, input {
-  min-height: 44px;
+/* Form fields stay tappable; compact GO/status chips are exempt. */
+select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+  min-height: 40px;
   font-size: 16px; /* prevents iOS auto-zoom on focus */
+}
+
+@media (min-width: 700px) {
+  :root { --suite-chrome: 2.5rem; }
 }
 
 /* One-finger drags over the graph should remain page scrolls on touch screens.
@@ -220,32 +229,20 @@ button, select, input {
 
 /* ── Phone-specific overrides (≤480px) ───────────────────────────────────── */
 @media (max-width: 480px) {
-  /* Header — keep it compact but readable */
-  header h1 { font-size: 1.15rem !important; }
-  header p  { font-size: 10px !important; }
+  header h1 { font-size: 13px !important; }
 
-  /* Tab bar — full-width tabs, big text (top or bottom) */
-  nav button {
-    font-size: 12px !important;
-    padding-top: 0.65rem !important;
-    padding-bottom: 0.65rem !important;
-    min-height: 52px !important;
-  }
-
-  /* Controls — stack location on its own row */
   .controls-location { width: 100%; }
   .phone-location-trigger { font-size: 16px !important; }
   .controls-actions { width: 100%; margin-left: 0; justify-content: space-between; gap: 0.25rem; }
-  .controls-actions > button { min-width: 44px; padding-left: 0.6rem; padding-right: 0.6rem; }
+  .controls-actions > button { min-width: 40px; padding-left: 0.5rem; padding-right: 0.5rem; }
 
-  /* Chart shorter on small screens */
   .chart-container { height: 200px !important; }
-
-  /* Table font slightly larger for readability */
   table { font-size: 11px !important; }
+}
 
-  /* Selects and inputs — ensure full readable size */
-  select, input { font-size: 16px !important; min-height: 48px !important; }
+/* Old iPad 1024×768 — release-critical: keep chrome compact, no page overflow. */
+@media (min-width: 700px) and (max-height: 800px) {
+  .chart-container { height: 210px !important; }
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────────────── */
