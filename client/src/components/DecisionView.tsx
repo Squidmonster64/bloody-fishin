@@ -101,11 +101,17 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
   const kind = windowKind(brief.goNoGo);
   const c = brief.conditions;
 
-  const windowRange = brief.nextUseful
+  const nextGood = brief.nextUseful
     ? `${brief.nextUseful.dateLabel} ${brief.nextUseful.startHour}–${brief.nextUseful.endHour}`
-    : kind === "GOOD"
-      ? brief.nowLabel
-      : "no clear GOOD window in range";
+    : null;
+  const windowLine =
+    kind === "GOOD"
+      ? nextGood ?? brief.nowLabel
+      : kind === "OUTLOOK"
+        ? "vessel call unavailable"
+        : nextGood
+          ? `now · next GOOD ${nextGood}`
+          : "now · no clear GOOD window in range";
 
   const timeline = useMemo(() => {
     if (!brief.current) return data.merged.slice(0, 16);
@@ -127,7 +133,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
                 {kind}
               </span>
               <span className="text-[var(--text-muted)] font-medium"> window </span>
-              <span className="tabular-nums">{windowRange}</span>
+              <span className="tabular-nums">{windowLine}</span>
             </p>
           </div>
           <div className="shrink-0 text-right">
