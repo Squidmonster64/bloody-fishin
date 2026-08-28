@@ -1,7 +1,7 @@
 /**
  * DecisionView — go/don't-go home.
  * Location + GOOD/POOR window + compact GO, then Wind/Swell/Tide/Water and a timeline.
- * Visual recovery only; data from buildDecisionBrief / rateSL20 unchanged.
+ * Visual recovery only; briefing helpers and the vessel scorer are unchanged.
  */
 import { useMemo, useState } from "react";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
