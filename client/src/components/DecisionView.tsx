@@ -108,7 +108,7 @@ function SlPill({
 function SlUnavailable() {
   return (
     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)] text-[var(--text-muted)] border border-[color-mix(in_srgb,var(--text-muted)_30%,transparent)]">
-      SL20 n/a
+      Boating n/a
     </span>
   );
 }
@@ -171,13 +171,13 @@ export function DecisionView({
             </span>
             {brief.currentSl ? (
               <SlPill
-                label={`SL20 ${brief.currentSl.label}`}
+                label={`Boating ${brief.currentSl.label}`}
                 bg={brief.currentSl.bg}
                 fg={brief.currentSl.fg}
               />
             ) : (
               <span className="font-bold px-2 py-0.5 rounded bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)] text-[var(--text-muted)] border border-[color-mix(in_srgb,var(--text-muted)_30%,transparent)]">
-                SL20 unavailable
+                Boating unavailable
               </span>
             )}
             {brief.current && (

@@ -87,7 +87,7 @@ export function TableView({ data }: Props) {
         <span>📍 {data.location.name}</span>
         <span>·</span>
         <span>🌐 {data.timezone}</span>
-        <span className="ml-auto text-yellow-400">⭐ = SL20 Go+ & 4★+ fishing</span>
+        <span className="ml-auto text-yellow-400">⭐ = Boating Go+ & 4★+ fishing</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs border-collapse" style={{ minWidth: "700px" }}>
@@ -95,7 +95,7 @@ export function TableView({ data }: Props) {
             <tr className="border-b-2 border-[var(--border)] text-[var(--text-muted)] text-[10px] uppercase tracking-wider">
               <th className="sticky left-0 bg-[var(--surface)] px-2 py-2 text-left border-r border-[var(--border)] z-30 min-w-[90px]">Date / Hour</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Fish %</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap">SL20</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap">Boating</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Wind</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Dir</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Gust</th>

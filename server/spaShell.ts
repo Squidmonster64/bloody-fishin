@@ -83,7 +83,7 @@ function readerShellHeader(): string {
   return `<div id="reader-shell">
 <header>
 <h1>Bloody Dave's Fishing Planner</h1>
-<p>Interactive planner for SL20 boating and fishing conditions. The full app needs JavaScript. Automated readers should use the server endpoints below.</p>
+<p>Interactive planner for Boating and fishing conditions. The full app needs JavaScript. Automated readers should use the server endpoints below.</p>
 <ul>
 <li><a href="/brief?spot=freo&amp;days=7">Markdown forecast — /brief</a></li>
 <li><a href="/brief.json?spot=freo&amp;days=7">JSON forecast — /brief.json</a></li>

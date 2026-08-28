@@ -23,7 +23,7 @@ export function Header() {
               Beta
             </span>
             <p className="text-[10px] sm:text-xs text-[var(--text-muted)] truncate">
-              Outdoor weather instrument · SL20 boating + fishing · Open-Meteo
+              Outdoor weather instrument · Boating + fishing · Open-Meteo
             </p>
           </div>
         </div>
