@@ -1,40 +1,50 @@
-/** Bloody Dave's Fishing Planner — Header
- * Marine-instrument shell: surface bar, Geist hierarchy, brand-first.
+/** Bloody Dave's Fishing Planner — compact family chrome.
+ * Brand mark always returns to Control. Suite product links on tablet/desktop.
  */
+import { SuiteNav } from "@/components/SuiteNav";
+import { CONTROL_URL } from "@/lib/suiteNav";
+
 export function Header() {
+  const dateLabel = new Date().toLocaleDateString("en-AU", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
   return (
-    <header className="bg-[var(--surface)] border-b border-[var(--border)] px-3 sm:px-4 py-2.5 flex items-center gap-3 sticky top-0 z-50">
-      <a
-        href="https://control.bloodydaves.com"
-        className="flex items-center gap-3 min-w-0 flex-1 text-inherit no-underline"
-        aria-label="Bloody Dave's Control"
-      >
-        <img
-          src="/bloody-dave-original.webp"
-          alt=""
-          className="h-11 w-11 sm:h-12 sm:w-12 rounded-full object-cover border border-[var(--border)] flex-shrink-0"
-        />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-[var(--text)] leading-tight truncate">
-            Bloody Dave&apos;s Fishing Planner
-          </h1>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2">
-            <span className="rounded px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] uppercase bg-[color-mix(in_srgb,var(--action)_15%,transparent)] text-[var(--action)] border border-[color-mix(in_srgb,var(--action)_35%,transparent)]">
-              Beta
-            </span>
-            <p className="text-[10px] sm:text-xs text-[var(--text-muted)] truncate">
-              Outdoor weather instrument · Boating + fishing · Open-Meteo
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)]">
+      <div className="flex items-center gap-2.5 px-3 min-[700px]:px-4 min-h-[44px] min-[700px]:min-h-[40px]">
+        <a
+          href={CONTROL_URL}
+          className="flex items-center gap-2 min-w-0 shrink-0 text-inherit no-underline"
+          aria-label="Bloody Dave's Control"
+        >
+          <img
+            src="/bloody-dave-original.webp"
+            alt=""
+            className="h-8 w-8 rounded-full object-cover border border-[var(--border)] shrink-0"
+          />
+          <div className="min-w-0">
+            <p className="text-[9px] font-bold tracking-[0.16em] uppercase text-[var(--action)] leading-none">
+              Bloody Dave&apos;s
             </p>
+            <h1 className="mt-0.5 text-[13px] font-semibold tracking-tight text-[var(--text)] leading-tight truncate">
+              Fishing Planner
+            </h1>
           </div>
-        </div>
-      </a>
-      <div className="ml-auto flex-shrink-0 text-right hidden sm:block">
-        <p className="text-[10px] text-[var(--text-muted)] font-medium">
-          {new Date().toLocaleDateString("en-AU", {
-            weekday: "long",
-            day: "numeric",
-            month: "short",
-          })}
+        </a>
+        <p className="hidden min-[700px]:block shrink-0 text-[10px] text-[var(--text-muted)]">
+          Boating + fishing
+        </p>
+        <p className="min-[700px]:hidden text-[10px] text-[var(--text-muted)] truncate">
+          Boating + fishing
+        </p>
+
+        <div className="hidden min-[700px]:block h-4 w-px bg-[var(--border)] shrink-0" aria-hidden />
+        <SuiteNav />
+
+        <p className="ml-auto hidden md:block shrink-0 text-[10px] text-[var(--text-muted)] tabular-nums">
+          {dateLabel}
         </p>
       </div>
     </header>

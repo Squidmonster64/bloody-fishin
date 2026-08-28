@@ -147,9 +147,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(18,27,42,0.95)",
-            borderColor: "#202e44", borderWidth: 1,
-            titleColor: "#f59e0b", bodyColor: "#d1c7bd",
+            backgroundColor: "rgba(29,42,32,0.95)",
+            borderColor: "#35463a", borderWidth: 1,
+            titleColor: "#d7bd7c", bodyColor: "#d6d0c4",
             padding: 10, cornerRadius: 8,
             callbacks: {
               title: (items) => {
@@ -206,12 +206,12 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
               autoSkip: false,
               callback: (_val, idx) => labels[idx] || null,
             },
-            grid: { color: "rgba(32,46,68,0.55)" },
+            grid: { color: "rgba(53,70,58,0.55)" },
           },
           y: {
             position: "left",
             ticks: { color: "#3b82f6", font: { size: 10 } },
-            grid: { color: "rgba(32,46,68,0.35)" },
+            grid: { color: "rgba(53,70,58,0.35)" },
           },
           y2: {
             position: "right",

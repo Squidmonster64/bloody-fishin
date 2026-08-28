@@ -43,7 +43,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--app-bg)] text-[var(--text)] font-sans pb-[calc(52px+env(safe-area-inset-bottom))] sm:pb-0">
+    <div className="min-h-screen flex flex-col bg-[var(--app-bg)] text-[var(--text)] font-sans overflow-x-hidden pb-[calc(44px+env(safe-area-inset-bottom))] min-[700px]:pb-0">
       <Header />
       <Controls
         state={state}
@@ -59,20 +59,20 @@ export default function Home() {
         onCompare={() => setShowCompare(true)}
         onRefresh={refresh}
       />
-      {/* Desktop / tablet: top tabs. Mobile: fixed bottom nav (same TabBar). */}
-      <div className="hidden sm:block">
+      {/* Tablet / desktop: compact top tabs. Phone: fixed bottom nav. */}
+      <div className="hidden min-[700px]:block">
         <TabBar view={state.view} onViewChange={setView} placement="top" />
       </div>
 
       <main className="flex-1 overflow-hidden">
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && (
-          <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-center text-xs text-[var(--text-muted)]">
+          <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]">
             Refreshing live conditions… showing the latest saved forecast meanwhile.
           </div>
         )}
         {state.refreshFailed && state.data && !state.loading && (
-          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-2 text-center text-xs text-[var(--warm-text)]">
+          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-1.5 text-center text-[11px] text-[var(--warm-text)]">
             <span>
               Live refresh failed — showing the saved forecast. Check signal and try again before
               you leave.
@@ -86,7 +86,7 @@ export default function Home() {
           </div>
         )}
         {state.cacheSavedAt && !state.loading && !state.refreshFailed && (
-          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-2 text-center text-xs text-[var(--warm-text)]">
+          <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-1.5 text-center text-[11px] text-[var(--warm-text)]">
             <span>
               Saved forecast from {new Date(state.cacheSavedAt).toLocaleString("en-AU")}. It could
               be stale.
@@ -108,7 +108,7 @@ export default function Home() {
         {state.data &&
           (state.days > 8 || (state.data.requestedDays && state.data.requestedDays > 8)) &&
           !state.loading && (
-            <div className="border-b border-[color-mix(in_srgb,var(--action)_30%,transparent)] bg-[color-mix(in_srgb,var(--action)_10%,transparent)] px-3 py-2 text-center text-xs text-[var(--text)]">
+            <div className="border-b border-[color-mix(in_srgb,var(--sand)_30%,transparent)] bg-[color-mix(in_srgb,var(--sand)_10%,transparent)] px-3 py-1.5 text-center text-[11px] text-[var(--text)]">
               Days 9–14 are weather and fishing outlook only — marine swell/chop/SL20 vessel calls
               stop after day 8
               {state.data.marineThrough ? ` (marine through ${state.data.marineThrough})` : ""}.
@@ -168,7 +168,7 @@ export default function Home() {
         of Meteorology marine warnings, local knowledge and skipper judgement before you go.
       </footer>
 
-      <div className="sm:hidden">
+      <div className="min-[700px]:hidden">
         <TabBar view={state.view} onViewChange={setView} placement="bottom" />
       </div>
     </div>

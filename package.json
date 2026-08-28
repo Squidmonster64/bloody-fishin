@@ -10,7 +10,7 @@
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "vitest run",
+    "test": "vitest run && node --test suite-nav.test.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {
