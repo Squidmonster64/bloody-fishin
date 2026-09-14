@@ -237,9 +237,23 @@ export async function buildBrief(request: Request) {
     const rows = futureHours.filter((hour) => hour.date === date);
     const marineDataAvailable = rows.some((hour) => hour.marineDataAvailable);
     const temps = rows.map((hour) => hour.temp).filter((t): t is number => t !== null && Number.isFinite(t));
+    const range = (values: Array<number | null>) => {
+      const valid = values.filter((value): value is number => value !== null && Number.isFinite(value));
+      return { min: valid.length ? Math.min(...valid) : null, max: valid.length ? Math.max(...valid) : null };
+    };
+    const rain = range(rows.map(hour => hour.rainProb));
+    const swell = range(rows.map(hour => hour.swellH));
+    const period = range(rows.map(hour => hour.swellP));
+    const chop = range(rows.map(hour => hour.windWaveH));
     return {
       date,
       marineDataAvailable,
+      maxRainChance: rain.max,
+      minSwellM: swell.min,
+      maxSwellM: swell.max,
+      minSwellPeriodS: period.min,
+      maxSwellPeriodS: period.max,
+      maxWindChopM: chop.max,
       maxWindKt: Math.max(...rows.map((hour) => hour.windKt ?? 0)),
       maxGustKt: Math.max(...rows.map((hour) => hour.gustKt ?? 0)),
       maxTempC: temps.length ? Math.max(...temps) : null,
@@ -306,6 +320,11 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
   if (brief.marineDataWarning) lines.push("", `> **Marine-data warning:** ${brief.marineDataWarning}`);
   if (!brief.nextWindows.length) lines.push("No qualifying window appears in this forecast range. Loosen the limits or increase `days`.");
   else for (const window of brief.nextWindows) lines.push(`- **${window.start} → ${window.end}** (${window.durationHours} h): avg wind ${window.averageWindKt} kt, max ${window.maxWindKt} kt, Boating ${window.sl20}, best fishing ${window.bestFishScore}% (${window.bestFishStars}★).`);
+  const showRange = (min: number | null, max: number | null) => min === null || max === null ? "—" : min === max ? String(min) : `${min}–${max}`;
+  lines.push("", "## Daily outlook", "Rain is the highest hourly probability, not a daily probability or rainfall amount. Ranges cover the forecast hours included for each date.",
+    "| Date | Max wind kt | Max gust kt | Max hourly rain chance | Swell m | Swell period s | Max chop m |",
+    "|---|---:|---:|---:|---:|---:|---:|");
+  for (const day of brief.dailyOutlook) lines.push(`| ${day.date} | ${day.maxWindKt} | ${day.maxGustKt} | ${day.maxRainChance === null ? "—" : day.maxRainChance + "%"} | ${showRange(day.minSwellM, day.maxSwellM)} | ${showRange(day.minSwellPeriodS, day.maxSwellPeriodS)} | ${day.maxWindChopM ?? "—"} |`);
   lines.push("", "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain | Fish | Boating |", "|---|---:|---:|---:|---:|---:|---:|---:|---|");
   for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.fishScore}% (${hour.fishStars}★) | ${hour.sl20} |`);
   const fishingOnly = brief.dailyOutlook.filter((day) => day.weatherAndFishingOnly);

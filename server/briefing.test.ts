@@ -120,6 +120,10 @@ describe("provider failure surfaces", () => {
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
     expect(brief.upcomingHours[0]).toHaveProperty("tempC");
     expect(brief.dailyOutlook[0]).toHaveProperty("sunrise");
+    expect(brief.dailyOutlook[0]).toMatchObject({
+      maxRainChance: 10, minSwellM: null, maxSwellM: null,
+      minSwellPeriodS: null, maxSwellPeriodS: null, maxWindChopM: null,
+    });
     expect(brief).toHaveProperty("nextUsable");
     expect(brief).toHaveProperty("bestUpcoming");
     const daylightBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3", mode: "wind", daylight: "true", minHours: "2" }));
@@ -167,5 +171,43 @@ describe("named place aliases for AI clients", () => {
     const { resolveLocation } = await import("./briefing");
     await expect(resolveLocation(fakeReq({ place: "ZzNotARealPlace999" }).query)).rejects.toThrow(/No location/);
     vi.unstubAllGlobals();
+  });
+});
+
+
+describe("daily rain and marine summary", () => {
+  it("includes seven days beyond the hourly preview and preserves missing values", async () => {
+    vi.resetModules();
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + i + 1);
+      return d.toISOString().slice(0, 10);
+    });
+    const time = dates.flatMap(date => Array.from({ length: 24 }, (_, h) => `${date}T${String(h).padStart(2, "0")}:00`));
+    const weather = { timezone: "Australia/Perth", hourly: {
+      time, wind_speed_10m: time.map(() => 8),
+      precipitation_probability: time.map((_, i) => i >= 144 ? null : i % 24),
+    }, daily: { time: dates, sunrise: dates.map(d => d + "T06:00"), sunset: dates.map(d => d + "T18:00") } };
+    const marine = { hourly: { time,
+      swell_wave_height: time.map((_, i) => i >= 144 ? null : i % 2 ? 2.5 : 1.5),
+      swell_wave_period: time.map((_, i) => i >= 144 ? null : i % 2 ? 12 : 10),
+      wind_wave_height: time.map((_, i) => i >= 144 ? null : 0),
+    } };
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify(String(url).includes("marine-api") ? marine : weather), { status: 200 })));
+    try {
+      const { buildBrief, briefMarkdown } = await import("./briefing");
+      const brief = await buildBrief(fakeReq({ spot: "freo", days: "7" }));
+      expect(brief.upcomingHours).toHaveLength(36);
+      expect(brief.dailyOutlook).toHaveLength(7);
+      expect(brief.dailyOutlook[5]).toMatchObject({ maxRainChance: 23, minSwellM: 1.5, maxSwellM: 2.5, minSwellPeriodS: 10, maxSwellPeriodS: 12, maxWindChopM: 0 });
+      expect(brief.dailyOutlook[6]).toMatchObject({ maxRainChance: null, minSwellM: null, maxSwellM: null, minSwellPeriodS: null, maxSwellPeriodS: null, maxWindChopM: null });
+      const markdown = briefMarkdown(brief);
+      expect(markdown).toContain("## Daily outlook");
+      expect(markdown).toContain("23% | 1.5–2.5 | 10–12 | 0");
+      expect(markdown).toContain(dates[6]);
+      expect(markdown).not.toMatch(/NaN|Infinity/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
