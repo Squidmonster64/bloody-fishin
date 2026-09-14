@@ -115,12 +115,17 @@ describe("provider failure surfaces", () => {
     const { buildBrief } = await import("./briefing");
     const brief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3", mode: "wind" }));
     expect(brief.marineDataAvailableThrough).toBeNull();
+    expect(brief.upcomingHours.map(h => h.daylight)).toEqual([false, true, true]);
     expect(brief.upcomingHours.every(h => h.sl20 === null)).toBe(true);
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
     expect(brief.upcomingHours[0]).toHaveProperty("tempC");
     expect(brief.dailyOutlook[0]).toHaveProperty("sunrise");
     expect(brief).toHaveProperty("nextUsable");
     expect(brief).toHaveProperty("bestUpcoming");
+    const daylightBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3", mode: "wind", daylight: "true", minHours: "2" }));
+    expect(daylightBrief.nextWindows).toHaveLength(1);
+    expect(daylightBrief.nextWindows[0].start).toBe(`${date} 07:00`);
+    expect(daylightBrief.nextWindows[0].end).toBe(`${date} 08:00`);
     vi.unstubAllGlobals();
   });
 });

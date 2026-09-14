@@ -8,7 +8,7 @@ import {
   fishingScore,
   hasMarineForVessel,
   moonTransitTimes,
-  parseHM,
+  isDaylightHour,
   rateSL20,
   type SL20Rating,
 } from "../shared/scoring.js";
@@ -205,9 +205,7 @@ async function forecast(location: Location, days: number): Promise<{ timezone: s
       const next = raw[index + 1]?.seaLevel;
       const tideRate = item.seaLevel === null ? null : next !== null && previous !== null && next !== undefined && previous !== undefined ? (next - previous) / 2 : next !== null && next !== undefined ? next - item.seaLevel : previous !== null && previous !== undefined ? item.seaLevel - previous : null;
       const sun = dailyByDate.get(item.date) ?? { sunrise: "", sunset: "" };
-      const sunrise = parseHM(sun.sunrise);
-      const sunset = parseHM(sun.sunset);
-      const daylight = sunrise === null || sunset === null ? true : item.hour >= sunrise && item.hour <= sunset;
+      const daylight = isDaylightHour(item.hour, sun.sunrise, sun.sunset);
       const moonTimes = moonTransitTimes(new Date(`${item.date}T12:00:00Z`), sun.sunrise, sun.sunset);
       const solunar = fishingScore({
         hour: item.hour,

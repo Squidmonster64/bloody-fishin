@@ -109,15 +109,18 @@ export function moonPhaseEmoji(phase: number): string {
 
 export function parseHM(s: string): number | null {
   if (!s) return null;
-  const [h, m] = s.split(":").map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  // Provider timestamps are local wall-clock times, not server-local instants.
+  const match = /^(?:\d{4}-\d{2}-\d{2}T)?(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.exec(s);
+  if (!match) return null;
+  const h = Number(match[1]), m = Number(match[2]);
+  if (h > 23 || m > 59) return null;
   return h + m / 60;
 }
 
 export function isDaylightHour(hour: number, sunrise: string, sunset: string): boolean {
   const sr = parseHM(sunrise);
   const ss = parseHM(sunset);
-  return sr == null || ss == null || (hour >= sr && hour <= ss);
+  return Number.isFinite(hour) && sr != null && ss != null && hour >= sr && hour <= ss;
 }
 
 export function moonTransitTimes(date: Date, sunriseStr: string, sunsetStr: string) {
