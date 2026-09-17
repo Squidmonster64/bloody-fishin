@@ -185,3 +185,17 @@ describe("formatters", () => {
     expect(formatTideLine({ type: "High", time: "2026-08-23T09:00", height: 1.1, hour: 9, dateStr: "2026-08-23" })).toContain("High");
   });
 });
+
+describe("mobile freshness safety", () => {
+  it("never labels a recent cached copy live or makes a current boating call", () => {
+    const brief = buildDecisionBrief(fixture(), {when: new Date("2026-08-22T22:10:00Z"), fetchedAt:"2026-08-22T22:00:00Z", cacheSavedAt:"2026-08-22T22:05:00Z"});
+    expect(brief.freshnessTone).not.toBe("live");
+    expect(brief.currentSl).toBeNull();
+    expect(brief.goNoGo).toBe("outlook");
+  });
+  it("does not produce a current vessel call from stale live data", () => {
+    const brief = buildDecisionBrief(fixture(), {when: new Date("2026-08-22T22:10:00Z"), fetchedAt:"2026-08-22T20:00:00Z"});
+    expect(brief.currentSl).toBeNull();
+    expect(brief.goNoGo).toBe("outlook");
+  });
+});

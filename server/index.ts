@@ -7,6 +7,9 @@ import { clientKey, consumeRateLimit, getCached, setCached } from "./ops.js";
 import { READER_VERSION, prefersMachineReadable, renderIndexHtml, serveRoot } from "./spaShell.js";
 import { MCP_SERVER_VERSION, mcpNodeHandler, mcpRateLimitMiddleware } from "./mcp.js";
 
+import { fetchFishingData, getTimezone } from "../client/src/lib/fishingEngine";
+import { validateCoordinates, validateForecastDays } from "../shared/http";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -34,6 +37,20 @@ function applyRateLimit(req: express.Request, res: express.Response): boolean {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  app.get("/forecast", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    if (!applyRateLimit(req, res)) return;
+    const lat = Number(req.query.lat), lon = Number(req.query.lon), days = Number(req.query.days);
+    const error = req.query.lat == null || req.query.lon == null || req.query.days == null ? "lat, lon and days are required" : validateCoordinates(lat, lon) || validateForecastDays(days);
+    if (error) { res.status(400).json({error}); return; }
+    try {
+      const location = {lat, lon, name: String(req.query.name ?? "Selected location").slice(0, 120)};
+      const data = await fetchFishingData(location, days, await getTimezone(lat, lon));
+      res.setHeader("Cache-Control", "no-store");
+      res.json(data);
+    } catch { res.status(502).json({error: "Forecast provider temporarily unavailable"}); }
+  });
 
   app.get("/health", (_req, res) => {
     res.json({
