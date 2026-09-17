@@ -19,6 +19,8 @@ import { PrintView } from "@/components/PrintView";
 import { BriefingSheet } from "@/components/BriefingSheet";
 import { CompareSpotsSheet } from "@/components/CompareSpotsSheet";
 
+import { exportSpots } from "@/lib/spotTransfer";
+
 export default function Home() {
   const {
     state,
@@ -32,7 +34,8 @@ export default function Home() {
     toggleVis,
     setCustomLocation,
   } = useFishingData();
-  const { spots, addSpot, updateSpot, deleteSpot } = useMySpots();
+  const { spots, addSpot, updateSpot, deleteSpot, importSavedSpots } = useMySpots();
+  const [transferMessage, setTransferMessage] = useState("");
   const [showPrint, setShowPrint] = useState(false);
   const [showBrief, setShowBrief] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
@@ -59,12 +62,33 @@ export default function Home() {
         onCompare={() => setShowCompare(true)}
         onRefresh={refresh}
       />
+      <details className="px-3 py-1 text-sm border-b border-[var(--border)]">
+        <summary className="min-h-[44px] flex items-center cursor-pointer">Saved spots backup</summary>
+        <div className="flex flex-wrap items-center gap-3 py-2">
+          <button className="min-h-[44px] border rounded px-3" onClick={() => {
+            const url = URL.createObjectURL(new Blob([exportSpots(spots)], {type:"application/json"}));
+            const a=document.createElement("a"); a.href=url; a.download="bloody-fishin-spots.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+          }}>Export spots</button>
+          <label className="min-h-[44px] flex flex-wrap items-center gap-2">Import spots
+            <input aria-label="Import saved spots" type="file" accept=".json,application/json" className="max-w-full" onChange={async e => {
+              const file=e.target.files?.[0]; if(!file) return;
+              try { if(file.size>2000000) throw new Error("Choose an export smaller than 2 MB."); importSavedSpots(await file.text()); setTransferMessage("Spots imported. Existing spots preserved."); }
+              catch(error) { setTransferMessage(error instanceof Error ? error.message : "Import failed"); }
+              e.target.value="";
+            }}/>
+          </label>
+          <span role="status">{transferMessage}</span>
+        </div>
+      </details>
       {/* Tablet / desktop: compact top tabs. Phone: fixed bottom nav. */}
       <div className="hidden min-[700px]:block">
         <TabBar view={state.view} onViewChange={setView} placement="top" />
       </div>
 
       <main className="flex-1 overflow-hidden">
+        {state.cacheSavedAt && state.data && <p role="status" className="px-3 py-2 text-sm text-[var(--warning)]">
+          Saved forecast — {state.data.location.name} · fetched {state.data.fetchedAt ? new Date(state.data.fetchedAt).toLocaleString("en-AU") : "at an unknown time"}. Historical outlook only; current boating calls are unavailable.
+        </p>}
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && (
           <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]">
@@ -79,7 +103,7 @@ export default function Home() {
             </span>
             <button
               onClick={refresh}
-              className="min-h-[32px] rounded border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] px-2 font-bold text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
+              className="min-h-[44px] rounded border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] px-2 font-bold text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
             >
               ↻ Retry refresh
             </button>
@@ -93,13 +117,13 @@ export default function Home() {
             </span>
             <button
               onClick={refresh}
-              className="min-h-[32px] rounded border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] px-2 font-bold text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
+              className="min-h-[44px] rounded border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] px-2 font-bold text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
             >
               ↻ Refresh now
             </button>
             <button
               onClick={clearCache}
-              className="min-h-[32px] rounded border border-[color-mix(in_srgb,var(--warning)_30%,transparent)] px-2 font-semibold text-[var(--warm-text)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
+              className="min-h-[44px] rounded border border-[color-mix(in_srgb,var(--warning)_30%,transparent)] px-2 font-semibold text-[var(--warm-text)] hover:bg-[color-mix(in_srgb,var(--warning)_15%,transparent)]"
             >
               Clear saved copy
             </button>

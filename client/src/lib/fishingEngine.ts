@@ -305,20 +305,18 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   marineTimesRaw.forEach((t: string, i: number) => { marineTimeIdx[t] = i; });
 
   const merged: HourRow[] = times.map((t, i) => {
-    const dt = new Date(t);
-    // Get local hour using the timezone
-    const hour = parseInt(
-      dt.toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: timezone }),
-      10
-    ) % 24;
-    const dayName = dt.toLocaleString("en-AU", { weekday: "short", timeZone: timezone });
+    // Provider strings already express the selected location's wall clock.
+    // UTC is a stable carrier for labels, not a second timezone conversion.
+    const dt = new Date(`${t}Z`);
+    const hour = Number(t.slice(11, 13));
+    const dayName = dt.toLocaleString("en-AU", { weekday: "short", timeZone: "UTC" });
     const mi = marineTimeIdx[t];
     const hasM = mi !== undefined;
     return {
       time: t, hour, dateStr: t.slice(0, 10), dt,
       label: dt.toLocaleString("en-AU", {
         weekday: "short", day: "numeric", month: "short",
-        hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone,
+        hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
       }).replace(",", ""),
       shortLabel: [0, 6, 12, 18].includes(hour) ? `${dayName} ${String(hour).padStart(2, "0")}` : "",
       hourLabel: `${String(hour).padStart(2, "0")}:00`,
@@ -359,7 +357,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     const r9 = rows.find(r => r.hour === 9) || rows[0];
     const sunrise = (w.daily.sunrise[i] || "").slice(11, 16);
     const sunset  = (w.daily.sunset[i]  || "").slice(11, 16);
-    const dayMidday = new Date(`${d}T12:00:00`);
+    const dayMidday = new Date(`${d}T12:00:00Z`);
     const moonTimes = moonTransitTimes(dayMidday, sunrise, sunset);
 
     rows.forEach(row => {
