@@ -187,6 +187,7 @@ describe("daily rain and marine summary", () => {
     const weather = { timezone: "Australia/Perth", hourly: {
       time, wind_speed_10m: time.map(() => 8),
       precipitation_probability: time.map((_, i) => i >= 144 ? null : i % 24),
+      precipitation: time.map((_, i) => i >= 144 ? null : i < 24 ? 0 : i % 24 === 12 ? 100 : 0.1),
     }, daily: { time: dates, sunrise: dates.map(d => d + "T06:00"), sunset: dates.map(d => d + "T18:00") } };
     const marine = { hourly: { time,
       swell_wave_height: time.map((_, i) => i >= 144 ? null : i % 2 ? 2.5 : 1.5),
@@ -203,7 +204,12 @@ describe("daily rain and marine summary", () => {
       expect(brief.dailyOutlook[6]).toMatchObject({ maxRainChance: null, minSwellM: null, maxSwellM: null, minSwellPeriodS: null, maxSwellPeriodS: null, maxWindChopM: null });
       const markdown = briefMarkdown(brief);
       expect(markdown).toContain("## Daily outlook");
-      expect(markdown).toContain("23% | 1.5–2.5 | 10–12 | 0");
+      expect(brief.dailyOutlook[0].precipitationTotalMm).toBe(0);
+      expect(brief.dailyOutlook[5].precipitationTotalMm).toBe(102.3);
+      expect(brief.dailyOutlook[5].maxHourlyPrecipitationMm).toBe(100);
+      expect(brief.dailyOutlook[6].precipitationTotalMm).toBeNull();
+      expect(brief.upcomingHours[0].precipitationMm).toBe(0);
+      expect(markdown).toContain("23% | 102.3 | 100 | 1.5–2.5 | 10–12 | 0");
       expect(markdown).toContain(dates[6]);
       expect(markdown).not.toMatch(/NaN|Infinity/);
     } finally {

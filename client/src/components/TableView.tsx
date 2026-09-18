@@ -2,6 +2,7 @@
  * TableView — Hourly data table with frozen Date/Hour column.
  * Highlights golden rows (SL20 Go+ AND 4★+ fishing).
  */
+import { precipitationTotal } from "@shared/precipitation";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
 import { rateSL20, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
 
@@ -75,6 +76,7 @@ function Row({ row }: { row: HourRow }) {
       {/* Rain */}
       <td className="px-2 py-1.5 text-center whitespace-nowrap text-[#60a5fa]">
         {row.rainProb != null ? `${row.rainProb}%` : "—"}
+        <div className="text-[10px]">{row.precipitationMm != null ? `${row.precipitationMm} mm` : "— mm"}</div>
       </td>
     </tr>
   );
@@ -88,6 +90,15 @@ export function TableView({ data }: Props) {
         <span>·</span>
         <span>🌐 {data.timezone}</span>
         <span className="ml-auto text-yellow-400">⭐ = Boating Go+ & 4★+ fishing</span>
+      </div>
+      <div className="px-3 py-2 text-xs border-b border-[var(--border)]">
+        <p className="text-[var(--text-muted)] mb-2">Rain amount: full-day totals; hourly amounts below. Includes showers and snow water equivalent. Chance and amount are separate forecasts.</p>
+        <div className="flex flex-wrap gap-3">
+          {Array.from(new Set(data.merged.map(row => row.dateStr))).map(date => {
+            const total = precipitationTotal(data.merged.filter(row => row.dateStr === date).map(row => row.precipitationMm));
+            return <span key={date}>{date}: <strong>{total === null ? "—" : total} mm/day</strong></span>;
+          })}
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs border-collapse" style={{ minWidth: "700px" }}>
@@ -105,7 +116,7 @@ export function TableView({ data }: Props) {
               <th className="px-2 py-2 text-center whitespace-nowrap">Wave</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Tide</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Temp</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap">Rain%</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Chance of precipitation; modelled amount in the preceding hour">Rain % / mm per hour</th>
             </tr>
           </thead>
           <tbody>

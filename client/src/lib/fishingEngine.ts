@@ -1,3 +1,4 @@
+import { precipitationMm } from "@shared/precipitation";
 import {
   fishingScore,
   hasMarineForVessel,
@@ -58,6 +59,7 @@ export interface HourRow {
   windDir: number | null;
   gustKt: number | null;
   rainProb: number | null;
+  precipitationMm?: number | null;
   waveH: number | null;
   waveP: number | null;
   windWaveH: number | null;
@@ -265,7 +267,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   const weatherUrl =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${lat}&longitude=${lon}` +
-    `&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability` +
+    `&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation` +
     `&daily=sunrise,sunset,uv_index_max` +
     `&wind_speed_unit=kn&timezone=${encodeURIComponent(timezone)}` +
     `&forecast_days=${days}`;
@@ -328,6 +330,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       windDir:   (wh.wind_direction_10m || [])[i] ?? null,
       gustKt:    (wh.wind_gusts_10m || [])[i] ?? null,
       rainProb:  (wh.precipitation_probability || [])[i] ?? null,
+      precipitationMm: precipitationMm(wh.precipitation?.[i]),
       waveH:     hasM ? (mh.wave_height || [])[mi] ?? null : null,
       waveP:     hasM ? (mh.wave_period || [])[mi] ?? null : null,
       windWaveH: hasM ? (mh.wind_wave_height || [])[mi] ?? null : null,
@@ -417,4 +420,3 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     requestedDays: days,
   };
 }
-
