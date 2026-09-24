@@ -109,3 +109,7 @@ temp/
 .webdev/
 
 .project-config.json
+
+# Generated Floot transfer (rebuild with scripts/prepare-floot.py)
+floot-transfer/
+tmp-legacy-shell/

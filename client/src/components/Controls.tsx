@@ -5,6 +5,8 @@ import type { FishingState } from "@/hooks/useFishingData";
 import { MySpotsManager } from "@/components/MySpotsManager";
 import type { MySpot } from "@/hooks/useMySpots";
 
+import { currentLocation, shareForecast } from "@/lib/mobilePlatform";
+
 interface Props {
   state: FishingState;
   spots: MySpot[];
@@ -23,7 +25,7 @@ interface Props {
 const field =
   "bg-[var(--app-bg)] border border-[var(--border)] text-[var(--text)] rounded px-3 py-2 focus:border-[var(--action)] focus:outline-none font-semibold";
 const ghostBtn =
-  "flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-1.5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--action)] hover:text-[var(--text)]";
+  "flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[var(--border)] bg-[var(--app-bg)] px-2.5 py-1.5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--action)] hover:text-[var(--text)]";
 
 export function Controls({
   state,
@@ -39,6 +41,9 @@ export function Controls({
   onCompare,
   onRefresh,
 }: Props) {
+  const [deviceMessage, setDeviceMessage] = useState("");
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [latStr, setLatStr] = useState("");
@@ -76,6 +81,15 @@ export function Controls({
 
   return (
     <div className="bg-[var(--surface)] border-b border-[var(--border)] px-3 py-1.5 flex flex-wrap items-center gap-2">
+      <button className={ghostBtn} disabled={locating} onClick={async () => {
+        setLocating(true); setDeviceMessage("");
+        try { onLocationChange(await currentLocation()); }
+        catch(e) { setDeviceMessage(e instanceof Error ? e.message : "Location unavailable"); setShowCustom(true); }
+        finally { setLocating(false); }
+      }}>{locating ? "Locating…" : "Use my location"}</button>
+      <button className={ghostBtn} onClick={async () => setShareLink(await shareForecast(state.location, state.days))}>Share forecast</button>
+      {deviceMessage && <p role="status" className="w-full text-sm">{deviceMessage}</p>}
+      {shareLink && <a className={ghostBtn} href={shareLink} target="_blank" rel="noreferrer">Open shareable forecast</a>}
       <div className="controls-location flex w-full items-center gap-2 sm:w-auto sm:flex-1 sm:max-w-md">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap font-semibold">
           Location
@@ -92,7 +106,7 @@ export function Controls({
           </span>
         </button>
         <select
-          className={`hidden min-h-[40px] min-w-0 flex-1 text-sm min-[700px]:block min-[700px]:w-auto ${field}`}
+          className={`hidden min-h-[44px] min-w-0 flex-1 text-sm min-[700px]:block min-[700px]:w-auto ${field}`}
           value={`${state.location.lat},${state.location.lon}`}
           onChange={e => {
             if (e.target.value === "__custom__") {
@@ -132,7 +146,7 @@ export function Controls({
           Range
         </label>
         <select
-          className={`min-h-[40px] text-sm font-medium ${field}`}
+          className={`min-h-[44px] text-sm font-medium ${field}`}
           value={state.days}
           onChange={e => onDaysChange(Number(e.target.value))}
         >
@@ -154,7 +168,7 @@ export function Controls({
         <button
           onClick={onRefresh}
           disabled={state.loading}
-          className="flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded border border-[var(--action)] bg-[color-mix(in_srgb,var(--action)_15%,transparent)] px-2.5 py-1.5 text-sm font-bold text-[var(--action)] transition-colors hover:bg-[var(--action)] hover:text-[var(--app-bg)] disabled:cursor-wait disabled:opacity-60"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border border-[var(--action)] bg-[color-mix(in_srgb,var(--action)_15%,transparent)] px-2.5 py-1.5 text-sm font-bold text-[var(--action)] transition-colors hover:bg-[var(--action)] hover:text-[var(--app-bg)] disabled:cursor-wait disabled:opacity-60"
           title="Refresh live forecast"
           aria-label="Refresh live forecast"
         >

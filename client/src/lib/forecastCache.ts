@@ -6,6 +6,8 @@
  */
 import type { AppData, Location } from "@/lib/fishingEngine";
 
+import { reviveForecast } from "./forecastTransport";
+
 interface CachedForecast { data: AppData; savedAt: string; }
 const PREFIX = "bdave_forecast_cache_v1";
 
@@ -25,7 +27,12 @@ export function saveForecastCache(location: Location, days: number, data: AppDat
 export function loadForecastCache(location: Location, days: number): CachedForecast | null {
   try {
     const raw = localStorage.getItem(key(location, days));
-    return raw ? JSON.parse(raw) as CachedForecast : null;
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as CachedForecast;
+    if (!Number.isFinite(Date.parse(entry.savedAt))) return null;
+    const data = reviveForecast(entry.data);
+    if (key(data.location, data.requestedDays ?? days) !== key(location, days)) return null;
+    return {data, savedAt: entry.savedAt};
   } catch { return null; }
 }
 

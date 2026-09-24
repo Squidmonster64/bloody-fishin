@@ -1,12 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
-  fetchFishingData,
-  getTimezone,
   LOCATIONS,
   type AppData,
   type Location,
 } from "@/lib/fishingEngine";
 import { clearForecastCache, loadForecastCache, saveForecastCache } from "@/lib/forecastCache";
+
+import { lastSelection, saveSelection } from "@/lib/lastSelection";
+import { loadForecast } from "@/lib/forecastTransport";
 
 export type ViewType = "decision" | "graph" | "summary" | "table" | "sickie";
 
@@ -35,9 +36,9 @@ export interface FishingState {
 const DEFAULT_LOCATION = LOCATIONS["🎯 Spots"][0];
 
 export function useFishingData() {
-  const [state, setState] = useState<FishingState>({
-    location: DEFAULT_LOCATION,
-    days: 5,
+  const requestSequence = useRef(0);
+  const [state, setState] = useState<FishingState>(() => ({
+    ...lastSelection(DEFAULT_LOCATION),
     hourlyDay: null,
     view: "decision",
     data: null,
@@ -47,9 +48,11 @@ export function useFishingData() {
     cacheSavedAt: null,
     refreshFailed: false,
     vis: { wind: true, swell: true, fish: true, tide: true, temp: false, rain: false },
-  });
+  }));
 
   const loadData = useCallback(async (loc: Location, days: number) => {
+    const request = ++requestSequence.current;
+    saveSelection(loc, days);
     const cached = loadForecastCache(loc, days);
     setState(s => ({
       ...s,
@@ -62,8 +65,9 @@ export function useFishingData() {
       hourlyDay: cached?.data.daily[0]?.date ?? s.hourlyDay,
     }));
     try {
-      const tz = await getTimezone(loc.lat, loc.lon);
-      const data = await fetchFishingData(loc, days, tz);
+      const data = await loadForecast(loc, days);
+      if (request !== requestSequence.current) return;
+      const tz = data.timezone;
       saveForecastCache(loc, days, data);
       setState(s => ({
         ...s,
@@ -75,6 +79,7 @@ export function useFishingData() {
         hourlyDay: s.hourlyDay || (data.daily[0]?.date ?? null),
       }));
     } catch (e: unknown) {
+      if (request !== requestSequence.current) return;
       setState(s => {
         if (s.data) {
           return {
@@ -123,8 +128,9 @@ export function useFishingData() {
   }, [loadData, state.location, state.days]);
 
   const clearCache = useCallback(() => {
+    ++requestSequence.current;
     clearForecastCache(state.location, state.days);
-    setState(s => ({ ...s, data: null, cacheSavedAt: null, error: null, refreshFailed: false, hourlyDay: null }));
+    setState(s => ({ ...s, data: null, loading: false, cacheSavedAt: null, error: null, refreshFailed: false, hourlyDay: null }));
   }, [state.location, state.days]);
 
   return { state, loadData, refresh, clearCache, setLocation, setDays, setView, setHourlyDay, toggleVis, setCustomLocation };

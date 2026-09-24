@@ -11,6 +11,8 @@ export interface MySpot extends Location {
   notes?: string;
 }
 
+import { importSpots } from "@/lib/spotTransfer";
+
 const STORAGE_KEY = "bdave_my_spots";
 
 function load(): MySpot[] {
@@ -67,5 +69,10 @@ export function useMySpots() {
     });
   }, []);
 
-  return { spots, addSpot, updateSpot, deleteSpot };
+  const importSavedSpots = useCallback((text: string) => {
+    const next = importSpots(text, spots);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setSpots(next);
+  }, [spots]);
+  return { spots, addSpot, updateSpot, deleteSpot, importSavedSpots };
 }

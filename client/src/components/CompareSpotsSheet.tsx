@@ -4,7 +4,8 @@
  * useful on a 375px iPhone SE in either orientation.
  */
 import { useEffect, useMemo, useState } from "react";
-import { fetchFishingData, getTimezone, LOCATIONS, type AppData, type Location } from "@/lib/fishingEngine";
+import { LOCATIONS, type AppData, type Location } from "@/lib/fishingEngine";
+import { loadForecast } from "@/lib/forecastTransport";
 import type { MySpot } from "@/hooks/useMySpots";
 
 function isSame(a: Location, b: Location) { return a.lat === b.lat && a.lon === b.lon; }
@@ -39,8 +40,7 @@ export function CompareSpotsSheet({ baseData, savedSpots, onClose }: { baseData:
     if (!selected) return;
     setLoading(true); setError("");
     try {
-      const tz = await within(getTimezone(selected.lat, selected.lon), 8000);
-      setCompareData(await within(fetchFishingData(selected, baseData.daily.length, tz), 15000));
+      setCompareData(await within(loadForecast(selected, baseData.daily.length), 25000));
     } catch { setError("Could not load the comparison forecast within 15 seconds. Check reception, then tap Compare to retry."); }
     finally { setLoading(false); }
   }

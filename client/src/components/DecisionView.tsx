@@ -3,7 +3,7 @@
  * Location + GOOD/POOR window + compact GO, then Wind/Swell/Tide/Water and a timeline.
  * Visual recovery only; briefing helpers and the vessel scorer are unchanged.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
 import { fmt, hasMarineForVessel, rateSL20, windColor, swellColor } from "@/lib/fishingEngine";
 import {
@@ -87,6 +87,8 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 }
 
 export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefresh }: Props) {
+  const [clock, setClock] = useState(() => new Date());
+  useEffect(() => { const id = setInterval(() => setClock(new Date()), 60000); return () => clearInterval(id); }, []);
   const [showWhy, setShowWhy] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
   const brief = useMemo(
@@ -94,8 +96,9 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
       buildDecisionBrief(data, {
         fetchedAt: fetchedAt ?? data.fetchedAt,
         cacheSavedAt,
+        when: clock,
       }),
-    [data, fetchedAt, cacheSavedAt],
+    [data, fetchedAt, cacheSavedAt, clock],
   );
   const style = GO_STYLES[brief.goNoGo];
   const kind = windowKind(brief.goNoGo);
@@ -188,7 +191,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:-mx-4 sm:px-4">
           <div className="flex gap-1 min-w-max">
             {timeline.map(row => {
-              const tone = hourTone(row);
+              const tone = (brief.freshnessTone === "stale" ? "outlook" : hourTone(row));
               const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
               return (
                 <div

@@ -296,6 +296,7 @@ export function freshnessFromFetchedAt(fetchedAt: string | null, now = new Date(
   if (!fetchedAt) {
     return { freshnessLabel: "Freshness unknown", freshnessTone: "unknown" };
   }
+  if (!Number.isFinite(Date.parse(fetchedAt))) return {freshnessLabel: "Freshness unknown", freshnessTone: "unknown"};
   const ageMin = Math.max(0, Math.round((now.getTime() - new Date(fetchedAt).getTime()) / 60000));
   if (ageMin <= 15) return { freshnessLabel: `Live · updated ${ageMin === 0 ? "just now" : `${ageMin} min ago`}`, freshnessTone: "live" };
   if (ageMin <= 90) return { freshnessLabel: `Updated ${ageMin} min ago`, freshnessTone: "recent" };
@@ -312,18 +313,22 @@ export function buildDecisionBrief(
   opts?: { fetchedAt?: string | null; cacheSavedAt?: string | null; when?: Date },
 ): DecisionBrief {
   const when = opts?.when ?? new Date();
+  const originalFetch = opts?.fetchedAt ?? data.fetchedAt ?? null;
+  const fetchFreshness = freshnessFromFetchedAt(originalFetch, when);
+  const historical = Boolean(opts?.cacheSavedAt) || fetchFreshness.freshnessTone === "stale";
+
   const current = findCurrentHour(data, when);
   const conditions = snapFromRow(current);
   const marineMissing = Boolean(data.marineUnavailable) || data.merged.slice(0, 24).every(r => !hasMarineForVessel(r));
-  const currentMarineOk = current ? hasMarineForVessel(current) : false;
+  const currentMarineOk = !historical && (current ? hasMarineForVessel(current) : false);
   // Compute SL20 for diagnostics, but do not present an authoritative vessel call without marine fields.
   const computedSl = current
     ? rateSL20(current.windKt, current.swellH, current.swellP, current.waveH, current.windWaveH)
     : null;
   const currentSl = currentMarineOk ? computedSl : null;
   const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
-  const bestWindows = buildBestWindows(data);
-  const nextUseful = findNextUsefulWindow(data, current);
+  const bestWindows = historical ? [] : buildBestWindows(data);
+  const nextUseful = historical ? null : findNextUsefulWindow(data, current);
   const goNoGo = assessGoNoGo(currentSl, current, marineMissing || !currentMarineOk);
   const { headline, supporting } = buildHeadline(goNoGo, currentSl, current, nextUseful);
   const local = localParts(data.timezone, when);
@@ -332,6 +337,10 @@ export function buildDecisionBrief(
     ? opts.cacheSavedAt
     : (opts?.fetchedAt ?? data.fetchedAt ?? null);
   const freshness = freshnessFromFetchedAt(fetchedAt, when);
+  if (opts?.cacheSavedAt) {
+    freshness.freshnessTone = "stale";
+    freshness.freshnessLabel = `Saved forecast · fetched ${originalFetch ?? "at an unknown time"}`;
+  }
 
   const risks = buildRisks(current, currentSl, conditions, marineMissing);
   if (marineHorizonShort) {
