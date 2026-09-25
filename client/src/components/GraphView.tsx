@@ -125,6 +125,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       plugins: [goldenPlugin],
       options: {
         responsive: true, maintainAspectRatio: false,
+        // A new chart is built whenever a series is toggled. Avoid showing a
+        // partially animated scale while the new axes and datasets settle.
+        animation: false,
         interaction: { mode: "index", intersect: false },
         onHover: (_e, elements) => {
           if (elements.length) {
@@ -210,11 +213,13 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           },
           y: {
             position: "left",
+            display: vis.wind || vis.temp,
             ticks: { color: "#3b82f6", font: { size: 10 } },
             grid: { color: "rgba(53,70,58,0.35)" },
           },
           y2: {
             position: "right",
+            display: vis.swell || vis.tide,
             ticks: { color: "#10b981", font: { size: 10 } },
             grid: { display: false },
           },
