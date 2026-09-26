@@ -291,14 +291,18 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         </button>
       </div>
 
-      <p className="px-3 py-1 text-xs text-[var(--text-muted)]">Blue: wind · Dashed amber: gusts · Arrows point where wind blows; compass labels show where it comes from. North is up.</p>
       {/* Full-range chart */}
-      <div className="relative px-2 py-2 chart-container" style={{ height: "260px", minHeight: "200px" }}>
+      <div className="relative shrink-0 px-2 py-2 chart-container" style={{ height: "260px", minHeight: "200px" }}>
         <canvas ref={canvasRef} className="forecast-canvas" />
-        <p className="absolute bottom-3 right-4 text-[9px] text-[var(--text-muted)]">
-          Desktop: mouse-wheel zoom · Phone: use +/- then scroll normally · ⭐ = golden hour
-        </p>
+
       </div>
+
+      <details className="shrink-0 border-t border-[var(--border)] px-3 py-1 text-[10px] text-[var(--text-muted)]">
+        <summary className="cursor-pointer">Wind → · Gusts ╌ · Chart guide</summary>
+        <p className="py-1">Blue: wind · Dashed amber: gusts · Arrows point where wind blows; compass labels show where it comes from. North is up.</p>
+        <p>Desktop: mouse-wheel zoom · Phone: use +/- then scroll normally · ⭐ = golden hour.</p>
+        <p className="py-1">Swell period is the model mean period. Sea level is relative to mean sea level, not chart datum; use official harbour tide tables for navigation.</p>
+      </details>
 
       {/* Day selector strip */}
       <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border-t border-b border-[var(--border)] overflow-x-auto scrollbar-hide">
@@ -369,7 +373,6 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         </div>
       </div>
 
-      <p className="px-3 py-1 text-xs text-[var(--text-muted)]">Swell period is the model mean period. Sea level is relative to mean sea level, not chart datum; use official harbour tide tables for navigation.</p>
       {/* Tide extremes */}
       {dayData && dayData.tideExtremes.length > 0 && (
         <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-[var(--border)] text-xs">
