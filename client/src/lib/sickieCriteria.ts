@@ -45,8 +45,8 @@ export const VESSEL_PRESETS: Record<VesselPreset, { label: string; emoji: string
   sl20: {
     label: "SL20 / Half-cabin",
     emoji: "⛵",
-    description: "Golden default — daylight, ≤10 kt wind, <1.0 m swell, no rain, 4★+ fishing",
-    criteria: { minSL20Rank: 2, minFishStars: 4, maxWindKt: 10, maxGustKt: null, maxSwellH: 0.99, maxWindWaveH: null, maxRainProb: 0, daylightOnly: true, minWindowHours: 3 },
+    description: "Golden default — daylight, ≤10 kt wind, ≤14 kt gusts, <1.0 m swell, no rain, 4★+ fishing",
+    criteria: { minSL20Rank: 2, minFishStars: 4, maxWindKt: 10, maxGustKt: 14, maxSwellH: 0.99, maxWindWaveH: null, maxRainProb: 0, daylightOnly: true, minWindowHours: 3 },
   },
   offshore: {
     label: "Offshore Cruiser",
@@ -72,13 +72,14 @@ export const DEFAULT_CRITERIA = VESSEL_PRESETS.sl20.criteria;
 
 /** Check if a single hour row meets the Sickie criteria */
 export function meetsCriteria(
-  row: { slRank: number; fishStars: number; windKt: number | null; gustKt?: number | null; swellH: number | null; windWaveH?: number | null; rainProb?: number | null },
+  row: { slRank: number; fishStars: number; windKt: number | null; gustKt?: number | null; thunderstorm?: boolean; swellH: number | null; windWaveH?: number | null; rainProb?: number | null },
   criteria: SickieCriteria
 ): boolean {
+  if (row.thunderstorm) return false;
   if (row.slRank < criteria.minSL20Rank) return false;
   if (row.fishStars < criteria.minFishStars) return false;
   if (row.windKt != null && row.windKt > criteria.maxWindKt) return false;
-  if (criteria.maxGustKt != null && row.gustKt != null && row.gustKt > criteria.maxGustKt) return false;
+  if (criteria.maxGustKt != null && (row.gustKt ?? Infinity) > criteria.maxGustKt) return false;
   if (criteria.maxSwellH != null && row.swellH != null && row.swellH > criteria.maxSwellH) return false;
   if (criteria.maxWindWaveH != null && row.windWaveH != null && row.windWaveH > criteria.maxWindWaveH) return false;
   if (criteria.maxRainProb != null && row.rainProb != null && row.rainProb > criteria.maxRainProb) return false;

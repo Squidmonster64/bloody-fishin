@@ -1,3 +1,5 @@
+import type { OfficialMarine } from "@shared/officialMarine";
+import { forecastInstant } from "@shared/forecastTime";
 import { precipitationMm } from "@shared/precipitation";
 import {
   fishingScore,
@@ -58,6 +60,7 @@ export interface HourRow {
   windKt: number | null;
   windDir: number | null;
   gustKt: number | null;
+  thunderstorm?: boolean;
   rainProb: number | null;
   precipitationMm?: number | null;
   waveH: number | null;
@@ -119,6 +122,8 @@ export interface AppData {
   marineUnavailable?: boolean;
   /** Requested forecast days (weather horizon). */
   requestedDays?: number;
+  officialMarine?: OfficialMarine;
+  providerGrid?: { weather: { lat: number; lon: number }; marine: { lat: number; lon: number } };
 }
 
 
@@ -267,10 +272,10 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   const weatherUrl =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${lat}&longitude=${lon}` +
-    `&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation` +
+    `&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation,weather_code` +
     `&daily=sunrise,sunset,uv_index_max` +
     `&wind_speed_unit=kn&timezone=${encodeURIComponent(timezone)}` +
-    `&forecast_days=${days}`;
+    `&forecast_days=${days}&cell_selection=sea`;
 
   const marineUrl =
     `https://marine-api.open-meteo.com/v1/marine` +
@@ -278,6 +283,8 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     `&hourly=wave_height,wave_period,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,sea_level_height_msl` +
     `&timezone=${encodeURIComponent(timezone)}&forecast_days=${marineDays}&cell_selection=sea`;
 
+  const officialPromise = fetchWithTimeout(`/official-marine?lat=${lat}&lon=${lon}`, { timeoutMs: 12000 })
+    .then(async response => response.ok ? await response.json() as OfficialMarine : undefined).catch(() => undefined);
   let wRes: Response;
   let mRes: Response | null;
   try {
@@ -298,6 +305,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   const marineUnavailable = !(mRes && mRes.ok);
   const m = mRes && mRes.ok ? await mRes.json() : { hourly: {} };
 
+  const officialMarine = await officialPromise;
   const wh = w.hourly || {};
   const mh = m.hourly || {};
   if (!wh.time) throw new HttpError("Malformed provider data: weather.hourly.time is missing.");
@@ -307,7 +315,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   marineTimesRaw.forEach((t: string, i: number) => { marineTimeIdx[t] = i; });
 
   const merged: HourRow[] = times.map((t, i) => {
-    const dt = new Date(t);
+    const dt = forecastInstant(t, timezone);
     // Get local hour using the timezone
     const hour = parseInt(
       dt.toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: timezone }),
@@ -329,6 +337,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       windKt:    (wh.wind_speed_10m || [])[i] ?? null,
       windDir:   (wh.wind_direction_10m || [])[i] ?? null,
       gustKt:    (wh.wind_gusts_10m || [])[i] ?? null,
+      thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[i]) || !!officialMarine?.days?.some(day => day.date === t.slice(0, 10) && day.thunderstorm),
       rainProb:  (wh.precipitation_probability || [])[i] ?? null,
       precipitationMm: precipitationMm(wh.precipitation?.[i]),
       waveH:     hasM ? (mh.wave_height || [])[mi] ?? null : null,
@@ -362,7 +371,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     const r9 = rows.find(r => r.hour === 9) || rows[0];
     const sunrise = (w.daily.sunrise[i] || "").slice(11, 16);
     const sunset  = (w.daily.sunset[i]  || "").slice(11, 16);
-    const dayMidday = new Date(`${d}T12:00:00`);
+    const dayMidday = new Date(`${d}T12:00:00Z`);
     const moonTimes = moonTransitTimes(dayMidday, sunrise, sunset);
 
     rows.forEach(row => {
@@ -371,10 +380,12 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       });
       row.fishScore = f.score;
       row.fishStars = f.stars;
-      const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
+      const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
       row.slRank = sl.rank;
       row.golden = isGolden({
         windKt: row.windKt,
+        gustKt: row.gustKt,
+        thunderstorm: row.thunderstorm,
         swellH: row.swellH,
         rainProb: row.rainProb,
         fishStars: f.stars,
@@ -418,5 +429,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     marineThrough,
     marineUnavailable,
     requestedDays: days,
+    officialMarine,
+    providerGrid: { weather: { lat: w.latitude, lon: w.longitude }, marine: { lat: m.latitude, lon: m.longitude } },
   };
 }

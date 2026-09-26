@@ -1,3 +1,5 @@
+import { getOfficialMarine } from "./officialMarine.js";
+import { localHourKey } from "../shared/forecastTime.js";
 /**
  * Public, keyless briefing service for people and browsing-enabled LLMs.
  * It queries Open-Meteo directly at request time; no user spot or profile data
@@ -23,6 +25,7 @@ type Location = { name: string; lat: number; lon: number };
 type Hour = {
   time: string; date: string; hour: number; windKt: number | null; gustKt: number | null;
   windDirDeg: number | null;
+  thunderstorm: boolean;
   precipitationMm: number | null; rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
   swellP: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
   sunrise: string; sunset: string;
@@ -53,7 +56,7 @@ const PLACE_ALIASES: Record<string, string> = {
 
 const VESSELS: Record<string, Criteria> = {
   tinnie: { minRank: 2, minStars: 3, maxWind: 12, maxGust: 17, maxSwell: 0.5, maxChop: 0.3, maxRain: 50, daylightOnly: true, minHours: 3 },
-  sl20: { minRank: 2, minStars: 4, maxWind: 10, maxGust: null, maxSwell: 0.99, maxChop: null, maxRain: 0, daylightOnly: true, minHours: 3 },
+  sl20: { minRank: 2, minStars: 4, maxWind: 10, maxGust: 14, maxSwell: 0.99, maxChop: null, maxRain: 0, daylightOnly: true, minHours: 3 },
   offshore: { minRank: 1, minStars: 3, maxWind: 22, maxGust: 30, maxSwell: 2, maxChop: 1, maxRain: 85, daylightOnly: false, minHours: 3 },
   kayak: { minRank: 3, minStars: 3, maxWind: 8, maxGust: 12, maxSwell: 0.3, maxChop: 0.2, maxRain: 40, daylightOnly: true, minHours: 3 },
 };
@@ -149,6 +152,7 @@ function criteriaFromQuery(query: Request["query"]) {
 }
 
 function eligible(hour: Hour, criteria: Criteria, mode: "wind" | "vessel") {
+  if (hour.thunderstorm) return false;
   if ((hour.windKt ?? Infinity) > criteria.maxWind) return false;
   if (criteria.maxGust !== null && (hour.gustKt ?? Infinity) > criteria.maxGust) return false;
   if (criteria.daylightOnly && !hour.daylight) return false;
@@ -164,6 +168,8 @@ function makeWindows(hours: Hour[], criteria: Criteria, mode: "wind" | "vessel")
   const windows: Hour[][] = [];
   let run: Hour[] = [];
   for (const hour of hours) {
+    const previous = run.at(-1);
+    if (previous && Date.parse(`${hour.time}:00Z`) - Date.parse(`${previous.time}:00Z`) !== 3600000) { if (run.length >= criteria.minHours) windows.push(run); run = []; }
     if (eligible(hour, criteria, mode) && (mode === "wind" || hour.marineDataAvailable)) run.push(hour);
     else { if (run.length >= criteria.minHours) windows.push(run); run = []; }
   }
@@ -178,9 +184,9 @@ function makeWindows(hours: Hour[], criteria: Criteria, mode: "wind" | "vessel")
   }));
 }
 
-async function forecast(location: Location, days: number): Promise<{ timezone: string; hours: Hour[]; marineDataAvailableThrough: string | null }> {
+async function forecast(location: Location, days: number): Promise<{ timezone: string; hours: Hour[]; marineDataAvailableThrough: string | null; providerGrid: { weather: { lat: number; lon: number }; marine: { lat: number; lon: number } } }> {
   const weather = new URL("https://api.open-meteo.com/v1/forecast");
-  weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation", daily: "sunrise,sunset", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
+  weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation,weather_code", cell_selection: "sea", daily: "sunrise,sunset", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
   const marine = new URL("https://marine-api.open-meteo.com/v1/marine");
   marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
   const [weatherResponse, marineResponse] = await Promise.all([fetchWithTimeout(weather.toString(), { timeoutMs: 12_000 }), fetchWithTimeout(marine.toString(), { timeoutMs: 12_000 }).catch(() => null)]);
@@ -196,10 +202,11 @@ async function forecast(location: Location, days: number): Promise<{ timezone: s
   const dailyByDate = new Map<string, { sunrise: string; sunset: string }>((weatherData.daily?.time ?? []).map((date: string, index: number) => [date, { sunrise: weatherData.daily.sunrise?.[index] ?? "", sunset: weatherData.daily.sunset?.[index] ?? "" }]));
   const raw = wh.time.map((time: string, index: number) => {
     const marineAt = marineIndex.get(time);
-    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: wh.wind_speed_10m?.[index] ?? null, gustKt: wh.wind_gusts_10m?.[index] ?? null, windDirDeg: wh.wind_direction_10m?.[index] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, precipitationMm: precipitationMm(wh.precipitation?.[index]), temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
+    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: wh.wind_speed_10m?.[index] ?? null, gustKt: wh.wind_gusts_10m?.[index] ?? null, thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[index]), windDirDeg: wh.wind_direction_10m?.[index] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, precipitationMm: precipitationMm(wh.precipitation?.[index]), temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
   });
   return {
-    timezone: weatherData.timezone ?? "auto",
+    timezone: weatherData.timezone ?? "UTC",
+    providerGrid: { weather: { lat: weatherData.latitude, lon: weatherData.longitude }, marine: { lat: marineData.latitude, lon: marineData.longitude } },
     marineDataAvailableThrough: (mh.time ?? []).at(-1)?.slice(0, 10) ?? null,
     hours: raw.map((item: any, index: number) => {
       const previous = raw[index - 1]?.seaLevel;
@@ -216,7 +223,7 @@ async function forecast(location: Location, days: number): Promise<{ timezone: s
         moonTimes,
       });
       const marineDataAvailable = hasMarineForVessel(item);
-      const sl20 = rateSL20(item.windKt, item.swellH, item.swellP, item.waveH, item.windWaveH);
+      const sl20 = rateSL20(item.windKt, item.swellH, item.swellP, item.waveH, item.windWaveH, item.gustKt, item.thunderstorm);
       return { ...item, tideRate, daylight, sunrise: sun.sunrise, sunset: sun.sunset, fishScore: solunar.score, fishStars: solunar.stars, sl20, marineDataAvailable } as Hour;
     }),
   };
@@ -230,9 +237,15 @@ export async function buildBrief(request: Request) {
   }
   const days = numberParam(request.query.days, 5, 1, 14);
   const { vessel, criteria, mode } = criteriaFromQuery(request.query);
-  const data = await forecast(location, days);
+  const [data, officialMarine] = await Promise.all([forecast(location, days), getOfficialMarine(location.lat, location.lon)]);
+  for (const hour of data.hours) {
+    if (officialMarine.days.some(day => day.date === hour.date && day.thunderstorm)) {
+      hour.thunderstorm = true;
+      hour.sl20 = rateSL20(hour.windKt, hour.swellH, hour.swellP, hour.waveH, hour.windWaveH, hour.gustKt, true);
+    }
+  }
   const now = new Date();
-  const futureHours = data.hours.filter((hour) => new Date(`${hour.time}:00`).getTime() >= now.getTime() - 3_600_000);
+  const futureHours = data.hours.filter((hour) => hour.time >= localHourKey(data.timezone, now));
   const windows = makeWindows(futureHours, criteria, mode).slice(0, 8);
   const dailyOutlook = Array.from(new Set(futureHours.map((hour) => hour.date))).map((date) => {
     const rows = futureHours.filter((hour) => hour.date === date);
@@ -249,6 +262,7 @@ export async function buildBrief(request: Request) {
     return {
       date,
       marineDataAvailable,
+      thunderstorm: rows.some(hour => hour.thunderstorm),
       maxRainChance: rain.max,
       // Use the full local calendar day, not only the remaining forecast hours.
       precipitationTotalMm: precipitationTotal(data.hours.filter(hour => hour.date === date).map(hour => hour.precipitationMm)),
@@ -276,8 +290,11 @@ export async function buildBrief(request: Request) {
     : null;
   return {
     generatedAt: now.toISOString(),
+    officialMarine,
+    dataNotes: { wind: "Sea grid; direction is FROM true north", swellPeriod: "Model mean swell period", seaLevel: "Metres above mean sea level, not chart datum", rating: "Gusts >=21 kt: Marginal; >=28 kt or thunderstorm risk: Avoid. App thresholds, not BOM warning categories." },
     location,
     timezone: data.timezone,
+    providerGrid: data.providerGrid,
     days,
     marineDataAvailableThrough: data.marineDataAvailableThrough,
     marineDataWarning,
@@ -294,6 +311,7 @@ export async function buildBrief(request: Request) {
       windKt: hour.windKt,
       windDirDeg: hour.windDirDeg,
       gustKt: hour.gustKt,
+      thunderstorm: hour.thunderstorm,
       swellM: hour.swellH,
       swellPeriodS: hour.swellP,
       windChopM: hour.windWaveH,
@@ -319,6 +337,10 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
     `**Forecast range:** ${brief.days} days · **Timezone:** ${brief.timezone} · **Generated:** ${brief.generatedAt}  `,
     `**Marine data through:** ${brief.marineDataAvailableThrough ?? "unavailable"}  `,
     `**Filter:** ${filter} · minimum continuous window: ${brief.query.criteria.minHours} hour(s)${brief.query.criteria.daylightOnly ? " · daylight only" : ""}`,
+    "",
+    "## Official marine outlook",
+    `BOM status: ${brief.officialMarine.status}. ${brief.officialMarine.issued ?? ""} · ${brief.officialMarine.source}`,
+    ...brief.officialMarine.days.map(day => `- **${day.date}:** Wind ${day.winds} Seas ${day.seas} Swell ${day.swell} ${day.weather}`),
     "",
     "## Next qualifying windows",
   ];

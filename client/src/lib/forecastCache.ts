@@ -7,7 +7,7 @@
 import type { AppData, Location } from "@/lib/fishingEngine";
 
 interface CachedForecast { data: AppData; savedAt: string; }
-const PREFIX = "bdave_forecast_cache_v1";
+const PREFIX = "bdave_forecast_cache_v2";
 
 function key(location: Location, days: number) {
   return `${PREFIX}:${location.lat.toFixed(4)}:${location.lon.toFixed(4)}:${days}`;

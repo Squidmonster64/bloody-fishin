@@ -14,7 +14,8 @@ export interface SL20Rating {
  * SL20 boating rating.
  *
  * Wind sets the primary band: Go below 15 kt, Marginal from 15–20 kt and
- * Avoid above 20 kt. Swell is a separate period-aware modifier: short-period
+ * Avoid above 20 kt. Gusts >=21 kt are Marginal, >=28 kt are Avoid;
+ * thunderstorm risk is Avoid. These are app limits, not official warnings. Swell is a separate period-aware modifier: short-period
  * swell and wind chop can downgrade a rating, while clean long-period swell
  * is treated more gently than total wave height. It is a small-boat planning
  * guide, not a substitute for skipper judgement or official marine warnings.
@@ -25,7 +26,11 @@ export function rateSL20(
   swellP: number | null,
   waveH: number | null,
   windWaveH: number | null = null,
+  gustKt: number | null = null,
+  thunderstorm = false,
 ): SL20Rating {
+  // Gust thresholds are conservative app limits, not BOM warning categories.
+  const gust = Math.max(0, gustKt ?? 0);
   const wind = Math.max(0, windKt ?? 0);
   const swell = Math.max(0, swellH ?? 0);
   const period = Math.max(1, swellP ?? 9);
@@ -44,13 +49,13 @@ export function rateSL20(
 
   // Wind is the clear primary classification. Severe chop or steep, short swell
   // can still override a calm wind rating, but clean groundswell alone cannot.
-  if (wind > 20 || windChop > 1.5 || (period < 8 && swell > 2.0)) {
+  if (thunderstorm || gust >= 28 || wind > 20 || windChop > 1.5 || (period < 8 && swell > 2.0)) {
     return { label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0 };
   }
-  if (wind >= 15 || windChop > 1.1 || (period < 8 && swell > 1.2) || (period < 10 && shortPeriodSwell > 1.35)) {
+  if (gust >= 21 || wind >= 15 || windChop > 1.1 || (period < 8 && swell > 1.2) || (period < 10 && shortPeriodSwell > 1.35)) {
     return { label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1 };
   }
-  if (wind <= 10 && windChop <= 0.35 && swell < 1.0) {
+  if (gust <= 14 && wind <= 10 && windChop <= 0.35 && swell < 1.0) {
     return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
   }
   return { label: "Go", bg: "rgba(126,184,247,0.2)", fg: "#7eb8f7", rank: 2 };
@@ -62,9 +67,13 @@ export function isGolden(input: {
   rainProb: number | null;
   fishStars: number;
   daylight: boolean;
+  gustKt?: number | null;
+  thunderstorm?: boolean;
 }): boolean {
   return (
     input.daylight &&
+    !input.thunderstorm &&
+    (input.gustKt ?? 0) <= 14 &&
     (input.windKt ?? Infinity) <= 10 &&
     (input.swellH ?? Infinity) < 1.0 &&
     input.rainProb === 0 &&

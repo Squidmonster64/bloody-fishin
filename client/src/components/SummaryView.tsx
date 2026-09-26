@@ -16,7 +16,7 @@ function StarRow({ stars }: { stars: number }) {
 }
 
 function HourCell({ row }: { row: HourRow }) {
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
+  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
   return (
     <div className={`flex flex-col items-center gap-0.5 rounded px-1 py-1 min-w-[44px] flex-shrink-0
       ${row.golden ? "ring-1 ring-yellow-400 bg-yellow-400/10" : "bg-[var(--surface)]"}`}>
@@ -40,7 +40,7 @@ function DayCard({ day }: { day: DayData }) {
   const [expanded, setExpanded] = useState(false);
   const dt = new Date(day.date + "T12:00:00");
   const dateLabel = dt.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" });
-  const sl9 = rateSL20(day.morning?.windKt, day.morning?.swellH, day.morning?.swellP, day.morning?.waveH, day.morning?.windWaveH);
+  const sl9 = rateSL20(day.morning?.windKt, day.morning?.swellH, day.morning?.swellP, day.morning?.waveH, day.morning?.windWaveH, day.morning?.gustKt, day.morning?.thunderstorm);
 
   return (
     <div className={`bg-[var(--surface)] border rounded-xl overflow-hidden transition-all duration-200

@@ -1,3 +1,4 @@
+import { localHourKey } from "@shared/forecastTime";
 /**
  * decisionBrief — derive a mobile-first decision summary from AppData.
  * Pure helpers only; does not change SL20 / fishing scoring.
@@ -128,6 +129,7 @@ function nextTideAfter(data: AppData, current: HourRow | null): TideExtreme | nu
 function isUsefulHour(row: HourRow): boolean {
   // Useful planning hour: daylight-friendly boat rating or strong fishing signal.
   // Vessel usefulness requires marine fields; fishing-only usefulness can still count.
+  if (row.thunderstorm) return false;
   const marineOk = hasMarineForVessel(row);
   if (marineOk && row.slRank >= 2) return true;
   if (row.fishStars >= 4 && (!marineOk || row.slRank >= 1)) return true;
@@ -141,7 +143,7 @@ function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
   const winds = bucket.map(h => h.windKt).filter((v): v is number => v != null);
   const swells = bucket.map(h => h.swellH).filter((v): v is number => v != null);
   const marineOk = bucket.some(h => hasMarineForVessel(h));
-  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH);
+  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH, first.gustKt, first.thunderstorm);
   const peakFish = Math.max(...bucket.map(h => h.fishScore));
   const peakStars = Math.max(...bucket.map(h => h.fishStars));
   const dt = new Date(first.dateStr + "T12:00:00");
@@ -177,6 +179,8 @@ export function buildChronologicalWindows(data: AppData): DecisionWindow[] {
     if (w) windows.push(w);
   };
   for (const row of data.merged) {
+    const previous = bucket.at(-1);
+    if (previous && (previous.dateStr !== row.dateStr || Date.parse(`${row.time}:00Z`) - Date.parse(`${previous.time}:00Z`) !== 3600000)) flush();
     if (isUsefulHour(row)) bucket.push(row);
     else flush();
   }
@@ -318,12 +322,13 @@ export function buildDecisionBrief(
   const currentMarineOk = current ? hasMarineForVessel(current) : false;
   // Compute SL20 for diagnostics, but do not present an authoritative vessel call without marine fields.
   const computedSl = current
-    ? rateSL20(current.windKt, current.swellH, current.swellP, current.waveH, current.windWaveH)
+    ? rateSL20(current.windKt, current.swellH, current.swellP, current.waveH, current.windWaveH, current.gustKt, current.thunderstorm)
     : null;
   const currentSl = currentMarineOk ? computedSl : null;
   const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
-  const bestWindows = buildBestWindows(data);
-  const nextUseful = findNextUsefulWindow(data, current);
+  const futureData = { ...data, merged: data.merged.filter(row => row.time >= localHourKey(data.timezone, when)) };
+  const bestWindows = buildBestWindows(futureData);
+  const nextUseful = findNextUsefulWindow(futureData, current);
   const goNoGo = assessGoNoGo(currentSl, current, marineMissing || !currentMarineOk);
   const { headline, supporting } = buildHeadline(goNoGo, currentSl, current, nextUseful);
   const local = localParts(data.timezone, when);
@@ -334,6 +339,7 @@ export function buildDecisionBrief(
   const freshness = freshnessFromFetchedAt(fetchedAt, when);
 
   const risks = buildRisks(current, currentSl, conditions, marineMissing);
+  if (current?.thunderstorm) risks.unshift("Thunderstorm risk — avoid boating; check the official forecast.");
   if (marineHorizonShort) {
     risks.push("Days 9–14 are weather/fishing outlook only — no swell, chop or SL20 vessel call.");
   }

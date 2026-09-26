@@ -1,3 +1,4 @@
+import { windArrowRotation } from "@shared/forecastTime";
 /**
  * GraphView — Full multi-day Chart.js chart with zoom/pan.
  * Default view shows the entire loaded range.
@@ -26,10 +27,10 @@ interface Props {
 }
 
 const VIS_KEYS: { key: keyof FishingState["vis"]; label: string; color: string }[] = [
-  { key: "wind",  label: "Wind (kt)",  color: "#3b82f6" },
+  { key: "wind",  label: "Wind + gusts (kt)",  color: "#3b82f6" },
   { key: "swell", label: "Swell (m)",  color: "#10b981" },
   { key: "fish",  label: "Fish %",     color: "#f59e0b" },
-  { key: "tide",  label: "Tide (m)",   color: "#a78bfa" },
+  { key: "tide",  label: "Sea level (m MSL)",   color: "#a78bfa" },
   { key: "temp",  label: "Temp (°C)",  color: "#fbbf24" },
   // Cyan — must stay distinct from wind action-blue (#3b82f6)
   { key: "rain",  label: "Rain %",     color: "#22d3ee" },
@@ -67,6 +68,11 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.06)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
+    if (vis.wind) datasets.push({
+      label: "Gusts (kt)", yAxisID: "y", data: allRows.map(r => r.gustKt),
+      borderColor: "#f5a623", backgroundColor: "transparent", borderDash: [4, 3],
+      borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
+    });
     if (vis.swell) datasets.push({
       label: "Swell (m)", yAxisID: "y2",
       data: allRows.map(r => r.swellH),
@@ -80,7 +86,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true,
     });
     if (vis.tide) datasets.push({
-      label: "Tide (m)", yAxisID: "y2",
+      label: "Sea level (m MSL)", yAxisID: "y2",
       data: allRows.map(r => r.seaLevel),
       borderColor: "#a78bfa", backgroundColor: "rgba(167,139,250,0.06)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: false,
@@ -122,7 +128,26 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
     chartRef.current = new Chart(canvasRef.current, {
       type: "line",
       data: { labels, datasets },
-      plugins: [goldenPlugin],
+      plugins: [goldenPlugin, {
+        id: "windDirectionArrows",
+        afterDatasetsDraw(chart: Chart) {
+          if (!vis.wind) return;
+          const { ctx, chartArea, scales } = chart;
+          let lastX = -Infinity;
+          ctx.save();
+          ctx.beginPath(); ctx.rect(chartArea.left, chartArea.top, chartArea.width, chartArea.height); ctx.clip();
+          allRows.forEach((row, i) => {
+            const x = scales.x.getPixelForValue(i);
+            if (row.windDir == null || row.windKt == null || x < chartArea.left || x > chartArea.right || x - lastX < 30) return;
+            lastX = x;
+            const y = scales.y.getPixelForValue(row.windKt);
+            ctx.save(); ctx.translate(x, y); ctx.rotate(windArrowRotation(row.windDir) * Math.PI / 180);
+            ctx.strokeStyle = "#93c5fd"; ctx.lineWidth = 1.8;
+            ctx.beginPath(); ctx.moveTo(0, 7); ctx.lineTo(0, -7); ctx.lineTo(-4, -2); ctx.moveTo(0, -7); ctx.lineTo(4, -2); ctx.stroke(); ctx.restore();
+          });
+          ctx.restore();
+        },
+      }],
       options: {
         responsive: true, maintainAspectRatio: false,
         // A new chart is built whenever a series is toggled. Avoid showing a
@@ -183,7 +208,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                 }
                 if (num == null) return `${label}: —`;
                 if (label.startsWith("Fish")) return `Fish: ${Math.round(num)}%`;
-                if (label.startsWith("Tide")) return `Tide: ${fmt(num)} m`;
+                if (label.startsWith("Sea level")) return `Sea level: ${fmt(num)} m above MSL`;
                 if (label.startsWith("Temp")) return `Temp: ${fmt(num, 0)}°C`;
                 if (label.startsWith("Rain")) return `Rain: ${Math.round(num)}%`;
                 return `${label}: ${num}`;
@@ -266,6 +291,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         </button>
       </div>
 
+      <p className="px-3 py-1 text-xs text-[var(--text-muted)]">Blue: wind · Dashed amber: gusts · Arrows point where wind blows; compass labels show where it comes from. North is up.</p>
       {/* Full-range chart */}
       <div className="relative px-2 py-2 chart-container" style={{ height: "260px", minHeight: "200px" }}>
         <canvas ref={canvasRef} className="forecast-canvas" />
@@ -307,7 +333,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       <div className="overflow-x-auto px-2 pb-2 scrollbar-hide">
         <div className="flex gap-1 min-w-max pt-2">
           {dayRows.map((row) => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
+            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
             const isActive = row.time === activeTime;
             return (
               <div key={row.time}
@@ -326,10 +352,13 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                     className={`text-[9px] font-semibold ${isActive ? "text-[var(--text)]" : ""}`}
                     style={{ color: isActive ? undefined : windColor(row.windKt) }}
                   >
+                    {row.windDir != null && <svg role="img" aria-label={`Wind from ${degToCompass(row.windDir)}`} width="18" height="18" viewBox="0 0 20 20" style={{ transform: `rotate(${windArrowRotation(row.windDir)}deg)` }}><path d="M10 17V3M5 8l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="2" /></svg>}
                     {Math.round(row.windKt)}kt
                     {row.windDir != null ? ` ${degToCompass(row.windDir)}` : ""}
                   </span>
                 )}
+                {row.gustKt != null && <span className="text-[9px] text-amber-400">G {Math.round(row.gustKt)}kt</span>}
+                {row.thunderstorm && <span className="text-[9px] text-amber-400">Storm risk</span>}
                 {row.swellH != null && <span className="text-[9px]" style={{ color: swellColor(row.swellH) }}>{fmt(row.swellH)}m</span>}
                 {row.windKt == null && row.windDir != null && (
                   <span className="text-[9px] text-[var(--text-muted)]">{degToCompass(row.windDir)}</span>
@@ -340,10 +369,11 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         </div>
       </div>
 
+      <p className="px-3 py-1 text-xs text-[var(--text-muted)]">Swell period is the model mean period. Sea level is relative to mean sea level, not chart datum; use official harbour tide tables for navigation.</p>
       {/* Tide extremes */}
       {dayData && dayData.tideExtremes.length > 0 && (
         <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-[var(--border)] text-xs">
-          <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider">Tides:</span>
+          <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider">Model sea level (MSL):</span>
           {dayData.tideExtremes.map((t, i) => (
             <span key={i} className={`font-semibold ${t.type === "High" ? "text-[var(--success)]" : "text-[var(--action)]"}`}>
               {t.type === "High" ? "▲" : "▼"} {t.type} {fmt(t.height)}m @ {t.time.slice(11, 16)}

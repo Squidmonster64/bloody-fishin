@@ -1,3 +1,4 @@
+import { localHourKey } from "@shared/forecastTime";
 /**
  * SickieView — Sickie Forecast tab with configurable vessel criteria.
  * Windows require >= minWindowHours consecutive hours meeting all thresholds.
@@ -41,7 +42,12 @@ function buildWindows(data: AppData, criteria: SickieCriteria): SickieWindow[] {
   const windows: SickieWindow[] = [];
   let current: HourRow[] = [];
 
-  for (const row of data.merged) {
+  for (const row of data.merged.filter(row => row.time >= localHourKey(data.timezone))) {
+    const previous = current.at(-1);
+    if (previous && (previous.dateStr !== row.dateStr || Date.parse(`${row.time}:00Z`) - Date.parse(`${previous.time}:00Z`) !== 3600000)) {
+      if (current.length >= criteria.minWindowHours) flush(current, windows, daylightByDate);
+      current = [];
+    }
     const daylight = daylightByDate[row.dateStr];
     const daylightPasses = !criteria.daylightOnly || !daylight || isDaylight(row.hour, daylight.sunrise, daylight.sunset);
     if (meetsCriteria(row, criteria) && daylightPasses) {
@@ -68,7 +74,7 @@ function flush(
   const peakStars = Math.max(...hours.map(h => h.fishStars));
   const winds = hours.map(h => h.windKt).filter((v): v is number => v != null);
   const swells = hours.map(h => h.swellH).filter((v): v is number => v != null);
-  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH);
+  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH, first.gustKt, first.thunderstorm);
 
   const dl = daylightByDate[first.dateStr];
   const daylightHours = dl
@@ -397,7 +403,7 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
       <div className="overflow-x-auto px-3 py-2 bg-[var(--surface)] scrollbar-hide">
         <div className="flex gap-1 min-w-max">
           {win.hours.map(row => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
+            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
             return (
               <div key={row.time}
                 className="flex flex-col items-center gap-0.5 bg-yellow-400/10 ring-1 ring-yellow-400/40 rounded px-1.5 py-1 min-w-[44px]">

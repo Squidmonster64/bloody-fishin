@@ -1,3 +1,4 @@
+import { getOfficialMarine } from "./officialMarine.js";
 import express from "express";
 import { createServer } from "http";
 import path from "path";
@@ -41,9 +42,18 @@ async function startServer() {
       service: "bloody-fishin",
       stage: "beta",
       readerVersion: READER_VERSION,
+      forecastVersion: "2026-09-26-marine-v2",
+      commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
       mcp: { path: "/mcp", version: MCP_SERVER_VERSION, transport: "streamable-http" },
       ts: new Date().toISOString(),
     });
+  });
+
+  app.get("/official-marine", async (req, res) => {
+    if (!applyRateLimit(req, res)) return;
+    const lat = Number(req.query.lat), lon = Number(req.query.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) { res.status(400).json({error: "Valid latitude and longitude required"}); return; }
+    res.json(await getOfficialMarine(lat, lon));
   });
 
   app.get("/brief", async (req, res) => {

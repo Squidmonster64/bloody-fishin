@@ -53,7 +53,7 @@ function formatWaterLine(row: HourRow | null, seaLevel: number | null): string {
 
 function hourTone(row: HourRow): "good" | "poor" | "outlook" {
   if (!hasMarineForVessel(row)) return "outlook";
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
+  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
   if (sl.label === "Avoid" || sl.label === "Marginal") return "poor";
   if (sl.rank >= 2) return "good";
   return "poor";
@@ -189,7 +189,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           <div className="flex gap-1 min-w-max">
             {timeline.map(row => {
               const tone = hourTone(row);
-              const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH);
+              const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
               return (
                 <div
                   key={row.time}

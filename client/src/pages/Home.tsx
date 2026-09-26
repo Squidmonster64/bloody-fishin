@@ -65,6 +65,15 @@ export default function Home() {
       </div>
 
       <main className="flex-1 overflow-hidden">
+        {state.data && <details className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs" open={state.data.officialMarine?.days.some(day => day.thunderstorm) || undefined}>
+          <summary className="cursor-pointer font-semibold">Official marine outlook · {state.data.officialMarine?.status === 'available' ? 'BOM Perth Local Waters' : state.data.officialMarine?.status === 'outside-coverage' ? 'Check local BOM forecast' : 'BOM feed unavailable — check source'}{state.data.officialMarine?.days.some(day => day.thunderstorm) ? ' · Thunderstorm risk' : ''}</summary>
+          <p className="mt-2">Selected position: {state.data.location.lat.toFixed(5)}, {state.data.location.lon.toFixed(5)}. Offshore wind uses the provider’s sea grid.</p>
+          <p>{state.data.officialMarine?.issued}</p>
+          {state.data.officialMarine?.days.map(day => <p key={day.date} className="mt-2"><strong>{day.date}:</strong> {day.winds} Seas {day.seas} Swell {day.swell} {day.weather}</p>)}
+          <p className="mt-2">Model values are point forecasts; BOM covers a wider area. Gusts of 21+ kt make the app rating Marginal; 28+ kt or thunderstorm risk make it Avoid. A BOM storm day is conservatively flagged for the whole day.</p>
+          <a className="underline" href={state.data.officialMarine?.status === 'outside-coverage' ? 'https://www.bom.gov.au/marine/' : 'https://www.bom.gov.au/wa/forecasts/perth-waters.shtml'} target="_blank" rel="noreferrer">Open official forecast and warnings</a>
+        </details>}
+
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && (
           <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]">
