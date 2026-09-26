@@ -11,6 +11,7 @@ import {
 } from "chart.js";
 import type { AppData } from "@/lib/fishingEngine";
 import type { FishingState } from "@/hooks/useFishingData";
+import { windDirectionPlugin } from "@/lib/windDirectionPlugin";
 import { openStandaloneForecastPrint } from "@/lib/standalonePrint";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend);
@@ -79,7 +80,7 @@ export function PrintView({ data, vis, onClose }: Props) {
     chartRef.current = new Chart(canvasRef.current, {
       type: "line",
       data: { labels: buildLabels(data), datasets },
-      plugins: [goldenHours],
+      plugins: [goldenHours, windDirectionPlugin(rows, vis.wind)],
       options: {
         responsive: true,
         maintainAspectRatio: false,

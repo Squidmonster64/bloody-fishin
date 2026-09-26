@@ -1,3 +1,4 @@
+import { windDirectionPlugin } from "@/lib/windDirectionPlugin";
 import { windArrowRotation } from "@shared/forecastTime";
 /**
  * GraphView — Full multi-day Chart.js chart with zoom/pan.
@@ -128,30 +129,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
     chartRef.current = new Chart(canvasRef.current, {
       type: "line",
       data: { labels, datasets },
-      plugins: [goldenPlugin, {
-        id: "windDirectionArrows",
-        afterDatasetsDraw(chart: Chart) {
-          if (!vis.wind) return;
-          const { ctx, chartArea, scales } = chart;
-          let lastX = -Infinity;
-          ctx.save();
-          ctx.beginPath(); ctx.rect(chartArea.left, chartArea.top, chartArea.width, chartArea.height); ctx.clip();
-          allRows.forEach((row, i) => {
-            const x = scales.x.getPixelForValue(i);
-            if (row.windDir == null || row.windKt == null || x < chartArea.left + 15 || x > chartArea.right - 15 || x - lastX < 56) return;
-            lastX = x;
-            const y = Math.max(chartArea.top + 15, Math.min(chartArea.bottom - 15, scales.y.getPixelForValue(row.windKt)));
-            ctx.save(); ctx.translate(x, y); ctx.rotate(windArrowRotation(row.windDir) * Math.PI / 180);
-            // A dark halo keeps the direction legible over every coloured series.
-            ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(11,20,16,0.88)"; ctx.fill();
-            ctx.strokeStyle = "#bae6fd"; ctx.lineWidth = 3;
-            ctx.lineCap = "round"; ctx.lineJoin = "round";
-            ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, -10); ctx.lineTo(-6, -3); ctx.moveTo(0, -10); ctx.lineTo(6, -3); ctx.stroke(); ctx.restore();
-          });
-          ctx.restore();
-        },
-      }],
+      plugins: [goldenPlugin, windDirectionPlugin(allRows, vis.wind)],
       options: {
         responsive: true, maintainAspectRatio: false,
         // A new chart is built whenever a series is toggled. Avoid showing a
@@ -360,7 +338,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                     className={`text-[9px] font-semibold ${isActive ? "text-[var(--text)]" : ""}`}
                     style={{ color: isActive ? undefined : windColor(row.windKt) }}
                   >
-                    {row.windDir != null && <svg role="img" aria-label={`Wind from ${degToCompass(row.windDir)}`} className="mx-auto my-1 rounded-full bg-[#0b1410] p-1 text-sky-200" width="32" height="32" viewBox="0 0 20 20" style={{ transform: `rotate(${windArrowRotation(row.windDir)}deg)` }}><path d="M10 17V3M5 8l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                    {row.windDir != null && <svg role="img" aria-label={`Wind from ${degToCompass(row.windDir)}`} className="mx-auto my-1 rounded-full bg-[#0b1410] p-0.5 text-sky-200" width="16" height="16" viewBox="0 0 20 20" style={{ transform: `rotate(${windArrowRotation(row.windDir)}deg)` }}><path d="M10 17V3M5 8l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     {Math.round(row.windKt)}kt
                     {row.windDir != null ? ` ${degToCompass(row.windDir)}` : ""}
                   </span>
