@@ -138,12 +138,16 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           ctx.beginPath(); ctx.rect(chartArea.left, chartArea.top, chartArea.width, chartArea.height); ctx.clip();
           allRows.forEach((row, i) => {
             const x = scales.x.getPixelForValue(i);
-            if (row.windDir == null || row.windKt == null || x < chartArea.left || x > chartArea.right || x - lastX < 30) return;
+            if (row.windDir == null || row.windKt == null || x < chartArea.left + 15 || x > chartArea.right - 15 || x - lastX < 56) return;
             lastX = x;
-            const y = scales.y.getPixelForValue(row.windKt);
+            const y = Math.max(chartArea.top + 15, Math.min(chartArea.bottom - 15, scales.y.getPixelForValue(row.windKt)));
             ctx.save(); ctx.translate(x, y); ctx.rotate(windArrowRotation(row.windDir) * Math.PI / 180);
-            ctx.strokeStyle = "#93c5fd"; ctx.lineWidth = 1.8;
-            ctx.beginPath(); ctx.moveTo(0, 7); ctx.lineTo(0, -7); ctx.lineTo(-4, -2); ctx.moveTo(0, -7); ctx.lineTo(4, -2); ctx.stroke(); ctx.restore();
+            // A dark halo keeps the direction legible over every coloured series.
+            ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(11,20,16,0.88)"; ctx.fill();
+            ctx.strokeStyle = "#bae6fd"; ctx.lineWidth = 3;
+            ctx.lineCap = "round"; ctx.lineJoin = "round";
+            ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, -10); ctx.lineTo(-6, -3); ctx.moveTo(0, -10); ctx.lineTo(6, -3); ctx.stroke(); ctx.restore();
           });
           ctx.restore();
         },
@@ -298,7 +302,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       </div>
 
       <details className="shrink-0 border-t border-[var(--border)] px-3 py-1 text-[10px] text-[var(--text-muted)]">
-        <summary className="cursor-pointer">Wind → · Gusts ╌ · Chart guide</summary>
+        <summary className="cursor-pointer">Arrows = wind blows TO · North ↑ · Chart guide</summary>
         <p className="py-1">Blue: wind · Dashed amber: gusts · Arrows point where wind blows; compass labels show where it comes from. North is up.</p>
         <p>Desktop: mouse-wheel zoom · Phone: use +/- then scroll normally · ⭐ = golden hour.</p>
         <p className="py-1">Swell period is the model mean period. Sea level is relative to mean sea level, not chart datum; use official harbour tide tables for navigation.</p>
@@ -356,7 +360,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                     className={`text-[9px] font-semibold ${isActive ? "text-[var(--text)]" : ""}`}
                     style={{ color: isActive ? undefined : windColor(row.windKt) }}
                   >
-                    {row.windDir != null && <svg role="img" aria-label={`Wind from ${degToCompass(row.windDir)}`} width="18" height="18" viewBox="0 0 20 20" style={{ transform: `rotate(${windArrowRotation(row.windDir)}deg)` }}><path d="M10 17V3M5 8l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="2" /></svg>}
+                    {row.windDir != null && <svg role="img" aria-label={`Wind from ${degToCompass(row.windDir)}`} className="mx-auto my-1 rounded-full bg-[#0b1410] p-1 text-sky-200" width="32" height="32" viewBox="0 0 20 20" style={{ transform: `rotate(${windArrowRotation(row.windDir)}deg)` }}><path d="M10 17V3M5 8l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     {Math.round(row.windKt)}kt
                     {row.windDir != null ? ` ${degToCompass(row.windDir)}` : ""}
                   </span>
