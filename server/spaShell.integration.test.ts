@@ -107,6 +107,20 @@ describe("renderIndexHtml", () => {
 });
 
 describe("serveRoot format=markdown", () => {
+  it("returns the HTML page to Messages previews without fetching weather", async () => {
+    const { serveRoot } = await import("./spaShell.js");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const headers: Record<string, string> = {};
+    const sendFile = vi.fn();
+    await serveRoot({ query: {}, headers: { accept: "*/*", "user-agent": "Mozilla/5.0 (compatible; facebookexternalhit/1.1; +http://www.facebook.com/externalhit_uatext.php)" } } as any,
+      { setHeader: (key: string, value: string) => { headers[key] = value; }, sendFile } as any,
+      path.resolve(__dirname, "..", "client"));
+    expect(sendFile).toHaveBeenCalledWith(path.resolve(__dirname, "..", "client", "index.html"));
+    expect(headers.Vary).toBe("Accept, User-Agent");
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
   beforeEach(() => {
     resetOpsState();
     vi.resetModules();
