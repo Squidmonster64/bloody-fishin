@@ -199,6 +199,13 @@ describe("daily rain and marine summary", () => {
       const { buildBrief, briefMarkdown } = await import("./briefing");
       const brief = await buildBrief(fakeReq({ spot: "freo", days: "7" }));
       expect(brief.upcomingHours).toHaveLength(36);
+      const complete = await buildBrief(fakeReq({ spot: "freo", days: "7", hours: "all" }));
+      expect(complete.upcomingHours).toHaveLength(168);
+      expect(complete.upcomingHours[0]).toEqual(brief.upcomingHours[0]);
+      expect(complete.upcomingHours.at(-1)?.time).toBe(dates[6] + " 23:00");
+      expect(complete.upcomingHours.at(-1)?.swellM).toBeNull();
+      expect(complete.dailyOutlook).toEqual(brief.dailyOutlook);
+      await expect(buildBrief(fakeReq({ spot: "freo", hours: "forever" }))).rejects.toThrow(/hours must/);
       expect(brief.dailyOutlook).toHaveLength(7);
       expect(brief.dailyOutlook[5]).toMatchObject({ maxRainChance: 23, minSwellM: 1.5, maxSwellM: 2.5, minSwellPeriodS: 10, maxSwellPeriodS: 12, maxWindChopM: 0 });
       expect(brief.dailyOutlook[6]).toMatchObject({ maxRainChance: null, minSwellM: null, maxSwellM: null, minSwellPeriodS: null, maxSwellPeriodS: null, maxWindChopM: null });

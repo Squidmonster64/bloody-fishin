@@ -230,6 +230,11 @@ async function forecast(location: Location, days: number): Promise<{ timezone: s
 }
 
 export async function buildBrief(request: Request) {
+  // Opt-in machine export; preserve the existing 36-hour preview by default.
+  const allHours = request.query.hours === "all";
+  if (request.query.hours !== undefined && !allHours && request.query.hours !== "preview") {
+    throw new Error('hours must be "preview" or "all".');
+  }
   const location = await resolveLocation(request.query);
   if (request.query.days !== undefined && request.query.days !== null && request.query.days !== "") {
     const daysErr = validateForecastDays(Number(request.query.days));
@@ -303,7 +308,7 @@ export async function buildBrief(request: Request) {
     nextUsable,
     bestUpcoming,
     dailyOutlook,
-    upcomingHours: futureHours.slice(0, 36).map((hour) => ({
+    upcomingHours: futureHours.slice(0, allHours ? 14 * 24 : 36).map((hour) => ({
       time: formatHour(hour.time),
       daylight: hour.daylight,
       marineDataAvailable: hour.marineDataAvailable,
@@ -352,7 +357,7 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
     "| Date | Max wind kt | Max gust kt | Max hourly rain chance | Total precipitation mm/day | Peak mm/hour | Swell m | Swell period s | Max chop m |",
     "|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const day of brief.dailyOutlook) lines.push(`| ${day.date} | ${day.maxWindKt} | ${day.maxGustKt} | ${day.maxRainChance === null ? "—" : day.maxRainChance + "%"} | ${day.precipitationTotalMm ?? "—"} | ${day.maxHourlyPrecipitationMm ?? "—"} | ${showRange(day.minSwellM, day.maxSwellM)} | ${showRange(day.minSwellPeriodS, day.maxSwellPeriodS)} | ${day.maxWindChopM ?? "—"} |`);
-  lines.push("", "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain chance | Precipitation mm/hour | Fish | Boating |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+  lines.push("", brief.upcomingHours.length > 36 ? "## Hourly forecast export" : "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain chance | Precipitation mm/hour | Fish | Boating |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
   for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.precipitationMm ?? "—"} | ${hour.fishScore}% (${hour.fishStars}★) | ${hour.sl20} |`);
   const fishingOnly = brief.dailyOutlook.filter((day) => day.weatherAndFishingOnly);
   if (fishingOnly.length) {
