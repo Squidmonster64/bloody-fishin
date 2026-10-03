@@ -80,7 +80,8 @@ describe("provider failure surfaces", () => {
   it("buildBrief continues when marine fails but weather succeeds", async () => {
     vi.resetModules();
     const day = new Date();
-    day.setUTCDate(day.getUTCDate() + 1);
+    // Two UTC days ahead keeps 06:00 Perth in the future even late in the UTC day.
+    day.setUTCDate(day.getUTCDate() + 2);
     const date = day.toISOString().slice(0, 10);
     const weatherBody = {
       timezone: "Australia/Perth",

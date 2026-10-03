@@ -10,6 +10,10 @@ function fakeReq(overrides: Partial<Request> & { query?: Record<string, string> 
 }
 
 describe("prefersMachineReadable", () => {
+  it.each(["facebookexternalhit/1.1", "Applebot/0.1", "Twitterbot/1.0", "Slackbot-LinkExpanding 1.0", "WhatsApp/2.0", "TelegramBot", "Discordbot/2.0"])("serves HTML metadata to %s", (ua) => {
+    expect(prefersMachineReadable(fakeReq({ headers: { "user-agent": ua, accept: "*/*" } }))).toBe(false);
+    expect(prefersMachineReadable(fakeReq({ query: { format: "markdown" }, headers: { "user-agent": ua } }))).toBe(true);
+  });
   it("detects explicit format query", () => {
     expect(prefersMachineReadable(fakeReq({ query: { format: "markdown" } }))).toBe(true);
     expect(prefersMachineReadable(fakeReq({ query: { format: "json" } }))).toBe(true);

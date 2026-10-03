@@ -37,6 +37,8 @@ export function prefersMachineReadable(req: Request): boolean {
   if (format === "text" || format === "markdown" || format === "md" || format === "json") return true;
   if (/text\/markdown/.test(accept) && !/text\/html/.test(accept)) return true;
   if (/application\/json/.test(accept) && !/text\/html/.test(accept)) return true;
+  // Social previews need the HTML metadata, not a downloadable forecast document.
+  if (/facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|applebot|imessage|linkpresentation/i.test(ua)) return false;
   if (
     /bot|crawler|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkshare|w3c_validator|redditbot|applebot|whatsapp|telegrambot|googlebot|bingbot|duckduckbot|baiduspider|yandexbot|exabot|facebot|ia_archiver|gptbot|chatgpt|claude|anthropic|bytespider|cohere|perplexity|youbot/i.test(
       ua,
@@ -146,6 +148,7 @@ export async function renderIndexHtml(staticPath: string, injectBrief = true): P
 }
 
 export async function serveRoot(req: Request, res: Response, staticPath: string): Promise<boolean> {
+  res.setHeader("Vary", "Accept, User-Agent");
   const format = typeof req.query.format === "string" ? req.query.format.toLowerCase() : "";
 
   if (format === "json") {
