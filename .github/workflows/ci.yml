@@ -22,4 +22,4 @@ jobs:
       - name: Install dependencies
         run: corepack enable && pnpm install --frozen-lockfile
       - name: Verify
-        run: pnpm check && pnpm build
+        run: pnpm test && pnpm check && pnpm build
