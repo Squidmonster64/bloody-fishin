@@ -178,6 +178,10 @@ describe("named place aliases for AI clients", () => {
 describe("daily rain and marine summary", () => {
   it("includes seven days beyond the hourly preview and preserves missing values", async () => {
     vi.resetModules();
+    // Fix the clock so UTC tomorrow is also tomorrow in the provider's Perth timezone.
+    // After 16:00 UTC the old fixture included hours already in the past.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-01T00:00:00Z'));
     const dates = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setUTCDate(d.getUTCDate() + i + 1);
@@ -221,6 +225,7 @@ describe("daily rain and marine summary", () => {
       expect(markdown).not.toMatch(/NaN|Infinity/);
     } finally {
       vi.unstubAllGlobals();
+      vi.useRealTimers();
     }
   });
 });
