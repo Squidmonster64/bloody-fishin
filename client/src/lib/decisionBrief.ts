@@ -1,4 +1,4 @@
-import { localHourKey } from "@shared/forecastTime";
+import { hourBucketEnd, localHourKey } from "@shared/forecastTime";
 /**
  * decisionBrief — derive a mobile-first decision summary from AppData.
  * Pure helpers only; does not change SL20 / fishing scoring.
@@ -157,7 +157,7 @@ function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
     date: first.dateStr,
     dateLabel,
     startHour: first.hourLabel,
-    endHour: last.hourLabel,
+    endHour: hourBucketEnd(last.time).slice(11, 16),
     hours: bucket.length,
     peakFish,
     peakStars,
@@ -239,7 +239,7 @@ function buildHeadline(goNoGo: GoNoGo, sl: SL20Rating | null, row: HourRow | nul
   if (goNoGo === "go") {
     return {
       headline: sl.label === "Excellent" ? "Excellent window now" : "Good to go now",
-      supporting: `Boating ${sl.label.toLowerCase()} · fishing ${row.fishStars}★ (${row.fishScore}%). Check wind, swell and tide below before you leave.`,
+      supporting: `Boating ${sl.label.toLowerCase()} · fishing outlook ${row.fishStars}★. Check wind, swell and model sea level below before you leave.`,
     };
   }
   if (goNoGo === "no-go") {
@@ -274,7 +274,7 @@ function buildWhy(row: HourRow | null, sl: SL20Rating | null, conditions: Condit
   if (!row) return why;
   if (sl && marineOk) why.push(`SL20 ${sl.label} from wind ${fmt(conditions.windKt, 0)} kt and period-aware swell.`);
   else why.push(`Vessel SL20 not authoritative this hour — marine swell/chop fields are incomplete.`);
-  why.push(`Fishing ${row.fishStars}★ (${row.fishScore}%) from moon, sun and tide-rate timing.`);
+  why.push(`Fishing outlook ${row.fishStars}★ is a planning heuristic from approximate moon, sun and model sea-level timing.`);
   if (conditions.gustKt != null && conditions.windKt != null && conditions.gustKt - conditions.windKt >= 8) {
     why.push(`Gust spread is ${Math.round(conditions.gustKt - conditions.windKt)} kt — expect a bumpier ride than mean wind suggests.`);
   }
@@ -301,8 +301,8 @@ export function freshnessFromFetchedAt(fetchedAt: string | null, now = new Date(
     return { freshnessLabel: "Freshness unknown", freshnessTone: "unknown" };
   }
   const ageMin = Math.max(0, Math.round((now.getTime() - new Date(fetchedAt).getTime()) / 60000));
-  if (ageMin <= 15) return { freshnessLabel: `Live · updated ${ageMin === 0 ? "just now" : `${ageMin} min ago`}`, freshnessTone: "live" };
-  if (ageMin <= 90) return { freshnessLabel: `Updated ${ageMin} min ago`, freshnessTone: "recent" };
+  if (ageMin <= 15) return { freshnessLabel: `Forecast refreshed ${ageMin === 0 ? "just now" : `${ageMin} min ago`}`, freshnessTone: "live" };
+  if (ageMin <= 90) return { freshnessLabel: `Forecast refreshed ${ageMin} min ago`, freshnessTone: "recent" };
   if (ageMin < 60 * 24) {
     const hrs = Math.round(ageMin / 60);
     return { freshnessLabel: `Saved forecast · ${hrs}h old — refresh before you leave`, freshnessTone: "stale" };
@@ -384,5 +384,5 @@ export function formatSwellLine(c: ConditionSnap): string {
 
 export function formatTideLine(tide: TideExtreme | null): string {
   if (!tide) return "—";
-  return `${tide.type} ${fmt(tide.height)} m @ ${tide.time.slice(11, 16)}`;
+  return `${tide.type} ${fmt(tide.height)} m MSL @ ${tide.time.slice(11, 16)}`;
 }

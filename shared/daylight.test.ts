@@ -15,8 +15,8 @@ describe("provider local solar times", () => {
   });
   it("excludes midnight and respects sunrise/sunset boundaries", () => {
     const sunrise = "2026-09-14T06:17", sunset = "2026-09-14T18:08";
-    for (const hour of [0, 5, 6, 19, 23]) expect(isDaylightHour(hour, sunrise, sunset)).toBe(false);
-    for (const hour of [7, 12, 18]) expect(isDaylightHour(hour, sunrise, sunset)).toBe(true);
+    for (const hour of [0, 5, 6, 18, 19, 23]) expect(isDaylightHour(hour, sunrise, sunset)).toBe(false);
+    for (const hour of [7, 12, 17]) expect(isDaylightHour(hour, sunrise, sunset)).toBe(true);
     expect(isDaylightHour(6 + 17 / 60, sunrise, sunset)).toBe(true);
     expect(isDaylightHour(18 + 9 / 60, sunrise, sunset)).toBe(false);
   });

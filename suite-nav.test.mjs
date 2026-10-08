@@ -62,15 +62,17 @@ test('theme uses Bloody Dave marine tokens, not 5M paper/red', () => {
   assert.doesNotMatch(css, /--action:\s*#3b82f6/);
 });
 
-test('decision view is GOOD/POOR-first with Wind/Swell/Tide/Water and compact GO', () => {
+test('decision view is GOOD/POOR-first with truthful forecast-source labels and compact GO', () => {
   assert.match(decision, /windowKind/);
   assert.match(decision, /"GOOD"/);
   assert.match(decision, /"POOR"/);
   assert.match(decision, /label: "GO"/);
   assert.match(decision, /label="Wind"/);
   assert.match(decision, /label="Swell"/);
-  assert.match(decision, /label="Tide"/);
+  assert.match(decision, /label="Model sea level"/);
   assert.match(decision, /label="Water"/);
+  assert.match(decision, /label="Coastal air forecast"/);
+  assert.match(decision, /label="Coastal rain chance"/);
   assert.match(decision, /aria-label="Next hours"/);
   assert.doesNotMatch(decision, /text-4xl|text-5xl|text-6xl/);
   assert.doesNotMatch(home, /sidebar/i);

@@ -30,9 +30,9 @@ function Row({ row }: { row: HourRow }) {
         <div className="font-mono text-[var(--warm-text)]">{row.hourLabel}</div>
         {row.golden && <GoldenBadge />}
       </td>
-      {/* Fish % */}
+      {/* Fishing heuristic index */}
       <td className="px-2 py-1.5 text-center whitespace-nowrap">
-        <span className="font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
+        <span className="font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
         <span className="text-yellow-400 text-[10px] ml-1">{"★".repeat(row.fishStars)}</span>
       </td>
       {/* SL20 */}
@@ -105,7 +105,7 @@ export function TableView({ data }: Props) {
           <thead className="sticky top-0 z-20 bg-[var(--surface)]">
             <tr className="border-b-2 border-[var(--border)] text-[var(--text-muted)] text-[10px] uppercase tracking-wider">
               <th className="sticky left-0 bg-[var(--surface)] px-2 py-2 text-left border-r border-[var(--border)] z-30 min-w-[90px]">Date / Hour</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap">Fish %</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Heuristic planning index, not an observed bite probability">Fishing index</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Boating</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Wind</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Dir</th>
@@ -114,9 +114,9 @@ export function TableView({ data }: Props) {
               <th className="px-2 py-2 text-center whitespace-nowrap">Period</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Swell Dir</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Wave</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap">Tide</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap">Temp</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap" title="Chance of precipitation; modelled amount in the preceding hour">Rain % / mm per hour</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Model sea level above MSL, not chart datum">Sea level MSL</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Coastal land-grid air-temperature forecast">Coastal air</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Coastal forecast chance; modelled amount in the preceding hour">Rain chance / mm per hour</th>
             </tr>
           </thead>
           <tbody>

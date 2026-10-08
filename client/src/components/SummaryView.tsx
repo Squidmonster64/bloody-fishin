@@ -21,7 +21,7 @@ function HourCell({ row }: { row: HourRow }) {
     <div className={`flex flex-col items-center gap-0.5 rounded px-1 py-1 min-w-[44px] flex-shrink-0
       ${row.golden ? "ring-1 ring-yellow-400 bg-yellow-400/10" : "bg-[var(--surface)]"}`}>
       <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
-      <span className="text-[12px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
+      <span className="text-[12px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
       <StarRow stars={row.fishStars} />
       <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
         {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
@@ -62,7 +62,7 @@ function DayCard({ day }: { day: DayData }) {
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-[var(--action)] font-bold text-sm">{day.peakFish}%</span>
+            <span className="text-[var(--action)] font-bold text-sm" title="Heuristic planning index, not an observed bite probability">{day.peakFish}/100</span>
             <StarRow stars={day.bestFishStars} />
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: sl9.bg, color: sl9.fg }}>
@@ -77,7 +77,7 @@ function DayCard({ day }: { day: DayData }) {
         <div className="flex flex-wrap gap-2 px-4 pb-2 text-xs">
           {day.tideExtremes.map((t, i) => (
             <span key={i} className={`font-semibold ${t.type === "High" ? "text-[var(--success)]" : "text-[var(--action)]"}`}>
-              {t.type === "High" ? "▲" : "▼"} {t.type} {fmt(t.height)}m @ {t.time.slice(11, 16)}
+              {t.type === "High" ? "▲" : "▼"} Model {t.type.toLowerCase()} {fmt(t.height)}m MSL @ {t.time.slice(11, 16)}
             </span>
           ))}
         </div>

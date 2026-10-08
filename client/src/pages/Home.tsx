@@ -77,13 +77,13 @@ export default function Home() {
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && (
           <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]">
-            Refreshing live conditions… showing the latest saved forecast meanwhile.
+            Refreshing model forecast… showing the latest saved forecast meanwhile.
           </div>
         )}
         {state.refreshFailed && state.data && !state.loading && (
           <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-1.5 text-center text-[11px] text-[var(--warm-text)]">
             <span>
-              Live refresh failed — showing the saved forecast. Check signal and try again before
+              Forecast refresh failed — showing the saved forecast. Check signal and try again before
               you leave.
             </span>
             <button

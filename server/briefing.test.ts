@@ -129,7 +129,7 @@ describe("provider failure surfaces", () => {
     const daylightBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3", mode: "wind", daylight: "true", minHours: "2" }));
     expect(daylightBrief.nextWindows).toHaveLength(1);
     expect(daylightBrief.nextWindows[0].start).toBe(`${date} 07:00`);
-    expect(daylightBrief.nextWindows[0].end).toBe(`${date} 08:00`);
+    expect(daylightBrief.nextWindows[0].end).toBe(`${date} 09:00`);
     vi.unstubAllGlobals();
   });
 });

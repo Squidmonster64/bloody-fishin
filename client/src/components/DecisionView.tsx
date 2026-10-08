@@ -46,7 +46,7 @@ function windowKind(goNoGo: GoNoGo): "GOOD" | "POOR" | "OUTLOOK" {
 function formatWaterLine(row: HourRow | null, seaLevel: number | null): string {
   if (!row) return "—";
   const chop = row.windWaveH != null ? `Chop ${fmt(row.windWaveH)} m` : null;
-  const sea = seaLevel != null ? `sea ${fmt(seaLevel)} m` : null;
+  const sea = seaLevel != null ? `sea ${fmt(seaLevel)} m MSL` : null;
   if (chop && sea) return `${chop} · ${sea}`;
   return chop ?? sea ?? (row.waveH != null ? `Wave ${fmt(row.waveH)} m` : "—");
 }
@@ -152,7 +152,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           <span className={FRESH_STYLES[brief.freshnessTone]}>{brief.freshnessLabel}</span>
           {brief.current && (
             <span className="text-[var(--sand)] font-semibold">
-              {brief.current.fishStars}★ fish · {brief.current.fishScore}%
+              {brief.current.fishStars}★ fishing outlook
             </span>
           )}
           <button
@@ -172,11 +172,13 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
       </section>
 
       <section className="px-3 sm:px-4 py-2 border-y border-[var(--border)]" aria-label="Key conditions">
-        <div className="grid grid-cols-2 min-[700px]:grid-cols-4 gap-x-4 gap-y-2">
+        <div className="grid grid-cols-2 min-[700px]:grid-cols-3 min-[1100px]:grid-cols-6 gap-x-4 gap-y-2">
           <Stat label="Wind" value={formatWindLine(c)} color={windColor(c.windKt)} />
           <Stat label="Swell" value={formatSwellLine(c)} color={swellColor(c.swellH)} />
-          <Stat label="Tide" value={formatTideLine(brief.nextTide)} />
+          <Stat label="Model sea level" value={formatTideLine(brief.nextTide)} />
           <Stat label="Water" value={formatWaterLine(brief.current, c.seaLevel)} />
+          <Stat label="Coastal air forecast" value={c.temp == null ? "—" : `${fmt(c.temp, 0)}°C`} />
+          <Stat label="Coastal rain chance" value={c.rainProb == null ? "—" : `${Math.round(c.rainProb)}%`} />
         </div>
       </section>
 
@@ -352,8 +354,8 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
               <dd className="text-[var(--text)] font-mono">{fmt(brief.current.windWaveH)} m</dd>
             </div>
             <div>
-              <dt className="text-[var(--text-muted)]">Sea level</dt>
-              <dd className="text-[var(--text)] font-mono">{fmt(brief.current.seaLevel)} m</dd>
+              <dt className="text-[var(--text-muted)]">Model sea level</dt>
+              <dd className="text-[var(--text)] font-mono">{fmt(brief.current.seaLevel)} m MSL</dd>
             </div>
             <div>
               <dt className="text-[var(--text-muted)]">Tide rate</dt>

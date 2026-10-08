@@ -7,6 +7,10 @@ import { TableView } from "../components/TableView";
 it("fetches amounts separately from probability and renders hourly and daily amounts", async () => {
   vi.stubGlobal("fetch", vi.fn(async (input: string) => {
     if (String(input).includes("marine-api")) return new Response(JSON.stringify({ hourly: {} }));
+    if (String(input).includes("wind_speed_10m")) return new Response(JSON.stringify({
+      hourly: { time: ["2026-09-19T12:00", "2026-09-19T13:00"], wind_speed_10m: [10, 11], wind_direction_10m: [180, 190], wind_gusts_10m: [15, 16] },
+    }));
+    expect(new URL(input).searchParams.get("cell_selection")).toBe("land");
     expect(new URL(input).searchParams.get("hourly")?.split(",")).toContain("precipitation");
     return new Response(JSON.stringify({
       hourly: { time: ["2026-09-19T12:00", "2026-09-19T13:00"], precipitation: [3, 100], precipitation_probability: [75, 25] },

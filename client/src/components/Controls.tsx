@@ -155,8 +155,8 @@ export function Controls({
           onClick={onRefresh}
           disabled={state.loading}
           className="flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded border border-[var(--action)] bg-[color-mix(in_srgb,var(--action)_15%,transparent)] px-2.5 py-1.5 text-sm font-bold text-[var(--action)] transition-colors hover:bg-[var(--action)] hover:text-[var(--app-bg)] disabled:cursor-wait disabled:opacity-60"
-          title="Refresh live forecast"
-          aria-label="Refresh live forecast"
+          title="Refresh model forecast"
+          aria-label="Refresh model forecast"
         >
           <span className={state.loading ? "animate-spin" : ""}>↻</span>
           <span className="hidden lg:inline">Refresh</span>
