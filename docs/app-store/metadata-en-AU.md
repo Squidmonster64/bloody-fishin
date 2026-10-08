@@ -62,4 +62,6 @@ Capture real, live-data screens without marketing overlays:
 4. Locations — built-in and custom saved spots.
 5. Offline/stale — truthful cached-data state and retry action.
 
-Required master set: iPhone 6.9-inch portrait, opaque RGB PNG/JPEG. Keep all safety and attribution copy legible. Do not fabricate favourable conditions for the screenshots.
+Required master sets: iPhone 6.9-inch portrait and iPad 13-inch portrait, using opaque RGB PNG/JPEG at Apple's currently accepted dimensions. Include the iPhone SE 375x667 preview in internal small-screen QA, but do not upscale it into store artwork. Keep all safety and attribution copy legible. Do not fabricate favourable conditions for the screenshots.
+
+The Apple-silicon Mac path uses the compatible iPhone/iPad app rather than a separate macOS product. Capture Mac images for internal acceptance; do not prepare a separate macOS screenshot set unless a native macOS platform is later added.

@@ -37,9 +37,22 @@ Floot's native build currently travels through its publish workflow, which also 
 - Safe-area-aware fixed navigation and 44 px minimum controls.
 - Visible Open-Meteo/model attribution and official BOM link.
 - Dark Bloody Dave marine visual system; no 5M co-branding.
+- Responsive layouts follow the recovered Figma Make sources: compact four-card phone view below 768 px, stacked iPad view with a 3x2 measurement grid from 768-1023 px, and a two-column desktop/Mac workspace from 1024 px.
 - Floot typecheck is clean and all helper specs pass.
-- Live iPhone acceptance at 393x852 confirmed Now/Days/Hourly state changes, no horizontal overflow, the custom-location dialog, attribution and safety copy.
+- Live responsive acceptance confirmed at iPhone SE 375x667, current iPhone 393x852, iPad 820x1180 and Mac/desktop 1440x900. The iPhone flow also confirmed Now/Days/Hourly state changes, no horizontal overflow, the custom-location dialog, attribution and safety copy.
+- Floot device family is explicitly set to universal iPhone and iPad.
 - Floot publish status: unpublished, no custom domain, no mobile build started.
+
+### Mac distribution
+
+Use the same universal iPhone/iPad build on Apple-silicon Macs. Apple documents that eligible iPhone and iPad apps can be offered through the Mac App Store without a port because they use the same frameworks, resources and runtime. This is an iPad-compatible app on Mac, not a native AppKit or Mac Catalyst target.
+
+After a build is uploaded, enable the TestFlight group's Apple-silicon Mac testing and complete a real Mac acceptance pass. App Store Connect compatibility must be verified only after that pass; no Mac availability setting was changed in this sprint.
+
+Apple references reviewed 8 October 2026:
+
+- [Manage availability of iPhone and iPad apps on Macs with Apple silicon](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-of-iphone-and-ipad-apps-on-macs-with-apple-silicon)
+- [Test iPhone and iPad apps on Macs with Apple silicon](https://developer.apple.com/help/app-store-connect/test-a-beta-version/test-iphone-and-ipad-apps-on-macs-with-apple-silicon)
 
 ## Forecast-data licensing decision
 
@@ -69,10 +82,9 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 
 ## iOS decisions still requiring owner/account confirmation
 
-1. Confirm whether this bundle ID or app has ever been released with iPad support. Floot's `iphone` device-family setting is a one-way App Store decision after release; until confirmed, leave the default universal family unchanged.
-2. Confirm that TestFlight remains free, ad-free and non-commercial. Otherwise approve the Open-Meteo commercial plan first.
-3. Provide the support URL/contact and privacy-policy URL that will be maintained publicly.
-4. Decide whether to obtain BOM reuse permission or ship link-only BOM access.
+1. Confirm that TestFlight remains free, ad-free and non-commercial. Otherwise approve the Open-Meteo commercial plan first.
+2. Provide the support URL/contact and privacy-policy URL that will be maintained publicly.
+3. Decide whether to obtain BOM reuse permission or ship link-only BOM access.
 
 ## Release gates
 
@@ -82,9 +94,11 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 - [x] 1024x1024 opaque RGB app icon prepared.
 - [x] Store metadata, privacy notes, review notes and TestFlight checklist drafted.
 - [ ] BOM copied-text path removed/disabled for the native release payload, or licence recorded.
-- [ ] Device family confirmed.
+- [x] Universal iPhone and iPad device family confirmed and configured.
+- [x] Figma-aligned responsive preview accepted at iPhone SE, current iPhone, iPad and Mac/desktop sizes.
 - [ ] Support and privacy URLs supplied and reachable.
 - [ ] Native build explicitly approved.
 - [ ] Build uploaded and processed in App Store Connect.
 - [ ] Internal TestFlight install completed on a physical iPhone.
+- [ ] Internal TestFlight install completed on a physical iPad and Apple-silicon Mac.
 - [ ] Public/external TestFlight or App Store release separately approved.
