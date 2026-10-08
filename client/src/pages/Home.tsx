@@ -175,6 +175,13 @@ export default function Home() {
       <footer className="border-t border-[var(--border)] bg-[var(--app-bg)] px-3 py-2 text-center text-[10px] leading-relaxed text-[var(--text-muted)]">
         Planning aid for Australian fishing and small-boat decisions. Always check official Bureau
         of Meteorology marine warnings, local knowledge and skipper judgement before you go.
+        <span className="mt-1 block">
+          Weather and marine model data by{" "}
+          <a className="underline underline-offset-2" href="https://open-meteo.com/" target="_blank" rel="noreferrer">
+            Open-Meteo
+          </a>
+          .
+        </span>
       </footer>
 
       <div className="min-[700px]:hidden">

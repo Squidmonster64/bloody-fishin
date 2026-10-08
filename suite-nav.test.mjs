@@ -75,3 +75,8 @@ test('decision view is GOOD/POOR-first with Wind/Swell/Tide/Water and compact GO
   assert.doesNotMatch(decision, /text-4xl|text-5xl|text-6xl/);
   assert.doesNotMatch(home, /sidebar/i);
 });
+
+test('forecast provider attribution is visible in the product footer', () => {
+  assert.match(home, /Weather and marine model data by/);
+  assert.match(home, /https:\/\/open-meteo\.com\//);
+});

@@ -31,8 +31,8 @@ A production-grade fishing and boating conditions planner for serious anglers. C
 
 - **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS 4
 - **Charts**: Chart.js 4 + chartjs-plugin-zoom + Hammer.js (touch)
-- **Data**: [Open-Meteo](https://open-meteo.com/) (weather + marine) — **free, no API key**
-- **Timezone**: [TimeAPI.io](https://timeapi.io/) — **free, no API key**
+- **Data**: [Open-Meteo](https://open-meteo.com/) weather + marine models. The public API is keyless for qualifying non-commercial use; commercial distribution requires an appropriate Open-Meteo plan and attribution.
+- **Timezone**: [TimeAPI.io](https://timeapi.io/) in the legacy browser client; the public briefing service uses Open-Meteo's returned timezone.
 - **Server**: Express (serves static build in production)
 - **Package Manager**: pnpm
 
@@ -85,7 +85,7 @@ cp .env.example .env
 |---|---|---|
 | `PORT` | No | Server port (default: 3000). Railway injects this automatically. |
 | `NODE_ENV` | No | Set to `production` in deployment. |
-**No API keys or third-party secrets are required.** Open-Meteo and TimeAPI.io are both free and keyless. The only runtime environment variable used is Railway's standard `PORT`; see [DEPLOYMENT.md](DEPLOYMENT.md).
+**The current non-commercial deployment does not require API keys.** This is a technical statement, not a perpetual licence grant: re-check provider terms and provision the commercial Open-Meteo endpoint before any paid, ad-supported or otherwise commercial release. The only current runtime environment variable is Railway's standard `PORT`; see [DEPLOYMENT.md](DEPLOYMENT.md) and [docs/ios-packaging-and-store-readiness.md](docs/ios-packaging-and-store-readiness.md).
 
 ---
 
