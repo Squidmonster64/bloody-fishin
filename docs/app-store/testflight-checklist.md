@@ -9,7 +9,7 @@ Prepared: 8 October 2026 (AWST)
 - [x] Floot helper tests and TypeScript check pass.
 - [x] Repository tests, TypeScript check and production build pass.
 - [x] Universal iPhone and iPad device family confirmed by owner and configured in Floot.
-- [ ] Fresh screenshots confirm the full-parity Floot rebuild at every target. The 375x667, 393x852 and 820x1180 captures passed on 8 October 2026; Floot's Desktop and custom 1024/1440 capture modes still rendered the 375px responsive canvas, so Mac visual acceptance remains open. Earlier reduced-client screenshots are superseded.
+- [x] Fresh screenshots confirm the full-parity Floot rebuild at 375x667, 393x852, 820x1180 and 1440x900 on 8 October 2026. Earlier reduced-client screenshots are superseded.
 - [ ] Release payload no longer contains copied BOM forecast text, or licence is recorded.
 - [ ] Support URL, privacy URL, copyright owner and reviewer contact supplied.
 - [ ] Native build/publish explicitly approved.
@@ -33,7 +33,7 @@ Prepared: 8 October 2026 (AWST)
 ## iPad and Apple-silicon Mac acceptance
 
 - [x] iPad preview uses the Figma tablet hierarchy without losing current functionality.
-- [ ] Mac/desktop preview uses the Figma desktop hierarchy without losing current functionality.
+- [x] Mac/desktop preview uses the two-column Figma desktop hierarchy without losing current functionality; all controls and tabs remain visible without horizontal overflow.
 - [ ] Install and operate the processed build on a physical iPad.
 - [ ] Enable the internal TestFlight group's Apple-silicon Mac testing, install on a Mac and verify keyboard, pointer, window resizing and sharing.
 - [ ] After the Mac pass, verify Apple-silicon compatibility in App Store Connect and decide whether to make the iOS app available on the Mac App Store.

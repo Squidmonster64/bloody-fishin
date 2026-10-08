@@ -44,7 +44,7 @@ Floot's native build currently travels through its publish workflow, which also 
 - Floot typecheck is clean and three helper/product-contract spec files pass.
 - Connected-preview browser acceptance confirms the live window, all five view transitions, grouped spot catalogue, all five range choices, Compare, Briefing, saved/exact-coordinate management and Print dispatch. The inspected viewport had no horizontal overflow.
 - Fresh full-parity screenshots passed at iPhone SE 375x667, current iPhone 393x852 and iPad 820x1180 on 8 October 2026. The phone captures preserve the primary live-window card, five-tab navigation and controls without horizontal clipping; the iPad capture preserves all five views, the decision card, six-measurement grid and expanded next-hours grid.
-- Mac visual acceptance is still pending. Floot's Desktop preset and custom 1024x768/1440x900 captures reported the requested target but rendered the 375px responsive canvas, so they are not accepted as desktop evidence. Earlier reduced-client screenshots are superseded and must not be used as evidence.
+- Mac visual acceptance passed at 1440x900 after wrapping utilities at narrower desktop widths and moving the two-column live-window/next-hours breakpoint just above iPad portrait. All five utilities and view tabs are visible, the measured page width equals the viewport width, and the 820x1180 iPad regression capture remains in the intended stacked tablet hierarchy. Earlier reduced-client screenshots are superseded and must not be used as evidence.
 - Floot device family is explicitly set to universal iPhone and iPad.
 - Floot publish status: unpublished, no custom domain, no mobile build started.
 
@@ -100,7 +100,7 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 - [x] Store metadata, privacy notes, review notes and TestFlight checklist drafted.
 - [ ] BOM copied-text path removed/disabled for the native release payload, or licence recorded.
 - [x] Universal iPhone and iPad device family confirmed and configured.
-- [ ] Full-parity responsive preview accepted at iPhone SE, current iPhone, iPad and Mac/desktop sizes.
+- [x] Full-parity responsive preview accepted at iPhone SE, current iPhone, iPad and Mac/desktop sizes.
 - [ ] Support and privacy URLs supplied and reachable.
 - [ ] Native build explicitly approved.
 - [ ] Build uploaded and processed in App Store Connect.
