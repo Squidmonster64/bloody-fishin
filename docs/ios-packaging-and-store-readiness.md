@@ -31,15 +31,19 @@ Floot's native build currently travels through its publish workflow, which also 
 
 ### Floot mobile client
 
-- Mobile-first GOOD/POOR decision, Days and Hourly views.
+- Full current product shell: Decision/live window, Charts, Daily, Hourly and Sickie views.
+- Grouped location catalogue, 3/5/7/10/14-day range selection, exact coordinate entry, device-local saved spots, compare, briefing/share and print.
+- Configurable Sickie vessel criteria with calendar export for qualifying windows.
 - Live data from `https://weather.bloodydaves.com/brief.json`; no copied scoring implementation.
 - Local cached fallback, saved/custom locations, retry and share-link behaviour.
 - Safe-area-aware fixed navigation and 44 px minimum controls.
 - Visible Open-Meteo/model attribution and official BOM link.
 - Dark Bloody Dave marine visual system; no 5M co-branding.
-- Responsive layouts follow the recovered Figma Make sources: compact four-card phone view below 768 px, stacked iPad view with a 3x2 measurement grid from 768-1023 px, and a two-column desktop/Mac workspace from 1024 px.
-- Floot typecheck is clean and all helper specs pass.
-- Live responsive acceptance confirmed at iPhone SE 375x667, current iPhone 393x852, iPad 820x1180 and Mac/desktop 1440x900. The iPhone flow also confirmed Now/Days/Hourly state changes, no horizontal overflow, the custom-location dialog, attribution and safety copy.
+- Responsive presentation follows the recovered Figma hierarchy without replacing the repository/live-app product contract.
+- The Recharts payload is lazy-loaded only when Charts opens, reducing the initial decision/live-window load.
+- Floot typecheck is clean and three helper/product-contract spec files pass.
+- Connected-preview browser acceptance confirms the live window, all five view transitions, grouped spot catalogue, all five range choices, Compare, Briefing, saved/exact-coordinate management and Print dispatch. The inspected viewport had no horizontal overflow.
+- Fresh responsive screenshots for this parity rebuild are pending; earlier reduced-client screenshots are superseded and must not be used as evidence.
 - Floot device family is explicitly set to universal iPhone and iPad.
 - Floot publish status: unpublished, no custom domain, no mobile build started.
 
@@ -95,7 +99,7 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 - [x] Store metadata, privacy notes, review notes and TestFlight checklist drafted.
 - [ ] BOM copied-text path removed/disabled for the native release payload, or licence recorded.
 - [x] Universal iPhone and iPad device family confirmed and configured.
-- [x] Figma-aligned responsive preview accepted at iPhone SE, current iPhone, iPad and Mac/desktop sizes.
+- [ ] Full-parity responsive preview accepted at iPhone SE, current iPhone, iPad and Mac/desktop sizes.
 - [ ] Support and privacy URLs supplied and reachable.
 - [ ] Native build explicitly approved.
 - [ ] Build uploaded and processed in App Store Connect.
