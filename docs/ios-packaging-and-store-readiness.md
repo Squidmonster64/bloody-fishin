@@ -90,6 +90,14 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 2. Provide the support URL/contact and privacy-policy URL that will be maintained publicly.
 3. Decide whether to obtain BOM reuse permission or ship link-only BOM access.
 
+## Beta deployment receipt — 9 October 2026
+
+- Git commit `90fd3dae3e3d81b5cf14ef76f228dc180bc67076` was pushed to `codex/sprint3-ios-readiness` and PR #23. GitHub `verify` passed.
+- Railway deployment `a327d5a8-d9bf-4651-835a-f883c222d659` completed with status `SUCCESS` for the existing `bloody-fishin` service. Its live `/health` response identifies the service stage as `beta`.
+- Live `/brief.json` readback returned 36 preview hours plus the new backward-compatible fields: `waveM`, `swellDirDeg`, `moonName`, `moonEmoji` and `moonIllumination`.
+- Floot was refreshed against the deployed service. The first Hourly row displayed swell direction `WSW` and total wave `3.0 m`; Daily displayed `Waning Crescent · 4% lit`; the document retained zero horizontal overflow.
+- Floot itself remains unpublished and no native/mobile build was started. This preserves the no-public-release boundary because Floot's available publish action is a production web publish as well as the mobile-build carrier.
+
 ## Release gates
 
 - [x] Repository baseline identified and reproducible.

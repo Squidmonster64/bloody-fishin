@@ -44,7 +44,7 @@ Prepared: 8 October 2026 (AWST)
 - [x] Missing marine values are shown as unavailable, not zero.
 - [x] Failed live loads can fall back to the last successful local cache.
 - [x] Attribution is present in both GitHub and Floot clients.
-- [ ] Compare one Fremantle response against the GitHub public brief at the same generated timestamp.
+- [x] Refreshed Floot against the deployed Fremantle public brief and confirmed matching first-hour swell direction/total wave plus daily moon fields on 9 October 2026.
 - [ ] Confirm link-only BOM behaviour in the release candidate.
 
 ## TestFlight receipt
