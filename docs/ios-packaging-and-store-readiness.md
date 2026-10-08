@@ -12,11 +12,17 @@ Proposed bundle ID: `com.bloodydaves.fishin`
 
 ## Decision
 
-Use Floot's Capacitor-based native wrapper for iOS. Do not create a second React Native or Expo implementation. The wrapper should host the focused mobile client, while the existing Express briefing service remains the calculation and scoring authority.
+### Canonical-source and Xcode correction — 9 October 2026
 
-This split avoids duplicating the tested scoring, forecast, tide/solunar, cache and public briefing behaviour. It also gives the App Store build native system bars, safe-area handling, sharing and device packaging without changing the public web app.
+The owner requires all application code, assets, tests, hosting adapters and native packaging to be preserved in `Squidmonster64/bloody-fishin`. The iOS release must be represented by a checked-in, independently buildable Xcode project. No release-critical source may exist only in Floot, and losing or ending the Floot subscription must not prevent a web deployment or an Xcode build.
 
-Floot's native build currently travels through its publish workflow, which also publishes the web app. Because this sprint explicitly forbids public release, no native build or publish has been started. The project is configured but unpublished.
+Use a repository-owned Capacitor wrapper around the React/Vite client rather than a second React Native or Expo implementation. The generated iOS project and configuration must be committed under the repository and opened/built in Xcode. The shared forecast, scoring, tide/solunar, cache and public-brief behaviour remains repository-owned and must not be duplicated in native-only code.
+
+Floot is now a temporary design/acceptance workspace and source to be exported, not the build or hosting authority. Before Floot Pro access ends on 19 October 2026 at 11:11 AWST, the accepted Floot interface, assets and tests must be ported into the repository and verified without Floot.
+
+The web/API build must also be host-portable from this repository. Host-specific configuration belongs in reviewed adapters and deployment files. The current Railway Express deployment remains the verified live service; Cloudflare is not recorded as the approved Bloody Fishin destination yet. A Cloudflare cutover, if chosen, requires its own compatible Worker/Pages adapter, smoke tests and explicit production approval.
+
+Current gap: the repository does not yet contain a Capacitor dependency, `capacitor.config.*`, or an `ios/*.xcodeproj`/workspace, and the newest accepted Floot interface has not yet been fully ported back. Therefore the Xcode/native package is not prepared or independently reproducible yet.
 
 ## Verified product state
 
@@ -101,7 +107,11 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 ## Release gates
 
 - [x] Repository baseline identified and reproducible.
-- [x] Mobile client implemented in Floot.
+- [x] Mobile client implemented and accepted in Floot as a temporary source workspace.
+- [ ] Latest accepted Floot interface, assets and tests ported into the GitHub repository.
+- [ ] Repository-owned Capacitor configuration and Xcode project committed and reproducibly generated.
+- [ ] Xcode archive succeeds without requiring Floot access.
+- [ ] Chosen web/API host adapter builds and passes smoke tests from the same repository.
 - [x] Forecast provider attribution visible.
 - [x] 1024x1024 opaque RGB app icon prepared.
 - [x] Store metadata, privacy notes, review notes and TestFlight checklist drafted.

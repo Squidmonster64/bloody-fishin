@@ -4,6 +4,10 @@ Prepared: 8 October 2026 (AWST)
 
 ## Build readiness
 
+- [ ] Latest accepted Floot source, assets and tests are preserved in `Squidmonster64/bloody-fishin`; no release-critical code remains Floot-only.
+- [ ] Repository contains the Capacitor configuration and versioned iOS Xcode project/workspace.
+- [ ] A clean checkout can build and archive the app in Xcode without Floot access.
+- [ ] Web/API deployment configuration matches the selected host and is smoke-tested from the same repository.
 - [x] Floot project configured with proposed bundle ID and opaque 1024px icon.
 - [x] Safe-area-aware mobile layout and native system-bar colours configured.
 - [x] Floot helper tests and TypeScript check pass.
