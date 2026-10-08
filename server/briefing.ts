@@ -10,6 +10,9 @@ import { precipitationMm, precipitationTotal } from "../shared/precipitation.js"
 import {
   fishingScore,
   hasMarineForVessel,
+  moonIllumination,
+  moonPhaseEmoji,
+  moonPhaseName,
   moonTransitTimes,
   isDaylightHour,
   rateSL20,
@@ -27,7 +30,7 @@ type Hour = {
   windDirDeg: number | null;
   thunderstorm: boolean;
   precipitationMm: number | null; rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
-  swellP: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
+  swellP: number | null; swellDir: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
   sunrise: string; sunset: string;
   fishScore: number; fishStars: number; sl20: SL20Rating; marineDataAvailable: boolean;
 };
@@ -199,7 +202,7 @@ async function forecast(location: Location, days: number): Promise<{
   const wind = new URL("https://api.open-meteo.com/v1/forecast");
   wind.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wind_speed_10m,wind_direction_10m,wind_gusts_10m", cell_selection: "sea", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
   const marine = new URL("https://marine-api.open-meteo.com/v1/marine");
-  marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
+  marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
   const [weatherResponse, windResponse, marineResponse] = await Promise.all([
     fetchWithTimeout(weather.toString(), { timeoutMs: 12_000 }),
     fetchWithTimeout(wind.toString(), { timeoutMs: 12_000 }),
@@ -225,7 +228,7 @@ async function forecast(location: Location, days: number): Promise<{
   const raw = wh.time.map((time: string, index: number) => {
     const windAt = windIndex.get(time);
     const marineAt = marineIndex.get(time);
-    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: windAt === undefined ? null : windh.wind_speed_10m?.[windAt] ?? null, gustKt: windAt === undefined ? null : windh.wind_gusts_10m?.[windAt] ?? null, thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[index]), windDirDeg: windAt === undefined ? null : windh.wind_direction_10m?.[windAt] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, precipitationMm: precipitationMm(wh.precipitation?.[index]), temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
+    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: windAt === undefined ? null : windh.wind_speed_10m?.[windAt] ?? null, gustKt: windAt === undefined ? null : windh.wind_gusts_10m?.[windAt] ?? null, thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[index]), windDirDeg: windAt === undefined ? null : windh.wind_direction_10m?.[windAt] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, precipitationMm: precipitationMm(wh.precipitation?.[index]), temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, swellDir: marineAt === undefined ? null : mh.swell_wave_direction?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
   });
   return {
     timezone: weatherData.timezone ?? "UTC",
@@ -293,6 +296,8 @@ export async function buildBrief(request: Request) {
     const swell = range(rows.map(hour => hour.swellH));
     const period = range(rows.map(hour => hour.swellP));
     const chop = range(rows.map(hour => hour.windWaveH));
+    const sun = { sunrise: rows[0]?.sunrise || "", sunset: rows[0]?.sunset || "" };
+    const moon = moonTransitTimes(new Date(`${date}T12:00:00Z`), sun.sunrise, sun.sunset);
     return {
       date,
       marineDataAvailable,
@@ -311,6 +316,9 @@ export async function buildBrief(request: Request) {
       minTempC: temps.length ? Math.min(...temps) : null,
       sunrise: rows[0]?.sunrise || null,
       sunset: rows[0]?.sunset || null,
+      moonName: moonPhaseName(moon.phase),
+      moonEmoji: moonPhaseEmoji(moon.phase),
+      moonIllumination: moonIllumination(moon.phase),
       bestFishScore: Math.max(...rows.map((hour) => hour.fishScore)),
       bestFishStars: Math.max(...rows.map((hour) => hour.fishStars)),
       weatherAndFishingOnly: !marineDataAvailable,
@@ -355,6 +363,8 @@ export async function buildBrief(request: Request) {
       thunderstorm: hour.thunderstorm,
       swellM: hour.swellH,
       swellPeriodS: hour.swellP,
+      swellDirDeg: hour.swellDir,
+      waveM: hour.waveH,
       windChopM: hour.windWaveH,
       seaLevelM: hour.seaLevel,
       rainChance: hour.rainProb,

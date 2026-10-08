@@ -9,7 +9,7 @@ Prepared: 8 October 2026 (AWST)
 - [x] Floot helper tests and TypeScript check pass.
 - [x] Repository tests, TypeScript check and production build pass.
 - [x] Universal iPhone and iPad device family confirmed by owner and configured in Floot.
-- [x] Fresh screenshots confirm the full-parity Floot rebuild at 375x667, 393x852, 820x1180 and 1440x900 on 8 October 2026. Earlier reduced-client screenshots are superseded.
+- [x] Full functional parity restored and re-audited on 9 October 2026; see `floot-full-screen-parity-audit-2026-10-09.md`.
 - [ ] Release payload no longer contains copied BOM forecast text, or licence is recorded.
 - [ ] Support URL, privacy URL, copyright owner and reviewer contact supplied.
 - [ ] Native build/publish explicitly approved.
@@ -18,8 +18,8 @@ Prepared: 8 October 2026 (AWST)
 
 ## Phone acceptance — iPhone SE 375x667 through current iPhone
 
-- [x] Initial live forecast resolves to a clear GOOD/POOR state in the rebuilt preview.
-- [x] Decision, Charts, Daily, Hourly and Sickie navigation works without horizontal overflow.
+- [x] Initial forecast resolves to the reference GOOD/POOR/OUTLOOK and GO/CAUTION/NO-GO hierarchy.
+- [x] Decision, Charts, Daily, Hourly and Sickie pass connected-preview acceptance at 375x667 without document-level horizontal overflow; Hourly keeps its frozen Date/Hour column inside the intentionally scrollable operational table.
 - [x] Core controls meet a 44px minimum target in the Floot implementation.
 - [x] Model attribution, safety copy and official BOM link are visible.
 - [x] Custom-location helper stores, loads and removes local entries in tests.
@@ -32,8 +32,8 @@ Prepared: 8 October 2026 (AWST)
 
 ## iPad and Apple-silicon Mac acceptance
 
-- [x] iPad preview uses the Figma tablet hierarchy without losing current functionality.
-- [x] Mac/desktop preview uses the two-column Figma desktop hierarchy without losing current functionality; all controls and tabs remain visible without horizontal overflow.
+- [x] iPad preview uses the Figma tablet hierarchy without losing current functionality (820x1180 acceptance capture, 9 October 2026).
+- [x] Mac/desktop preview uses the Figma desktop hierarchy without losing current functionality (1440x900 acceptance capture, 9 October 2026).
 - [ ] Install and operate the processed build on a physical iPad.
 - [ ] Enable the internal TestFlight group's Apple-silicon Mac testing, install on a Mac and verify keyboard, pointer, window resizing and sharing.
 - [ ] After the Mac pass, verify Apple-silicon compatibility in App Store Connect and decide whether to make the iOS app available on the Mac App Store.

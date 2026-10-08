@@ -41,10 +41,9 @@ Floot's native build currently travels through its publish workflow, which also 
 - Dark Bloody Dave marine visual system; no 5M co-branding.
 - Responsive presentation follows the recovered Figma hierarchy without replacing the repository/live-app product contract.
 - The Recharts payload is lazy-loaded only when Charts opens, reducing the initial decision/live-window load.
-- Floot typecheck is clean and three helper/product-contract spec files pass.
-- Connected-preview browser acceptance confirms the live window, all five view transitions, grouped spot catalogue, all five range choices, Compare, Briefing, saved/exact-coordinate management and Print dispatch. The inspected viewport had no horizontal overflow.
-- Fresh full-parity screenshots passed at iPhone SE 375x667, current iPhone 393x852 and iPad 820x1180 on 8 October 2026. The phone captures preserve the primary live-window card, five-tab navigation and controls without horizontal clipping; the iPad capture preserves all five views, the decision card, six-measurement grid and expanded next-hours grid.
-- Mac visual acceptance passed at 1440x900 after wrapping utilities at narrower desktop widths and moving the two-column live-window/next-hours breakpoint just above iPad portrait. All five utilities and view tabs are visible, the measured page width equals the viewport width, and the 820x1180 iPad regression capture remains in the intended stacked tablet hierarchy. Earlier reduced-client screenshots are superseded and must not be used as evidence.
+- Floot typecheck is clean; three standard spec files and both explicitly-run hook spec files pass.
+- Connected-preview acceptance confirms the live window, all five view transitions at 5- and 14-day ranges, grouped spot catalogue, Compare, Briefing, saved/exact-coordinate management and the dedicated print workflow. There is no document-level horizontal overflow.
+- Full-parity captures passed at iPhone SE 375x667, iPad 820x1180 and Mac 1440x900 on 9 October 2026. Decision hierarchy/timeline, chart zoom/day detail, full Hourly data, Sickie profiles/windows, Print and My Spots are restored. See `docs/floot-full-screen-parity-audit-2026-10-09.md`.
 - Floot device family is explicitly set to universal iPhone and iPad.
 - Floot publish status: unpublished, no custom domain, no mobile build started.
 
@@ -100,7 +99,7 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 - [x] Store metadata, privacy notes, review notes and TestFlight checklist drafted.
 - [ ] BOM copied-text path removed/disabled for the native release payload, or licence recorded.
 - [x] Universal iPhone and iPad device family confirmed and configured.
-- [x] Full-parity responsive preview accepted at iPhone SE, current iPhone, iPad and Mac/desktop sizes.
+- [x] Full functional parity accepted in connected previews at iPhone SE, iPad and Mac/desktop sizes; physical-device acceptance remains a separate gate.
 - [ ] Support and privacy URLs supplied and reachable.
 - [ ] Native build explicitly approved.
 - [ ] Build uploaded and processed in App Store Connect.

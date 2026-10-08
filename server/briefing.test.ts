@@ -119,7 +119,12 @@ describe("provider failure surfaces", () => {
     expect(brief.upcomingHours.every(h => h.sl20 === null)).toBe(true);
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
     expect(brief.upcomingHours[0]).toHaveProperty("tempC");
+    expect(brief.upcomingHours[0]).toHaveProperty("waveM");
+    expect(brief.upcomingHours[0]).toHaveProperty("swellDirDeg");
     expect(brief.dailyOutlook[0]).toHaveProperty("sunrise");
+    expect(brief.dailyOutlook[0]).toHaveProperty("moonName");
+    expect(brief.dailyOutlook[0]).toHaveProperty("moonEmoji");
+    expect(brief.dailyOutlook[0]).toHaveProperty("moonIllumination");
     expect(brief.dailyOutlook[0]).toMatchObject({
       maxRainChance: 10, minSwellM: null, maxSwellM: null,
       minSwellPeriodS: null, maxSwellPeriodS: null, maxWindChopM: null,
@@ -180,7 +185,9 @@ describe("daily rain and marine summary", () => {
     vi.resetModules();
     const dates = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
-      d.setUTCDate(d.getUTCDate() + i + 1);
+      // Start two UTC days ahead so every mocked local hour remains in the future
+      // regardless of when the suite runs in Australia/Perth.
+      d.setUTCDate(d.getUTCDate() + i + 2);
       return d.toISOString().slice(0, 10);
     });
     const time = dates.flatMap(date => Array.from({ length: 24 }, (_, h) => `${date}T${String(h).padStart(2, "0")}:00`));
@@ -190,8 +197,10 @@ describe("daily rain and marine summary", () => {
       precipitation: time.map((_, i) => i >= 144 ? null : i < 24 ? 0 : i % 24 === 12 ? 100 : 0.1),
     }, daily: { time: dates, sunrise: dates.map(d => d + "T06:00"), sunset: dates.map(d => d + "T18:00") } };
     const marine = { hourly: { time,
+      wave_height: time.map((_, i) => i >= 144 ? null : 2.8),
       swell_wave_height: time.map((_, i) => i >= 144 ? null : i % 2 ? 2.5 : 1.5),
       swell_wave_period: time.map((_, i) => i >= 144 ? null : i % 2 ? 12 : 10),
+      swell_wave_direction: time.map((_, i) => i >= 144 ? null : 240),
       wind_wave_height: time.map((_, i) => i >= 144 ? null : 0),
     } };
     vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify(String(url).includes("marine-api") ? marine : weather), { status: 200 })));
@@ -202,6 +211,8 @@ describe("daily rain and marine summary", () => {
       const complete = await buildBrief(fakeReq({ spot: "freo", days: "7", hours: "all" }));
       expect(complete.upcomingHours).toHaveLength(168);
       expect(complete.upcomingHours[0]).toEqual(brief.upcomingHours[0]);
+      expect(complete.upcomingHours[0]).toMatchObject({ waveM: 2.8, swellDirDeg: 240 });
+      expect(complete.dailyOutlook[0]).toEqual(expect.objectContaining({ moonName: expect.any(String), moonEmoji: expect.any(String), moonIllumination: expect.any(Number) }));
       expect(complete.upcomingHours.at(-1)?.time).toBe(dates[6] + " 23:00");
       expect(complete.upcomingHours.at(-1)?.swellM).toBeNull();
       expect(complete.dailyOutlook).toEqual(brief.dailyOutlook);
