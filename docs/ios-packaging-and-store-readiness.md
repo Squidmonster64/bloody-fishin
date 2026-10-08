@@ -43,7 +43,8 @@ Floot's native build currently travels through its publish workflow, which also 
 - The Recharts payload is lazy-loaded only when Charts opens, reducing the initial decision/live-window load.
 - Floot typecheck is clean and three helper/product-contract spec files pass.
 - Connected-preview browser acceptance confirms the live window, all five view transitions, grouped spot catalogue, all five range choices, Compare, Briefing, saved/exact-coordinate management and Print dispatch. The inspected viewport had no horizontal overflow.
-- Fresh responsive screenshots for this parity rebuild are pending; earlier reduced-client screenshots are superseded and must not be used as evidence.
+- Fresh full-parity screenshots passed at iPhone SE 375x667, current iPhone 393x852 and iPad 820x1180 on 8 October 2026. The phone captures preserve the primary live-window card, five-tab navigation and controls without horizontal clipping; the iPad capture preserves all five views, the decision card, six-measurement grid and expanded next-hours grid.
+- Mac visual acceptance is still pending. Floot's Desktop preset and custom 1024x768/1440x900 captures reported the requested target but rendered the 375px responsive canvas, so they are not accepted as desktop evidence. Earlier reduced-client screenshots are superseded and must not be used as evidence.
 - Floot device family is explicitly set to universal iPhone and iPad.
 - Floot publish status: unpublished, no custom domain, no mobile build started.
 

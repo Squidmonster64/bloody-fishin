@@ -9,7 +9,7 @@ Prepared: 8 October 2026 (AWST)
 - [x] Floot helper tests and TypeScript check pass.
 - [x] Repository tests, TypeScript check and production build pass.
 - [x] Universal iPhone and iPad device family confirmed by owner and configured in Floot.
-- [ ] Fresh screenshots confirm the full-parity Floot rebuild at 375x667, 393x852, 820x1180 and 1440x900. Earlier reduced-client screenshots are superseded.
+- [ ] Fresh screenshots confirm the full-parity Floot rebuild at every target. The 375x667, 393x852 and 820x1180 captures passed on 8 October 2026; Floot's Desktop and custom 1024/1440 capture modes still rendered the 375px responsive canvas, so Mac visual acceptance remains open. Earlier reduced-client screenshots are superseded.
 - [ ] Release payload no longer contains copied BOM forecast text, or licence is recorded.
 - [ ] Support URL, privacy URL, copyright owner and reviewer contact supplied.
 - [ ] Native build/publish explicitly approved.
@@ -18,8 +18,8 @@ Prepared: 8 October 2026 (AWST)
 
 ## Phone acceptance — iPhone SE 375x667 through current iPhone
 
-- [ ] Initial live forecast resolves to a clear GOOD/POOR state in the rebuilt preview.
-- [ ] Decision, Charts, Daily, Hourly and Sickie navigation works without horizontal overflow.
+- [x] Initial live forecast resolves to a clear GOOD/POOR state in the rebuilt preview.
+- [x] Decision, Charts, Daily, Hourly and Sickie navigation works without horizontal overflow.
 - [x] Core controls meet a 44px minimum target in the Floot implementation.
 - [x] Model attribution, safety copy and official BOM link are visible.
 - [x] Custom-location helper stores, loads and removes local entries in tests.
@@ -32,7 +32,7 @@ Prepared: 8 October 2026 (AWST)
 
 ## iPad and Apple-silicon Mac acceptance
 
-- [ ] iPad preview uses the Figma tablet hierarchy without losing current functionality.
+- [x] iPad preview uses the Figma tablet hierarchy without losing current functionality.
 - [ ] Mac/desktop preview uses the Figma desktop hierarchy without losing current functionality.
 - [ ] Install and operate the processed build on a physical iPad.
 - [ ] Enable the internal TestFlight group's Apple-silicon Mac testing, install on a Mac and verify keyboard, pointer, window resizing and sharing.
