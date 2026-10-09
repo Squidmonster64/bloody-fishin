@@ -32,8 +32,9 @@ A production-grade fishing and boating conditions planner for serious anglers. C
 - **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS 4
 - **Charts**: Chart.js 4 + chartjs-plugin-zoom + Hammer.js (touch)
 - **Data**: [Open-Meteo](https://open-meteo.com/) weather + marine models. The public API is keyless for qualifying non-commercial use; commercial distribution requires an appropriate Open-Meteo plan and attribution.
-- **Timezone**: [TimeAPI.io](https://timeapi.io/) in the legacy browser client; the public briefing service uses Open-Meteo's returned timezone.
+- **Timezone**: returned by the repository backend with each Open-Meteo-derived forecast; packaged clients make no separate timezone-provider request.
 - **Server**: Express (serves static build in production)
+- **Native shell**: Capacitor 8 with a versioned universal iPhone/iPad Xcode project
 - **Package Manager**: pnpm
 
 ---
@@ -85,6 +86,10 @@ cp .env.example .env
 |---|---|---|
 | `PORT` | No | Server port (default: 3000). Railway injects this automatically. |
 | `NODE_ENV` | No | Set to `production` in deployment. |
+| `APP_STAGE` | No | Deployment label returned by health checks, for example `staging`. |
+| `OPEN_METEO_*_URL` | No | Server-only provider endpoints used when a commercial Open-Meteo account is configured. |
+| `OPEN_METEO_API_KEY` | No | Optional server-only provider key. Never expose this as a `VITE_` variable. |
+| `VITE_API_ORIGIN` | No | Explicit backend origin for a packaged build; native defaults to `https://boating.bloodydaves.com`. |
 **The current non-commercial deployment does not require API keys.** This is a technical statement, not a perpetual licence grant: re-check provider terms and provision the commercial Open-Meteo endpoint before any paid, ad-supported or otherwise commercial release. The only current runtime environment variable is Railway's standard `PORT`; see [DEPLOYMENT.md](DEPLOYMENT.md) and [docs/ios-packaging-and-store-readiness.md](docs/ios-packaging-and-store-readiness.md).
 
 ---
@@ -103,6 +108,18 @@ cp .env.example .env
 6. Done — Railway provides a public URL automatically.
 
 For the custom-domain handoff and independent-deployment details, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## iOS project
+
+The repository owns the Capacitor configuration and generated Xcode project under `ios/`; Floot is not required to reproduce the package.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm ios:sync
+pnpm ios:open
+```
+
+The target uses bundle identifier `com.bloodydaves.fishin`, supports iPhone and iPad, and is eligible to run as an iPhone/iPad app on Apple-silicon Macs. A full Xcode installation plus Apple signing is required to archive; generating the project does not upload anything to TestFlight or the App Store.
 
 ---
 

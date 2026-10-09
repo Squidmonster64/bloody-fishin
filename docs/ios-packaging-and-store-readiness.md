@@ -22,7 +22,7 @@ Floot is now a temporary design/acceptance workspace and source to be exported, 
 
 The web/API build must also be host-portable from this repository. Host-specific configuration belongs in reviewed adapters and deployment files. The current Railway Express deployment remains the verified live service; Cloudflare is not recorded as the approved Bloody Fishin destination yet. A Cloudflare cutover, if chosen, requires its own compatible Worker/Pages adapter, smoke tests and explicit production approval.
 
-Current gap: the repository does not yet contain a Capacitor dependency, `capacitor.config.*`, or an `ios/*.xcodeproj`/workspace, and the newest accepted Floot interface has not yet been fully ported back. Therefore the Xcode/native package is not prepared or independently reproducible yet.
+Current state (9 October 2026): the accepted Floot product shell is represented in the repository, Capacitor 8 is configured, and the generated universal iPhone/iPad Xcode project is versioned under `ios/`. The packaged web bundle calls the repository backend at `https://boating.bloodydaves.com`; provider credentials and Open-Meteo calls remain server-side. The project was generated and synced successfully, but it could not be compiled or archived on the preparation host because `/Applications/Xcode.app` is not installed (only Command Line Tools are present).
 
 ## Verified product state
 
@@ -30,7 +30,7 @@ Current gap: the repository does not yet contain a Capacitor dependency, `capaci
 
 - `main` baseline: `090eb78`.
 - React 19/Vite client and Express service.
-- 19 Vitest files / 88 tests passed; 7 suite/attribution tests passed after this change.
+- 19 Vitest files / 89 tests passed after the native/backend-boundary changes.
 - TypeScript check and production build passed.
 - Existing production build warning: the main JavaScript chunk is about 630 kB (about 202 kB gzip), above Vite's 500 kB advisory threshold. This is not a functional failure but should be addressed before a performance-sensitive release.
 - Existing public service provides `/brief`, `/brief.json`, `/locations` and read-only `/mcp`.
@@ -108,10 +108,10 @@ The legacy browser client calls TimeAPI.io for coordinate-to-timezone lookup. Th
 
 - [x] Repository baseline identified and reproducible.
 - [x] Mobile client implemented and accepted in Floot as a temporary source workspace.
-- [ ] Latest accepted Floot interface, assets and tests ported into the GitHub repository.
-- [ ] Repository-owned Capacitor configuration and Xcode project committed and reproducibly generated.
+- [x] Latest accepted Floot interface, assets and tests ported into the GitHub repository.
+- [x] Repository-owned Capacitor configuration and Xcode project generated and reproducibly synced.
 - [ ] Xcode archive succeeds without requiring Floot access.
-- [ ] Chosen web/API host adapter builds and passes smoke tests from the same repository.
+- [x] Railway web/API adapter builds from the same repository; live staging smoke receipt is recorded separately after deployment.
 - [x] Forecast provider attribution visible.
 - [x] 1024x1024 opaque RGB app icon prepared.
 - [x] Store metadata, privacy notes, review notes and TestFlight checklist drafted.

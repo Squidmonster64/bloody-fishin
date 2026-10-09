@@ -57,6 +57,16 @@ const PLACE_ALIASES: Record<string, string> = {
   broome: "Broome, Australia",
 };
 
+function providerUrl(variable: "OPEN_METEO_WEATHER_URL" | "OPEN_METEO_MARINE_URL" | "OPEN_METEO_GEOCODING_URL", fallback: string) {
+  return new URL(process.env[variable]?.trim() || fallback);
+}
+
+function attachProviderKey(url: URL) {
+  const apiKey = process.env.OPEN_METEO_API_KEY?.trim();
+  if (apiKey) url.searchParams.set("apikey", apiKey);
+  return url;
+}
+
 const VESSELS: Record<string, Criteria> = {
   tinnie: { minRank: 2, minStars: 3, maxWind: 12, maxGust: 17, maxSwell: 0.5, maxChop: 0.3, maxRain: 50, daylightOnly: true, minHours: 3 },
   sl20: { minRank: 2, minStars: 4, maxWind: 10, maxGust: 14, maxSwell: 0.99, maxChop: null, maxRain: 0, daylightOnly: true, minHours: 3 },
@@ -80,11 +90,12 @@ async function resolvePlace(place: string): Promise<Location> {
   const alias = PLACE_ALIASES[place.trim().toLowerCase()];
   const searchTerm = alias ?? place;
   const search = async (term: string) => {
-    const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+    const url = providerUrl("OPEN_METEO_GEOCODING_URL", "https://geocoding-api.open-meteo.com/v1/search");
     url.searchParams.set("name", term);
     url.searchParams.set("count", "5");
     url.searchParams.set("language", "en");
     url.searchParams.set("format", "json");
+    attachProviderKey(url);
     const response = await fetchWithTimeout(url.toString(), { timeoutMs: 10_000 });
     if (!response.ok) throw new Error("Place lookup is temporarily unavailable.");
     return response.json() as Promise<{
@@ -197,12 +208,15 @@ async function forecast(location: Location, days: number): Promise<{
     marine: { lat: number; lon: number };
   };
 }> {
-  const weather = new URL("https://api.open-meteo.com/v1/forecast");
+  const weather = providerUrl("OPEN_METEO_WEATHER_URL", "https://api.open-meteo.com/v1/forecast");
   weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,precipitation_probability,precipitation,weather_code", cell_selection: "land", daily: "sunrise,sunset", timezone: "auto", forecast_days: String(days) }).toString();
-  const wind = new URL("https://api.open-meteo.com/v1/forecast");
+  const wind = providerUrl("OPEN_METEO_WEATHER_URL", "https://api.open-meteo.com/v1/forecast");
   wind.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wind_speed_10m,wind_direction_10m,wind_gusts_10m", cell_selection: "sea", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
-  const marine = new URL("https://marine-api.open-meteo.com/v1/marine");
+  const marine = providerUrl("OPEN_METEO_MARINE_URL", "https://marine-api.open-meteo.com/v1/marine");
   marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
+  attachProviderKey(weather);
+  attachProviderKey(wind);
+  attachProviderKey(marine);
   const [weatherResponse, windResponse, marineResponse] = await Promise.all([
     fetchWithTimeout(weather.toString(), { timeoutMs: 12_000 }),
     fetchWithTimeout(wind.toString(), { timeoutMs: 12_000 }),
@@ -293,6 +307,8 @@ export async function buildBrief(request: Request) {
       return { min: valid.length ? Math.min(...valid) : null, max: valid.length ? Math.max(...valid) : null };
     };
     const rain = range(rows.map(hour => hour.rainProb));
+    const wind = range(rows.map(hour => hour.windKt));
+    const gust = range(rows.map(hour => hour.gustKt));
     const swell = range(rows.map(hour => hour.swellH));
     const period = range(rows.map(hour => hour.swellP));
     const chop = range(rows.map(hour => hour.windWaveH));
@@ -310,8 +326,9 @@ export async function buildBrief(request: Request) {
       minSwellPeriodS: period.min,
       maxSwellPeriodS: period.max,
       maxWindChopM: chop.max,
-      maxWindKt: Math.max(...rows.map((hour) => hour.windKt ?? 0)),
-      maxGustKt: Math.max(...rows.map((hour) => hour.gustKt ?? 0)),
+      minWindKt: wind.min,
+      maxWindKt: wind.max,
+      maxGustKt: gust.max,
       maxTempC: temps.length ? Math.max(...temps) : null,
       minTempC: temps.length ? Math.min(...temps) : null,
       sunrise: rows[0]?.sunrise || null,
@@ -329,6 +346,30 @@ export async function buildBrief(request: Request) {
   const bestUpcoming = windows.length
     ? [...windows].sort((a, b) => b.bestFishScore - a.bestFishScore || b.durationHours - a.durationHours)[0]
     : null;
+  const serializeHour = (hour: Hour) => ({
+    time: formatHour(hour.time),
+    daylight: hour.daylight,
+    marineDataAvailable: hour.marineDataAvailable,
+    tempC: hour.temp,
+    windKt: hour.windKt,
+    windDirDeg: hour.windDirDeg,
+    gustKt: hour.gustKt,
+    thunderstorm: hour.thunderstorm,
+    swellM: hour.swellH,
+    swellPeriodS: hour.swellP,
+    swellDirDeg: hour.swellDir,
+    waveM: hour.waveH,
+    windChopM: hour.windWaveH,
+    seaLevelM: hour.seaLevel,
+    rainChance: hour.rainProb,
+    precipitationMm: hour.precipitationMm,
+    tideRate: hour.tideRate,
+    fishScore: hour.fishScore,
+    fishStars: hour.fishStars,
+    sl20: hour.marineDataAvailable ? hour.sl20.label : null,
+    sunrise: hour.sunrise || null,
+    sunset: hour.sunset || null,
+  });
   return {
     generatedAt: now.toISOString(),
     officialMarine,
@@ -352,30 +393,10 @@ export async function buildBrief(request: Request) {
     nextUsable,
     bestUpcoming,
     dailyOutlook,
-    upcomingHours: futureHours.slice(0, allHours ? 14 * 24 : 36).map((hour) => ({
-      time: formatHour(hour.time),
-      daylight: hour.daylight,
-      marineDataAvailable: hour.marineDataAvailable,
-      tempC: hour.temp,
-      windKt: hour.windKt,
-      windDirDeg: hour.windDirDeg,
-      gustKt: hour.gustKt,
-      thunderstorm: hour.thunderstorm,
-      swellM: hour.swellH,
-      swellPeriodS: hour.swellP,
-      swellDirDeg: hour.swellDir,
-      waveM: hour.waveH,
-      windChopM: hour.windWaveH,
-      seaLevelM: hour.seaLevel,
-      rainChance: hour.rainProb,
-      precipitationMm: hour.precipitationMm,
-      tideRate: hour.tideRate,
-      fishScore: hour.fishScore,
-      fishStars: hour.fishStars,
-      sl20: hour.marineDataAvailable ? hour.sl20.label : null,
-      sunrise: hour.sunrise || null,
-      sunset: hour.sunset || null,
-    })),
+    // Backward-compatible native/web extension: daily cards can render the
+    // complete local calendar day while decision windows remain future-only.
+    forecastHours: allHours ? data.hours.map(serializeHour) : undefined,
+    upcomingHours: futureHours.slice(0, allHours ? 14 * 24 : 36).map(serializeHour),
   };
 }
 

@@ -4,8 +4,8 @@ Prepared: 8 October 2026 (AWST)
 
 ## Build readiness
 
-- [ ] Latest accepted Floot source, assets and tests are preserved in `Squidmonster64/bloody-fishin`; no release-critical code remains Floot-only.
-- [ ] Repository contains the Capacitor configuration and versioned iOS Xcode project/workspace.
+- [x] Latest accepted Floot source, assets and tests are preserved in `Squidmonster64/bloody-fishin`; no release-critical code remains Floot-only.
+- [x] Repository contains the Capacitor configuration and versioned iOS Xcode project/workspace.
 - [ ] A clean checkout can build and archive the app in Xcode without Floot access.
 - [ ] Web/API deployment configuration matches the selected host and is smoke-tested from the same repository.
 - [x] Floot project configured with proposed bundle ID and opaque 1024px icon.
@@ -13,6 +13,7 @@ Prepared: 8 October 2026 (AWST)
 - [x] Floot helper tests and TypeScript check pass.
 - [x] Repository tests, TypeScript check and production build pass.
 - [x] Universal iPhone and iPad device family confirmed by owner and configured in Floot.
+- [x] Repository Xcode target uses device family `1,2`, bundle ID `com.bloodydaves.fishin`, and Apple-silicon Mac compatibility.
 - [x] Full functional parity restored and re-audited on 9 October 2026; see `floot-full-screen-parity-audit-2026-10-09.md`.
 - [ ] Release payload no longer contains copied BOM forecast text, or licence is recorded.
 - [ ] Support URL, privacy URL, copyright owner and reviewer contact supplied.

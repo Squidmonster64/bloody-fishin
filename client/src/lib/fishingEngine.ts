@@ -23,6 +23,7 @@ import {
   validateCoordinates,
   validateForecastDays,
 } from "@shared/http";
+import { fetchFishingDataFromBackend } from "@/lib/forecastApi";
 
 export {
   fishingScore,
@@ -99,10 +100,14 @@ export interface DayData {
   moonIllum: number;
   moonTransit: number;
   moonUnderfoot: number;
+  minWind?: number | null;
   maxWind: number | null;
   maxTemp: number | null;
   minTemp: number | null;
+  minSwell?: number | null;
   maxSwell: number | null;
+  maxRainChance?: number | null;
+  precipitationTotalMm?: number | null;
   peakFish: number;
   bestFishStars: number;
   goldenHours: HourRow[];
@@ -264,7 +269,7 @@ export async function getTimezone(lat: number, lon: number): Promise<string> {
   return `Etc/GMT${offset >= 0 ? "-" : "+"}${Math.abs(offset)}`;
 }
 
-export async function fetchFishingData(loc: Location, days: number, timezone: string): Promise<AppData> {
+async function fetchFishingDataDirect(loc: Location, days: number, timezone: string): Promise<AppData> {
   const coordErr = validateCoordinates(loc.lat, loc.lon);
   if (coordErr) throw new Error(coordErr);
   const daysErr = validateForecastDays(days);
@@ -431,9 +436,11 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       moonIllum: moonIllumination(moonTimes.phase),
       moonTransit: moonTimes.transit,
       moonUnderfoot: moonTimes.underfoot,
+      minWind: winds.length ? Math.min(...winds) : null,
       maxWind: winds.length ? Math.max(...winds) : null,
       maxTemp: temps.length ? Math.max(...temps) : null,
       minTemp: temps.length ? Math.min(...temps) : null,
+      minSwell: swells.length ? Math.min(...swells) : null,
       maxSwell: swells.length ? Math.max(...swells) : null,
       peakFish: fishScores.length ? Math.max(...fishScores) : 0,
       bestFishStars: rows.length ? Math.max(...rows.map(r => r.fishStars)) : 0,
@@ -462,3 +469,10 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     },
   };
 }
+
+/**
+ * Public client entry point. Web and Capacitor clients use the repository
+ * backend; the direct provider implementation above is retained only as a
+ * server-side migration reference until the old production client is retired.
+ */
+export const fetchFishingData = fetchFishingDataFromBackend;
