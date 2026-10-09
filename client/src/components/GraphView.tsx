@@ -30,11 +30,11 @@ interface Props {
 const VIS_KEYS: { key: keyof FishingState["vis"]; label: string; color: string }[] = [
   { key: "wind",  label: "Wind + gusts (kt)",  color: "#3b82f6" },
   { key: "swell", label: "Swell (m)",  color: "#10b981" },
-  { key: "fish",  label: "Fish %",     color: "#f59e0b" },
+  { key: "fish",  label: "Fishing index", color: "#f59e0b" },
   { key: "tide",  label: "Sea level (m MSL)",   color: "#a78bfa" },
-  { key: "temp",  label: "Temp (°C)",  color: "#fbbf24" },
+  { key: "temp",  label: "Coastal air forecast (°C)", color: "#fbbf24" },
   // Cyan — must stay distinct from wind action-blue (#3b82f6)
-  { key: "rain",  label: "Rain %",     color: "#22d3ee" },
+  { key: "rain",  label: "Coastal rain chance", color: "#22d3ee" },
 ];
 
 export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Props) {
@@ -81,7 +81,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
     if (vis.fish) datasets.push({
-      label: "Fish %", yAxisID: "y3",
+      label: "Fishing index", yAxisID: "y3",
       data: allRows.map(r => r.fishScore),
       borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,0.10)",
       borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true,
@@ -94,13 +94,13 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       borderDash: [4, 3],
     });
     if (vis.temp) datasets.push({
-      label: "Temp (°C)", yAxisID: "y",
+      label: "Coastal air forecast (°C)", yAxisID: "y",
       data: allRows.map(r => r.temp),
       borderColor: "#fbbf24", backgroundColor: "rgba(251,191,36,0.06)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
     if (vis.rain) datasets.push({
-      label: "Rain %", yAxisID: "y3",
+      label: "Coastal rain chance (%)", yAxisID: "y3",
       data: allRows.map(r => r.rainProb),
       borderColor: "#22d3ee", backgroundColor: "rgba(34,211,238,0.08)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
@@ -160,7 +160,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
             backgroundColor: "rgba(29,42,32,0.95)",
             borderColor: "#35463a", borderWidth: 1,
             titleColor: "#d7bd7c", bodyColor: "#d6d0c4",
-            padding: 10, cornerRadius: 8,
+            padding: 12, cornerRadius: 8,
+            titleFont: { size: 13, weight: "bold" },
+            bodyFont: { size: 13 },
             callbacks: {
               title: (items) => {
                 const row = allRows[items[0].dataIndex];
@@ -189,10 +191,10 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                   return `Swell: ${h}${period}${dirPart}`;
                 }
                 if (num == null) return `${label}: —`;
-                if (label.startsWith("Fish")) return `Fish: ${Math.round(num)}%`;
+                if (label.startsWith("Fishing")) return `Fishing heuristic index: ${Math.round(num)}/100`;
                 if (label.startsWith("Sea level")) return `Sea level: ${fmt(num)} m above MSL`;
-                if (label.startsWith("Temp")) return `Temp: ${fmt(num, 0)}°C`;
-                if (label.startsWith("Rain")) return `Rain: ${Math.round(num)}%`;
+                if (label.startsWith("Coastal air")) return `Coastal air forecast: ${fmt(num, 0)}°C`;
+                if (label.startsWith("Coastal rain")) return `Coastal rain chance: ${Math.round(num)}%`;
                 return `${label}: ${num}`;
               },
             },
@@ -212,7 +214,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         scales: {
           x: {
             ticks: {
-              color: "#64748b", font: { size: 9 }, maxRotation: 0,
+              color: "#94a3b8", font: { size: 12 }, maxRotation: 0,
               autoSkip: false,
               callback: (_val, idx) => labels[idx] || null,
             },
@@ -221,18 +223,18 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           y: {
             position: "left",
             display: vis.wind || vis.temp,
-            ticks: { color: "#3b82f6", font: { size: 10 } },
+            ticks: { color: "#3b82f6", font: { size: 12 } },
             grid: { color: "rgba(53,70,58,0.35)" },
           },
           y2: {
             position: "right",
             display: vis.swell || vis.tide,
-            ticks: { color: "#10b981", font: { size: 10 } },
+            ticks: { color: "#10b981", font: { size: 12 } },
             grid: { display: false },
           },
           y3: {
             position: "right",
-            ticks: { color: "#f59e0b", font: { size: 10 } },
+            ticks: { color: "#f59e0b", font: { size: 12 } },
             grid: { display: false },
             min: 0, max: 100,
             display: vis.fish || vis.rain,
@@ -246,9 +248,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
   }, [vis, data]);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="charts-view flex flex-col h-full overflow-y-auto">
       {/* Visibility toggles */}
-      <div className="flex flex-wrap gap-1.5 px-3 py-1.5 bg-[var(--app-bg)] border-b border-[var(--border)]">
+      <div className="chart-tools flex flex-wrap gap-1.5 px-3 py-1.5 bg-[var(--app-bg)] border-b border-[var(--border)]">
         {VIS_KEYS.map(({ key, label, color }) => (
           <button key={key} onClick={() => onToggleVis(key)}
             className={`px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border transition-all duration-150 min-h-[38px]
@@ -310,7 +312,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           <span className="text-[var(--text-muted)]">🌅 {dayData.sunrise} / 🌇 {dayData.sunset}</span>
           {dayData.maxWind != null && <span style={{ color: windColor(dayData.maxWind) }}>💨 Max {Math.round(dayData.maxWind)}kt</span>}
           {dayData.maxSwell != null && <span style={{ color: swellColor(dayData.maxSwell) }}>🌊 Max {fmt(dayData.maxSwell)}m</span>}
-          <span className="text-[var(--action)]">🎣 Peak {dayData.peakFish}% ({dayData.bestFishStars}★)</span>
+          <span className="text-[var(--action)]">🎣 Heuristic peak {dayData.peakFish}/100 ({dayData.bestFishStars}★)</span>
           {dayData.isGolden && <span className="text-[var(--warning)] font-bold">⭐ GOLDEN DAY</span>}
         </div>
       )}
@@ -328,7 +330,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                   ${row.golden ? "ring-1 ring-[var(--warning)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)]" : ""}
                   ${isActive ? "bg-[var(--surface-raised)] ring-1 ring-[var(--action)]" : "bg-[var(--surface)] hover:bg-[var(--surface-raised)]/60"}`}>
                 <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
-                <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
+                <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
                 <span className="text-[9px]">{"★".repeat(row.fishStars)}{"☆".repeat(5 - row.fishStars)}</span>
                 <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
                   {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}

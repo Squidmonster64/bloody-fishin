@@ -23,6 +23,7 @@ import {
   validateCoordinates,
   validateForecastDays,
 } from "@shared/http";
+import { fetchFishingDataFromBackend } from "@/lib/forecastApi";
 
 export {
   fishingScore,
@@ -99,10 +100,14 @@ export interface DayData {
   moonIllum: number;
   moonTransit: number;
   moonUnderfoot: number;
+  minWind?: number | null;
   maxWind: number | null;
   maxTemp: number | null;
   minTemp: number | null;
+  minSwell?: number | null;
   maxSwell: number | null;
+  maxRainChance?: number | null;
+  precipitationTotalMm?: number | null;
   peakFish: number;
   bestFishStars: number;
   goldenHours: HourRow[];
@@ -123,7 +128,11 @@ export interface AppData {
   /** Requested forecast days (weather horizon). */
   requestedDays?: number;
   officialMarine?: OfficialMarine;
-  providerGrid?: { weather: { lat: number; lon: number }; marine: { lat: number; lon: number } };
+  providerGrid?: {
+    weather: { lat: number; lon: number };
+    wind?: { lat: number; lon: number };
+    marine: { lat: number; lon: number };
+  };
 }
 
 
@@ -260,7 +269,7 @@ export async function getTimezone(lat: number, lon: number): Promise<string> {
   return `Etc/GMT${offset >= 0 ? "-" : "+"}${Math.abs(offset)}`;
 }
 
-export async function fetchFishingData(loc: Location, days: number, timezone: string): Promise<AppData> {
+async function fetchFishingDataDirect(loc: Location, days: number, timezone: string): Promise<AppData> {
   const coordErr = validateCoordinates(loc.lat, loc.lon);
   if (coordErr) throw new Error(coordErr);
   const daysErr = validateForecastDays(days);
@@ -269,11 +278,21 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   const { lat, lon } = loc;
   const marineDays = Math.min(days, 8);
 
+  // Temperature/rain need a representative coastal land cell. Wind/gust need
+  // the offshore cell used for the actual run. Keeping them in one request was
+  // the source of the misleading Fremantle temperature.
   const weatherUrl =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${lat}&longitude=${lon}` +
-    `&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation,weather_code` +
+    `&hourly=temperature_2m,precipitation_probability,precipitation,weather_code` +
     `&daily=sunrise,sunset,uv_index_max` +
+    `&timezone=${encodeURIComponent(timezone)}` +
+    `&forecast_days=${days}&cell_selection=land`;
+
+  const windUrl =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${lat}&longitude=${lon}` +
+    `&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m` +
     `&wind_speed_unit=kn&timezone=${encodeURIComponent(timezone)}` +
     `&forecast_days=${days}&cell_selection=sea`;
 
@@ -286,30 +305,40 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
   const officialPromise = fetchWithTimeout(`/official-marine?lat=${lat}&lon=${lon}`, { timeoutMs: 12000 })
     .then(async response => response.ok ? await response.json() as OfficialMarine : undefined).catch(() => undefined);
   let wRes: Response;
+  let windRes: Response;
   let mRes: Response | null;
   try {
-    const pair = await Promise.all([
+    const responses = await Promise.all([
       fetchWithTimeout(weatherUrl, { timeoutMs: 12_000 }),
+      fetchWithTimeout(windUrl, { timeoutMs: 12_000 }),
       fetchWithTimeout(marineUrl, { timeoutMs: 12_000 }).catch(() => null),
     ]);
-    wRes = pair[0];
-    mRes = pair[1];
+    wRes = responses[0];
+    windRes = responses[1];
+    mRes = responses[2];
   } catch (error) {
     if (error instanceof HttpError) throw new Error(`Weather API: ${error.message}`);
     throw error;
   }
 
   if (!wRes.ok) throw new Error(`Weather API: HTTP ${wRes.status}`);
+  if (!windRes.ok) throw new Error(`Offshore wind API: HTTP ${windRes.status}`);
   const w = await wRes.json();
+  const wind = await windRes.json();
   if (!w || typeof w !== "object") throw new Error("Weather API: malformed JSON body.");
+  if (!wind || typeof wind !== "object") throw new Error("Offshore wind API: malformed JSON body.");
   const marineUnavailable = !(mRes && mRes.ok);
   const m = mRes && mRes.ok ? await mRes.json() : { hourly: {} };
 
   const officialMarine = await officialPromise;
   const wh = w.hourly || {};
+  const windh = wind.hourly || {};
   const mh = m.hourly || {};
   if (!wh.time) throw new HttpError("Malformed provider data: weather.hourly.time is missing.");
   const times: string[] = assertArray<string>(wh.time, "weather.hourly.time");
+  const windTimeIdx: Record<string, number> = {};
+  const windTimesRaw = assertArray<string>(windh.time, "wind.hourly.time");
+  windTimesRaw.forEach((t: string, i: number) => { windTimeIdx[t] = i; });
   const marineTimeIdx: Record<string, number> = {};
   const marineTimesRaw = Array.isArray(mh.time) ? mh.time as string[] : [];
   marineTimesRaw.forEach((t: string, i: number) => { marineTimeIdx[t] = i; });
@@ -322,6 +351,7 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       10
     ) % 24;
     const dayName = dt.toLocaleString("en-AU", { weekday: "short", timeZone: timezone });
+    const wi = windTimeIdx[t];
     const mi = marineTimeIdx[t];
     const hasM = mi !== undefined;
     return {
@@ -334,9 +364,9 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       hourLabel: `${String(hour).padStart(2, "0")}:00`,
       isDayStart: hour === 0,
       temp:      (wh.temperature_2m || [])[i] ?? null,
-      windKt:    (wh.wind_speed_10m || [])[i] ?? null,
-      windDir:   (wh.wind_direction_10m || [])[i] ?? null,
-      gustKt:    (wh.wind_gusts_10m || [])[i] ?? null,
+      windKt:    wi === undefined ? null : (windh.wind_speed_10m || [])[wi] ?? null,
+      windDir:   wi === undefined ? null : (windh.wind_direction_10m || [])[wi] ?? null,
+      gustKt:    wi === undefined ? null : (windh.wind_gusts_10m || [])[wi] ?? null,
       thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[i]) || !!officialMarine?.days?.some(day => day.date === t.slice(0, 10) && day.thunderstorm),
       rainProb:  (wh.precipitation_probability || [])[i] ?? null,
       precipitationMm: precipitationMm(wh.precipitation?.[i]),
@@ -406,9 +436,11 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
       moonIllum: moonIllumination(moonTimes.phase),
       moonTransit: moonTimes.transit,
       moonUnderfoot: moonTimes.underfoot,
+      minWind: winds.length ? Math.min(...winds) : null,
       maxWind: winds.length ? Math.max(...winds) : null,
       maxTemp: temps.length ? Math.max(...temps) : null,
       minTemp: temps.length ? Math.min(...temps) : null,
+      minSwell: swells.length ? Math.min(...swells) : null,
       maxSwell: swells.length ? Math.max(...swells) : null,
       peakFish: fishScores.length ? Math.max(...fishScores) : 0,
       bestFishStars: rows.length ? Math.max(...rows.map(r => r.fishStars)) : 0,
@@ -430,6 +462,17 @@ export async function fetchFishingData(loc: Location, days: number, timezone: st
     marineUnavailable,
     requestedDays: days,
     officialMarine,
-    providerGrid: { weather: { lat: w.latitude, lon: w.longitude }, marine: { lat: m.latitude, lon: m.longitude } },
+    providerGrid: {
+      weather: { lat: w.latitude, lon: w.longitude },
+      wind: { lat: wind.latitude, lon: wind.longitude },
+      marine: { lat: m.latitude, lon: m.longitude },
+    },
   };
 }
+
+/**
+ * Public client entry point. Web and Capacitor clients use the repository
+ * backend; the direct provider implementation above is retained only as a
+ * server-side migration reference until the old production client is retired.
+ */
+export const fetchFishingData = fetchFishingDataFromBackend;

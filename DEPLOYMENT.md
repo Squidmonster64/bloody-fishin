@@ -1,50 +1,50 @@
-# Independent Railway Deployment
+# Railway deployment
 
-This repository is self-contained and can be deployed from GitHub to Railway without a Manus account, runtime, asset host, API proxy, analytics endpoint, or secret.
+The React client, Express API, health checks and native web bundle are built from this repository. Railway reads `railway.json`, runs the pinned pnpm build, and starts `node dist/index.js`.
 
-## What Railway Needs
+## Environment boundary
 
-Railway reads `railway.json` and runs `pnpm install --frozen-lockfile && pnpm build`, followed by `node dist/index.js`. It supplies the `PORT` environment variable automatically. No additional variables or API keys are required for the planner's core weather, marine, timezone, chart, cache, comparison, sharing, printing, or calendar functionality.
+- Existing production service: `bloody-fishin`, including `weather.bloodydaves.com`. Do not repoint, redeploy or replace it as part of staging work.
+- Sprint 3 staging service: a separate Railway service built from `codex/sprint3-ios-readiness` and labelled with `APP_STAGE=staging`.
+- Staging custom domain: `boating.bloodydaves.com`.
+- The Capacitor app uses the staging origin by default; browser builds use their own origin.
 
-## Deploy
+## Required configuration
 
-1. In Railway, choose **New Project → Deploy from GitHub Repo**.
-2. Select `Squidmonster64/bloody-fishin` and its `main` branch.
-3. Confirm Railway detects `railway.json`.
-4. In the Railway service's **Settings → Networking → Custom Domain**, attach `weather.bloodydaves.com`.
-5. Update the DNS record at the domain provider using the value Railway displays, replacing the old Railway-domain mapping if necessary.
+Railway supplies `PORT`. Set `APP_STAGE=staging` on the staging service. The core non-commercial beta needs no provider secret.
 
-The only live data providers are the public, keyless Open-Meteo weather and marine APIs plus TimeAPI.io for timezone lookup. The planner remains usable with its last successful forecast stored locally in the browser if a live request fails.
+Optional commercial-provider configuration is server-only:
 
-## Public Forecast URLs
+| Variable | Purpose |
+|---|---|
+| `OPEN_METEO_WEATHER_URL` | Commercial weather endpoint |
+| `OPEN_METEO_MARINE_URL` | Commercial marine endpoint |
+| `OPEN_METEO_GEOCODING_URL` | Commercial geocoding endpoint |
+| `OPEN_METEO_API_KEY` | Commercial provider key |
 
-The Express app also exposes a keyless, LLM-readable briefing service:
+Never expose a provider key through `VITE_*`. Open-Meteo's free endpoint is limited to qualifying non-commercial use and requires attribution; configure the appropriate commercial endpoint/licence before paid, ad-supported or other commercial distribution.
+
+## Verification
+
+After deployment, verify all of the following over HTTPS:
+
+```text
+GET /livez
+GET /readyz
+GET /health
+GET /brief.json?spot=freo&days=5&hours=all
+GET /
+```
+
+`/health` must report the intended stage, `/brief.json` must include `forecastHours`, and the app must render from the same deployment. Deployment completion also requires a read-only check that the production service and both existing production domains remain unchanged.
+
+## Public forecast routes
 
 | Route | Purpose |
 |---|---|
-| `/brief` | Plain-English Markdown forecast, qualifying windows, and the next 36 hours. |
-| `/brief.json` | The same response as structured JSON. |
-| `/locations?place=Broome` | Resolves a worldwide place name to coordinates. |
-| `/mcp` | Remote **Model Context Protocol** (Streamable HTTP) read-only tools. |
+| `/brief` | Plain-English Markdown forecast and qualifying windows |
+| `/brief.json` | Structured forecast; add `hours=all` for complete local-day strips |
+| `/locations?place=Broome` | Place-name resolution |
+| `/mcp` | Stateless read-only MCP tools |
 
-### Remote MCP (ChatGPT / MCP clients)
-
-Production URL:
-
-```text
-https://weather.bloodydaves.com/mcp
-```
-
-Transport: Streamable HTTP (stateless). Tools are read-only and reuse the same briefing/scoring authority as `/brief.json`.
-
-| Tool | Purpose |
-|---|---|
-| `resolve_place` | Named place → coordinates |
-| `get_forecast` | Structured weather/marine/fishing forecast |
-| `find_windows` | Next continuous windows (e.g. wind ≤ 10 kt for 3 h) |
-
-**Engineering check:** any independent MCP client can `initialize`, `tools/list`, and `tools/call` against that URL.
-
-**ChatGPT product connection:** only if your ChatGPT plan exposes custom MCP / connector / app settings. When available, add a remote MCP server with URL `https://weather.bloodydaves.com/mcp` (no API key required for this public read-only service). Plan availability varies — successful `/mcp` engineering does not imply every ChatGPT account can attach custom MCP apps.
-
-Use `spot=freo` or `spot=johnny` for built-in spots, `place=Fremantle%20WA` for worldwide name lookup, or `name=My%20Reef&lat=-32.06&lon=115.65` for a personal coordinate. Add `mode=wind&maxWind=5&minHours=3` to retrieve the next continuous three-hour wind window at or below five knots. These endpoints contain no private user spots and require no API key.
+Personal spots remain device-local. The server receives coordinates only for the forecast request, does not persist them, and omits query strings from request logs.

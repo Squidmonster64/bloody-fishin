@@ -12,7 +12,7 @@ function formatBriefing(data: AppData) {
   const maxWind = today?.maxWind != null ? `${Math.round(today.maxWind)}kt` : "—";
   const maxSwell = today?.maxSwell != null ? `${today.maxSwell.toFixed(1)}m` : "—";
   const goldenLine = golden
-    ? `Best highlighted hour: ${golden.label} — ${golden.fishScore}% (${golden.fishStars}★), SL20 rank ${golden.slRank}/3, wind ${golden.windKt?.toFixed(0) ?? "—"}kt, swell ${golden.swellH?.toFixed(1) ?? "—"}m.`
+    ? `Best highlighted hour: ${golden.label} — fishing heuristic ${golden.fishScore}/100 (${golden.fishStars}★), SL20 rank ${golden.slRank}/3, wind ${golden.windKt?.toFixed(0) ?? "—"}kt, swell ${golden.swellH?.toFixed(1) ?? "—"}m.`
     : "No highlighted daylight hour in the currently loaded forecast.";
   const fetched = data.fetchedAt
     ? new Date(data.fetchedAt).toLocaleString("en-AU")

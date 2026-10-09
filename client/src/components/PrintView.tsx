@@ -50,10 +50,10 @@ export function PrintView({ data, vis, onClose }: Props) {
 
     if (vis.wind) datasets.push({ label: "Wind (kt)", yAxisID: "y", data: rows.map(r => r.windKt), borderColor: "#2563eb", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, tension: 0.25 });
     if (vis.swell) datasets.push({ label: "Swell (m)", yAxisID: "y2", data: rows.map(r => r.swellH), borderColor: "#059669", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, tension: 0.25 });
-    if (vis.fish) datasets.push({ label: "Fishing (%)", yAxisID: "y3", data: rows.map(r => r.fishScore), borderColor: "#ea580c", backgroundColor: "rgba(234,88,12,0.10)", borderWidth: 2.5, pointRadius: 0, tension: 0.25, fill: true });
-    if (vis.tide) datasets.push({ label: "Tide (m)", yAxisID: "y2", data: rows.map(r => r.seaLevel), borderColor: "#7c3aed", backgroundColor: "transparent", borderWidth: 1.6, pointRadius: 0, tension: 0.35, borderDash: [5, 3] });
-    if (vis.temp) datasets.push({ label: "Temperature (°C)", yAxisID: "y", data: rows.map(r => r.temp), borderColor: "#b45309", backgroundColor: "transparent", borderWidth: 1.8, pointRadius: 0, tension: 0.25 });
-    if (vis.rain) datasets.push({ label: "Rain (%)", yAxisID: "y3", data: rows.map(r => r.rainProb), borderColor: "#0284c7", backgroundColor: "transparent", borderWidth: 1.8, pointRadius: 0, tension: 0.25 });
+    if (vis.fish) datasets.push({ label: "Fishing heuristic index", yAxisID: "y3", data: rows.map(r => r.fishScore), borderColor: "#ea580c", backgroundColor: "rgba(234,88,12,0.10)", borderWidth: 2.5, pointRadius: 0, tension: 0.25, fill: true });
+    if (vis.tide) datasets.push({ label: "Model sea level (m MSL)", yAxisID: "y2", data: rows.map(r => r.seaLevel), borderColor: "#7c3aed", backgroundColor: "transparent", borderWidth: 1.6, pointRadius: 0, tension: 0.35, borderDash: [5, 3] });
+    if (vis.temp) datasets.push({ label: "Coastal air forecast (°C)", yAxisID: "y", data: rows.map(r => r.temp), borderColor: "#b45309", backgroundColor: "transparent", borderWidth: 1.8, pointRadius: 0, tension: 0.25 });
+    if (vis.rain) datasets.push({ label: "Coastal rain chance (%)", yAxisID: "y3", data: rows.map(r => r.rainProb), borderColor: "#0284c7", backgroundColor: "transparent", borderWidth: 1.8, pointRadius: 0, tension: 0.25 });
 
     const goldenHours = {
       id: "printGoldenHours",

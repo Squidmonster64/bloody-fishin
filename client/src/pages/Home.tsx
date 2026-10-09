@@ -64,7 +64,7 @@ export default function Home() {
         <TabBar view={state.view} onViewChange={setView} placement="top" />
       </div>
 
-      <main className="flex-1 overflow-hidden">
+      <main className="app-shell app-main flex-1 overflow-hidden">
         {state.data && <details className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs">
           <summary className="cursor-pointer font-semibold">Official marine outlook · {state.data.officialMarine?.status === 'available' ? 'BOM Perth Local Waters' : state.data.officialMarine?.status === 'outside-coverage' ? 'Check local BOM forecast' : 'BOM feed unavailable — check source'}{state.data.officialMarine?.days.some(day => day.thunderstorm) ? ' · Thunderstorm risk' : ''}</summary>
           <p className="mt-2">Selected position: {state.data.location.lat.toFixed(5)}, {state.data.location.lon.toFixed(5)}. Offshore wind uses the provider’s sea grid.</p>
@@ -77,13 +77,13 @@ export default function Home() {
         {state.loading && !state.data && <LoadingState />}
         {state.loading && state.data && (
           <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]">
-            Refreshing live conditions… showing the latest saved forecast meanwhile.
+            Refreshing model forecast… showing the latest saved forecast meanwhile.
           </div>
         )}
         {state.refreshFailed && state.data && !state.loading && (
           <div className="flex flex-wrap items-center justify-center gap-2 border-b border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-1.5 text-center text-[11px] text-[var(--warm-text)]">
             <span>
-              Live refresh failed — showing the saved forecast. Check signal and try again before
+              Forecast refresh failed — showing the saved forecast. Check signal and try again before
               you leave.
             </span>
             <button
@@ -172,9 +172,16 @@ export default function Home() {
         />
       )}
 
-      <footer className="border-t border-[var(--border)] bg-[var(--app-bg)] px-3 py-2 text-center text-[10px] leading-relaxed text-[var(--text-muted)]">
+      <footer className="app-shell app-footer border-t border-[var(--border)] bg-[var(--app-bg)] px-3 py-3 text-center text-[10px] leading-relaxed text-[var(--text-muted)]">
         Planning aid for Australian fishing and small-boat decisions. Always check official Bureau
         of Meteorology marine warnings, local knowledge and skipper judgement before you go.
+        <span className="mt-1 block">
+          Weather and marine model data by{" "}
+          <a className="underline underline-offset-2" href="https://open-meteo.com/" target="_blank" rel="noreferrer">
+            Open-Meteo
+          </a>
+          .
+        </span>
       </footer>
 
       <div className="min-[700px]:hidden">
