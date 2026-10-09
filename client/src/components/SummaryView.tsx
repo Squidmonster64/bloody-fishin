@@ -24,7 +24,7 @@ function range(min: number | null | undefined, max: number | null | undefined, u
 function HourCell({ row }: { row: HourRow }) {
   const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
   return (
-    <div className={`flex flex-col items-center gap-0.5 rounded px-1 py-1 min-w-[44px] flex-shrink-0
+    <div className={`daily-hour-cell flex flex-col items-center gap-0.5 rounded px-1 py-1 min-w-[44px] flex-shrink-0
       ${row.golden ? "ring-1 ring-yellow-400 bg-yellow-400/10" : "bg-[var(--surface)]"}`}>
       <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
       <span className="text-[12px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
@@ -48,7 +48,7 @@ function DayCard({ day }: { day: DayData }) {
   const sl9 = rateSL20(day.morning?.windKt, day.morning?.swellH, day.morning?.swellP, day.morning?.waveH, day.morning?.windWaveH, day.morning?.gustKt, day.morning?.thunderstorm);
 
   return (
-    <div className={`bg-[var(--surface)] border rounded-xl overflow-hidden transition-all duration-200
+    <div className={`daily-card bg-[var(--surface)] border rounded-xl overflow-hidden transition-all duration-200
       ${day.isGolden ? "border-yellow-400/60 shadow-lg shadow-yellow-400/10" : "border-[var(--border)]"}`}>
       {/* Card header */}
       <div className="w-full text-left px-4 py-3 flex items-center gap-3 min-h-[60px]">
@@ -90,8 +90,8 @@ function DayCard({ day }: { day: DayData }) {
       )}
 
       {/* Full local-day hourly strip, horizontally scrollable on phones. */}
-      <div className="overflow-x-auto px-3 pb-3 scrollbar-hide">
-        <div className="flex gap-1 min-w-max">
+      <div className="daily-hours-scroll overflow-x-auto px-3 pb-3 scrollbar-hide">
+        <div className="daily-hours-grid flex gap-1 min-w-max">
           {day.rows.map(row => (
             <HourCell key={row.time} row={row} />
           ))}
@@ -103,7 +103,7 @@ function DayCard({ day }: { day: DayData }) {
 
 export function SummaryView({ data }: Props) {
   return (
-    <div className="overflow-y-auto p-3 flex flex-col gap-3 pb-8">
+    <div className="daily-view overflow-y-auto p-3 flex flex-col gap-3 pb-8">
       <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-1">
         <span>📍 {data.location.name}</span>
         <span>·</span>

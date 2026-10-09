@@ -77,9 +77,9 @@ function SlUnavailable() {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="min-w-0">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
-      <p className="mt-0.5 text-[13px] font-semibold tabular-nums leading-tight truncate text-[var(--text)]" style={color ? { color } : undefined}>
+    <div className="decision-stat min-w-0">
+      <p className="decision-stat-label text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+      <p className="decision-stat-value mt-0.5 text-[13px] font-semibold tabular-nums leading-tight truncate text-[var(--text)]" style={color ? { color } : undefined}>
         {value}
       </p>
     </div>
@@ -115,14 +115,14 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
   }, [data.merged, brief.current]);
 
   return (
-    <div className="overflow-y-auto overflow-x-hidden pb-8">
-      <section className="px-3 sm:px-4 pt-3 pb-2" aria-label="Decision summary">
+    <div className="decision-view overflow-y-auto overflow-x-hidden pb-8">
+      <section className="decision-summary px-3 sm:px-4 pt-3 pb-2" aria-label="Decision summary">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
               {brief.locationName} · {brief.nowLabel}
             </p>
-            <p className="mt-1 text-[15px] sm:text-base font-semibold text-[var(--text)] leading-snug">
+            <p className="decision-verdict mt-1 text-[15px] sm:text-base font-semibold text-[var(--text)] leading-snug">
               <span className={kind === "GOOD" ? "text-[var(--success)]" : kind === "POOR" ? "text-[var(--danger)]" : "text-[var(--text-muted)]"}>
                 {kind}
               </span>
@@ -146,7 +146,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           </div>
         </div>
 
-        <p className="mt-1.5 text-[13px] text-[var(--warm-text)] leading-snug max-w-3xl">{brief.supporting}</p>
+        <p className="decision-supporting mt-1.5 text-[13px] text-[var(--warm-text)] leading-snug max-w-3xl">{brief.supporting}</p>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
           <span className={FRESH_STYLES[brief.freshnessTone]}>{brief.freshnessLabel}</span>
@@ -171,7 +171,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         )}
       </section>
 
-      <section className="px-3 sm:px-4 py-2 border-y border-[var(--border)]" aria-label="Key conditions">
+      <section className="decision-conditions px-3 sm:px-4 py-2 border-y border-[var(--border)]" aria-label="Key conditions">
         <div className="grid grid-cols-2 min-[700px]:grid-cols-3 min-[1100px]:grid-cols-6 gap-x-4 gap-y-2">
           <Stat label="Wind" value={formatWindLine(c)} color={windColor(c.windKt)} />
           <Stat label="Swell" value={formatSwellLine(c)} color={swellColor(c.swellH)} />
@@ -182,20 +182,20 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         </div>
       </section>
 
-      <section className="px-3 sm:px-4 py-2" aria-label="Next hours">
+      <section className="decision-timeline px-3 sm:px-4 py-2" aria-label="Next hours">
         <div className="flex items-baseline justify-between gap-2 mb-1.5">
           <h3 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] font-semibold">Timeline</h3>
           <p className="text-[10px] text-[var(--text-muted)]">G good · P poor</p>
         </div>
-        <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:-mx-4 sm:px-4">
-          <div className="flex gap-1 min-w-max">
+        <div className="decision-timeline-scroll overflow-x-auto scrollbar-hide -mx-3 px-3 sm:-mx-4 sm:px-4">
+          <div className="decision-timeline-grid flex gap-1 min-w-max">
             {timeline.map(row => {
               const tone = hourTone(row);
               const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
               return (
                 <div
                   key={row.time}
-                  className={`flex flex-col items-center gap-0.5 min-w-[44px] px-1 py-1 rounded ${
+                  className={`decision-hour flex flex-col items-center gap-0.5 min-w-[44px] px-1 py-1 rounded ${
                     row.golden ? "bg-[color-mix(in_srgb,var(--sand)_12%,transparent)]" : ""
                   }`}
                 >
@@ -224,7 +224,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         </div>
       </section>
 
-      <section className="px-3 sm:px-4 py-2 border-t border-[var(--border)]" aria-label="Next usable window">
+      <section className="decision-next px-3 sm:px-4 py-2 border-t border-[var(--border)]" aria-label="Next usable window">
         <div className="flex items-baseline justify-between gap-2 mb-1">
           <h3 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] font-semibold">Next usable</h3>
           <button type="button" onClick={() => onOpenView("sickie")} className="text-[11px] font-semibold text-[var(--action)] min-h-[32px]">
@@ -255,7 +255,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         )}
       </section>
 
-      <section className="px-3 sm:px-4 py-2 border-t border-[var(--border)]" aria-label="Best upcoming windows">
+      <section className="decision-best px-3 sm:px-4 py-2 border-t border-[var(--border)]" aria-label="Best upcoming windows">
         <h3 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] font-semibold mb-1.5">Best upcoming</h3>
         {brief.bestWindows.length === 0 ? (
           <p className="text-[13px] text-[var(--text-muted)]">No ranked windows in this range.</p>
@@ -285,7 +285,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         )}
       </section>
 
-      <section className="px-3 sm:px-4 py-2 border-t border-[var(--border)]" aria-label="Detail">
+      <section className="decision-detail px-3 sm:px-4 py-2 border-t border-[var(--border)]" aria-label="Detail">
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold">
           {(
             [
@@ -307,7 +307,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
         </div>
       </section>
 
-      <section className="px-3 sm:px-4 pt-1 pb-2" aria-label="Why and raw data">
+      <section className="decision-why px-3 sm:px-4 pt-1 pb-2" aria-label="Why and raw data">
         <button
           type="button"
           onClick={() => setShowWhy(v => !v)}

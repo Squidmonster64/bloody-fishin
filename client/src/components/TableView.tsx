@@ -84,7 +84,7 @@ function Row({ row }: { row: HourRow }) {
 
 export function TableView({ data }: Props) {
   return (
-    <div className="overflow-y-auto h-full pb-8">
+    <div className="hourly-view overflow-y-auto h-full pb-8">
       <div className="px-3 py-2 text-xs text-[var(--text-muted)] flex flex-wrap gap-2 border-b border-[var(--border)]">
         <span>📍 {data.location.name}</span>
         <span>·</span>
@@ -100,8 +100,8 @@ export function TableView({ data }: Props) {
           })}
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse" style={{ minWidth: "700px" }}>
+      <div className="hourly-table-scroll overflow-x-auto">
+        <table className="hourly-table w-full text-xs border-collapse" style={{ minWidth: "700px" }}>
           <thead className="sticky top-0 z-20 bg-[var(--surface)]">
             <tr className="border-b-2 border-[var(--border)] text-[var(--text-muted)] text-[10px] uppercase tracking-wider">
               <th className="sticky left-0 bg-[var(--surface)] px-2 py-2 text-left border-r border-[var(--border)] z-30 min-w-[90px]">Date / Hour</th>

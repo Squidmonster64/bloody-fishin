@@ -208,6 +208,167 @@ select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
    Mobile zoom is offered via the explicit +/- buttons instead. */
 .forecast-canvas { touch-action: pan-y !important; }
 
+/* ── Large desktop / Retina MacBook layout (≥1200px) ─────────────────────── */
+@media (min-width: 1200px) {
+  :root {
+    --suite-chrome: 4.75rem;
+    --controls-chrome: 5.75rem;
+  }
+
+  body { font-size: 17px; }
+
+  .app-shell {
+    width: min(calc(100% - 4rem), 92rem);
+    margin-inline: auto;
+  }
+
+  .app-header-inner { min-height: var(--suite-chrome); }
+  .app-header-inner img { width: 3rem; height: 3rem; }
+  .app-header-inner h1 { font-size: 1.35rem; }
+  .app-header-inner p { font-size: 0.72rem; }
+
+  .controls-bar {
+    position: sticky;
+    top: var(--suite-chrome);
+    z-index: 45;
+  }
+  .controls-inner {
+    min-height: var(--controls-chrome);
+    display: grid;
+    grid-template-columns: minmax(13rem, 1fr) auto auto auto;
+    gap: 1rem;
+    align-items: center;
+  }
+  .controls-location { width: 100%; max-width: none !important; }
+  .controls-inner label { font-size: 0.72rem; }
+  .controls-inner select {
+    min-height: 3rem;
+    padding-inline: 1rem;
+    font-size: 1rem;
+  }
+  .controls-inner > span { font-size: 0.88rem; padding: 0.72rem 0.85rem; }
+  .controls-actions { gap: 0.55rem; }
+  .controls-actions > button,
+  .controls-actions > div > button {
+    min-height: 3rem;
+    padding-inline: 0.9rem;
+    font-size: 0.95rem;
+  }
+
+  .tabs-bar { top: calc(var(--suite-chrome) + var(--controls-chrome)); }
+  .tabs-inner { margin-inline: auto; justify-content: flex-start; }
+  .tabs-inner > button {
+    flex: 0 0 10.5rem;
+    min-height: 3.5rem;
+    font-size: 1rem;
+  }
+
+  .app-main { padding-block: 1.5rem; }
+  .app-footer { margin-top: 0.5rem; font-size: 0.78rem; }
+
+  .decision-view {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(24rem, 0.8fr);
+    gap: 1rem;
+    padding: 0;
+  }
+  .decision-summary,
+  .decision-conditions,
+  .decision-timeline,
+  .decision-next,
+  .decision-best,
+  .decision-detail,
+  .decision-why {
+    border: 1px solid var(--border) !important;
+    border-radius: 0.75rem;
+    background: var(--surface);
+    padding: 1.25rem;
+  }
+  .decision-summary { grid-column: 1; grid-row: 1; }
+  .decision-conditions { grid-column: 2; grid-row: 1; }
+  .decision-timeline { grid-column: 1 / -1; grid-row: 2; }
+  .decision-next { grid-column: 1; grid-row: 3; }
+  .decision-detail { grid-column: 2; grid-row: 3; }
+  .decision-best { grid-column: 1; grid-row: 4; }
+  .decision-why { grid-column: 2; grid-row: 4; }
+  .decision-verdict { font-size: 1.75rem; }
+  .decision-supporting { font-size: 1rem; line-height: 1.55; max-width: 48rem; }
+  .decision-conditions > div { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .decision-stat {
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    background: var(--app-bg);
+    padding: 0.9rem;
+  }
+  .decision-stat-label { font-size: 0.72rem; }
+  .decision-stat-value { margin-top: 0.35rem; font-size: 1.25rem; overflow: visible; white-space: normal; }
+  .decision-timeline-scroll { overflow: visible; margin: 0; padding: 0; }
+  .decision-timeline-grid {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .decision-hour {
+    min-width: 0;
+    min-height: 5rem;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--app-bg);
+    padding: 0.65rem 0.35rem;
+  }
+  .decision-hour span:first-child { font-size: 0.76rem; }
+  .decision-hour span:nth-child(2) { font-size: 0.9rem; }
+  .decision-hour span:nth-child(3) { font-size: 0.78rem; }
+  .decision-next p,
+  .decision-best p,
+  .decision-detail,
+  .decision-why { font-size: 0.95rem; }
+
+  .charts-view,
+  .daily-view,
+  .hourly-view,
+  .sickie-view { border-radius: 0.75rem; }
+  .chart-tools { gap: 0.65rem; padding: 0.9rem 1rem; }
+  .chart-tools button { min-height: 2.75rem; font-size: 0.9rem; }
+  .charts-view .chart-container { height: 28rem !important; padding: 1rem; }
+
+  .daily-view { gap: 1rem; padding: 0; }
+  .daily-card > div:first-child { min-height: 5rem; padding: 1rem 1.25rem; }
+  .daily-card > div:first-child span { font-size: 0.9rem; }
+  .daily-hours-scroll { overflow: visible; padding: 0 1rem 1rem; }
+  .daily-hours-grid {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+  .daily-hour-cell {
+    min-width: 0;
+    min-height: 6.25rem;
+    justify-content: center;
+    padding: 0.55rem 0.3rem;
+  }
+  .daily-hour-cell span:first-child { font-size: 0.72rem; }
+  .daily-hour-cell span:nth-child(2) { font-size: 0.9rem; }
+  .daily-hour-cell span { white-space: nowrap; }
+
+  .hourly-view { background: var(--surface); border: 1px solid var(--border); }
+  .hourly-table-scroll { overflow-x: auto; }
+  .hourly-table { min-width: 76rem !important; table-layout: fixed; font-size: 0.78rem; }
+  .hourly-table th { font-size: 0.68rem; white-space: normal; line-height: 1.25; }
+  .hourly-table th,
+  .hourly-table td { padding: 0.65rem 0.35rem; }
+  .hourly-table th:first-child,
+  .hourly-table td:first-child { width: 7.5rem; }
+
+  .sickie-view { padding: 0; gap: 1rem; }
+  .sickie-view > div { padding: 1.25rem; }
+  .sickie-view h2 { font-size: 1.5rem; }
+  .sickie-view p,
+  .sickie-view button { font-size: 0.9rem; }
+}
+
 /* The print chart stays laid out offscreen before printing so Chart.js can paint a
    stable image. Safari otherwise measures a `display:none` canvas at 0 × 0. */
 .print-sheet {

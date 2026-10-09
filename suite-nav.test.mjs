@@ -3,8 +3,6 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const header = readFileSync(new URL('./client/src/components/Header.tsx', import.meta.url), 'utf8');
-const suiteNav = readFileSync(new URL('./client/src/components/SuiteNav.tsx', import.meta.url), 'utf8');
-const suiteLib = readFileSync(new URL('./client/src/lib/suiteNav.ts', import.meta.url), 'utf8');
 const table = readFileSync(new URL('./client/src/components/TableView.tsx', import.meta.url), 'utf8');
 const decision = readFileSync(new URL('./client/src/components/DecisionView.tsx', import.meta.url), 'utf8');
 const sickie = readFileSync(new URL('./client/src/components/SickieView.tsx', import.meta.url), 'utf8');
@@ -13,14 +11,13 @@ const criteria = readFileSync(new URL('./client/src/lib/sickieCriteria.ts', impo
 const css = readFileSync(new URL('./client/src/index.css', import.meta.url), 'utf8');
 const home = readFileSync(new URL('./client/src/pages/Home.tsx', import.meta.url), 'utf8');
 
-test('Fishing Planner header mark links to Bloody Dave’s Control', () => {
-  assert.match(header, /CONTROL_URL/);
-  assert.match(header, /aria-label="Bloody Dave's Control"/);
-  assert.match(suiteLib, /https:\/\/control\.bloodydaves\.com/);
+test('Fishing Planner header is focused, non-linked product branding', () => {
+  assert.match(header, /aria-label="Bloody Dave's Fishing Planner"/);
+  assert.match(header, /Fishing Planner/);
+  assert.doesNotMatch(header, /CONTROL_URL|SuiteNav|<a\b|control\.bloodydaves\.com/);
 });
 
 test('public titles and headings say Boating, not SL20', () => {
-  assert.match(header, /Boating \+ fishing/);
   assert.doesNotMatch(header, /SL20/);
   assert.match(table, />Boating</);
   assert.doesNotMatch(table, />SL20</);
@@ -38,17 +35,15 @@ test('SL20 vessel scoring and profile configuration stay in place', () => {
   assert.match(criteria, /label: "SL20 \/ Half-cabin"/);
 });
 
-test('compact horizontal suite nav lists Control and family products', () => {
-  assert.match(suiteNav, /aria-label="Bloody Dave's Suite"/);
-  assert.match(suiteNav, /hidden min-\[700px\]:flex/);
-  for (const name of ['Control', 'Fishin', 'Recipes', 'Pantry', 'Get List', 'Lift Log']) {
-    assert.match(suiteLib, new RegExp(name));
-  }
-  assert.match(suiteLib, /https:\/\/weather\.bloodydaves\.com/);
-  assert.match(suiteLib, /https:\/\/recipes\.bloodydaves\.com/);
-  assert.match(suiteLib, /https:\/\/pantry\.bloodydaves\.com/);
-  assert.match(suiteLib, /https:\/\/list\.bloodydaves\.com/);
-  assert.match(suiteLib, /https:\/\/lift\.bloodydaves\.com/);
+test('large desktop layout is centred, readable and internally grouped', () => {
+  assert.match(css, /@media \(min-width: 1200px\)/);
+  assert.match(css, /\.app-shell/);
+  assert.match(css, /92rem/);
+  assert.match(css, /\.decision-timeline-grid/);
+  assert.match(css, /repeat\(8, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.daily-hours-grid/);
+  assert.match(css, /repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.match(home, /app-shell app-main/);
 });
 
 test('theme uses Bloody Dave marine tokens, not 5M paper/red', () => {

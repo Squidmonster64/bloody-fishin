@@ -160,7 +160,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
             backgroundColor: "rgba(29,42,32,0.95)",
             borderColor: "#35463a", borderWidth: 1,
             titleColor: "#d7bd7c", bodyColor: "#d6d0c4",
-            padding: 10, cornerRadius: 8,
+            padding: 12, cornerRadius: 8,
+            titleFont: { size: 13, weight: "bold" },
+            bodyFont: { size: 13 },
             callbacks: {
               title: (items) => {
                 const row = allRows[items[0].dataIndex];
@@ -212,7 +214,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
         scales: {
           x: {
             ticks: {
-              color: "#64748b", font: { size: 9 }, maxRotation: 0,
+              color: "#94a3b8", font: { size: 12 }, maxRotation: 0,
               autoSkip: false,
               callback: (_val, idx) => labels[idx] || null,
             },
@@ -221,18 +223,18 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
           y: {
             position: "left",
             display: vis.wind || vis.temp,
-            ticks: { color: "#3b82f6", font: { size: 10 } },
+            ticks: { color: "#3b82f6", font: { size: 12 } },
             grid: { color: "rgba(53,70,58,0.35)" },
           },
           y2: {
             position: "right",
             display: vis.swell || vis.tide,
-            ticks: { color: "#10b981", font: { size: 10 } },
+            ticks: { color: "#10b981", font: { size: 12 } },
             grid: { display: false },
           },
           y3: {
             position: "right",
-            ticks: { color: "#f59e0b", font: { size: 10 } },
+            ticks: { color: "#f59e0b", font: { size: 12 } },
             grid: { display: false },
             min: 0, max: 100,
             display: vis.fish || vis.rain,
@@ -246,9 +248,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
   }, [vis, data]);
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="charts-view flex flex-col h-full overflow-y-auto">
       {/* Visibility toggles */}
-      <div className="flex flex-wrap gap-1.5 px-3 py-1.5 bg-[var(--app-bg)] border-b border-[var(--border)]">
+      <div className="chart-tools flex flex-wrap gap-1.5 px-3 py-1.5 bg-[var(--app-bg)] border-b border-[var(--border)]">
         {VIS_KEYS.map(({ key, label, color }) => (
           <button key={key} onClick={() => onToggleVis(key)}
             className={`px-3 py-1.5 rounded text-xs sm:text-sm font-semibold border transition-all duration-150 min-h-[38px]

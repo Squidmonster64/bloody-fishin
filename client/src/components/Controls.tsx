@@ -75,7 +75,8 @@ export function Controls({
   }
 
   return (
-    <div className="bg-[var(--surface)] border-b border-[var(--border)] px-3 py-1.5 flex flex-wrap items-center gap-2">
+    <div className="controls-bar bg-[var(--surface)] border-b border-[var(--border)]">
+      <div className="app-shell controls-inner px-3 py-2 flex flex-wrap items-center gap-2 min-[700px]:px-4">
       <div className="controls-location flex w-full items-center gap-2 sm:w-auto sm:flex-1 sm:max-w-md">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap font-semibold">
           Location
@@ -336,6 +337,7 @@ export function Controls({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

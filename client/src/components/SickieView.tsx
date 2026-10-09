@@ -474,7 +474,7 @@ export function SickieView({ data }: Props) {
   const windows = useMemo(() => buildWindows(data, criteria), [data, criteria]);
 
   return (
-    <div className="overflow-y-auto p-3 flex flex-col gap-3 pb-8">
+    <div className="sickie-view overflow-y-auto p-3 flex flex-col gap-3 pb-8">
       {/* Header */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
         <h2 className="text-[var(--action)] font-black text-lg" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>
