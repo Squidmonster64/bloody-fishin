@@ -115,8 +115,8 @@ export function TableView({ data }: Props) {
               <th className="px-2 py-2 text-center whitespace-nowrap">Swell Dir</th>
               <th className="px-2 py-2 text-center whitespace-nowrap">Wave</th>
               <th className="px-2 py-2 text-center whitespace-nowrap" title="Model sea level above MSL, not chart datum">Sea level MSL</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap" title="Coastal land-grid air-temperature forecast">Coastal air</th>
-              <th className="px-2 py-2 text-center whitespace-nowrap" title="Coastal forecast chance; modelled amount in the preceding hour">Rain chance / mm per hour</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Air temperature (°C)">Temperature (°C)</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap" title="Chance of rain (%); rainfall in the preceding hour (mm)">Rain chance / mm per hour</th>
             </tr>
           </thead>
           <tbody>

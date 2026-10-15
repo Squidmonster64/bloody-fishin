@@ -32,9 +32,9 @@ const VIS_KEYS: { key: keyof FishingState["vis"]; label: string; color: string }
   { key: "swell", label: "Swell (m)",  color: "#10b981" },
   { key: "fish",  label: "Fishing index", color: "#f59e0b" },
   { key: "tide",  label: "Sea level (m MSL)",   color: "#a78bfa" },
-  { key: "temp",  label: "Coastal air forecast (°C)", color: "#fbbf24" },
+  { key: "temp",  label: "Temperature (°C)", color: "#fbbf24" },
   // Cyan — must stay distinct from wind action-blue (#3b82f6)
-  { key: "rain",  label: "Coastal rain chance", color: "#22d3ee" },
+  { key: "rain",  label: "Chance of rain (%)", color: "#22d3ee" },
 ];
 
 export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Props) {
@@ -94,13 +94,13 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       borderDash: [4, 3],
     });
     if (vis.temp) datasets.push({
-      label: "Coastal air forecast (°C)", yAxisID: "y",
+      label: "Temperature (°C)", yAxisID: "y",
       data: allRows.map(r => r.temp),
       borderColor: "#fbbf24", backgroundColor: "rgba(251,191,36,0.06)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
     });
     if (vis.rain) datasets.push({
-      label: "Coastal rain chance (%)", yAxisID: "y3",
+      label: "Chance of rain (%)", yAxisID: "y3",
       data: allRows.map(r => r.rainProb),
       borderColor: "#22d3ee", backgroundColor: "rgba(34,211,238,0.08)",
       borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false,
@@ -193,8 +193,8 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                 if (num == null) return `${label}: —`;
                 if (label.startsWith("Fishing")) return `Fishing heuristic index: ${Math.round(num)}/100`;
                 if (label.startsWith("Sea level")) return `Sea level: ${fmt(num)} m above MSL`;
-                if (label.startsWith("Coastal air")) return `Coastal air forecast: ${fmt(num, 0)}°C`;
-                if (label.startsWith("Coastal rain")) return `Coastal rain chance: ${Math.round(num)}%`;
+                if (label.startsWith("Temperature")) return `Temperature: ${fmt(num, 0)}°C`;
+                if (label.startsWith("Chance of rain")) return `Chance of rain: ${Math.round(num)}%`;
                 return `${label}: ${num}`;
               },
             },

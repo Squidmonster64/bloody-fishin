@@ -48,3 +48,11 @@ GET /
 | `/mcp` | Stateless read-only MCP tools |
 
 Personal spots remain device-local. The server receives coordinates only for the forecast request, does not persist them, and omits query strings from request logs.
+
+## Weather labels — 15 October 2026
+
+David requested plain English in the boating interface: use `Temperature (°C)`
+and `Chance of rain (%)` in the chart controls, datasets, tooltips and print
+view, with corresponding wording in the decision and table views. Rain percent
+means forecast probability, not rainfall amount. The underlying coastal land-cell
+weather selection, forecast calculations and chart behaviour are unchanged.

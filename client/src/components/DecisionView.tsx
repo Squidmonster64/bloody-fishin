@@ -177,8 +177,8 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           <Stat label="Swell" value={formatSwellLine(c)} color={swellColor(c.swellH)} />
           <Stat label="Model sea level" value={formatTideLine(brief.nextTide)} />
           <Stat label="Water" value={formatWaterLine(brief.current, c.seaLevel)} />
-          <Stat label="Coastal air forecast" value={c.temp == null ? "—" : `${fmt(c.temp, 0)}°C`} />
-          <Stat label="Coastal rain chance" value={c.rainProb == null ? "—" : `${Math.round(c.rainProb)}%`} />
+          <Stat label="Temperature" value={c.temp == null ? "—" : `${fmt(c.temp, 0)}°C`} />
+          <Stat label="Chance of rain" value={c.rainProb == null ? "—" : `${Math.round(c.rainProb)}%`} />
         </div>
       </section>
 
