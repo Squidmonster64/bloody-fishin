@@ -1,4 +1,4 @@
-import { localHourKey } from "@shared/forecastTime";
+import { hourBucketEnd, localHourKey } from "@shared/forecastTime";
 /**
  * SickieView — Sickie Forecast tab with configurable vessel criteria.
  * Windows require >= minWindowHours consecutive hours meeting all thresholds.
@@ -86,7 +86,7 @@ function flush(
   windows.push({
     date: first.dateStr, dateLabel,
     startHour: first.hourLabel,
-    endHour: last.hourLabel,
+    endHour: hourBucketEnd(last.time).slice(11, 16),
     hours, peakFish, peakStars,
     minWind: winds.length ? Math.min(...winds) : null,
     maxSwell: swells.length ? Math.max(...swells) : null,
@@ -282,7 +282,7 @@ function CriteriaPanel({
             </summary>
             <div className="mt-2 text-[10px] text-[var(--text-muted)] space-y-1 leading-relaxed bg-[var(--app-bg)] rounded p-3 border border-[var(--border)]">
               <p><strong className="text-[var(--text)]">Boating Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
-              <p><strong className="text-[var(--text)]">Fishing Score (0–100%)</strong> — Fishing is calculated only from sun, moon and tide: moon phase, moon transit/underfoot, sunrise/sunset and tide movement. Weather is kept separate, so a rain or wind forecast cannot quietly alter the fishing score.</p>
+              <p><strong className="text-[var(--text)]">Fishing heuristic index (0–100)</strong> — This planning aid uses approximate moon and sun timing plus model sea-level movement. It is not a measured bite probability. Weather remains separate, so rain or wind cannot quietly alter the index.</p>
               <p><strong className="text-[var(--text)]">Golden Window</strong> — The SL20 default is daylight, wind≤10kt, swell&lt;1.0m, rain chance 0%, fishing≥4★, and at least three consecutive qualifying hours.</p>
               <p><strong className="text-[var(--text)]">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>
               <p><strong className="text-[var(--text)]">Window</strong> — Consecutive hours where ALL active criteria are met. Windows shorter than "Min Window Length" are discarded. With daylight-only enabled, night hours cannot qualify.</p>
@@ -355,7 +355,7 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
       startHour: win.hours[0].hour,
       endDate: lastHour.dateStr,
       endHour: lastHour.hour + 1,
-      description: `Bloody Dave's Sickie window at ${locationName}. Peak fishing ${win.peakFish}% (${win.peakStars} stars). ${win.slLabel}. Wind from ${win.minWind?.toFixed(0) ?? "—"}kt; max swell ${win.maxSwell?.toFixed(1) ?? "—"}m.`,
+      description: `Bloody Dave's Sickie window at ${locationName}. Peak fishing heuristic ${win.peakFish}/100 (${win.peakStars} stars). ${win.slLabel}. Wind from ${win.minWind?.toFixed(0) ?? "—"}kt; max swell ${win.maxSwell?.toFixed(1) ?? "—"}m.`,
     });
   }
   return (
@@ -382,7 +382,7 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
         </div>
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-[var(--action)] font-bold text-lg">{win.peakFish}%</span>
+            <span className="text-[var(--action)] font-bold text-lg">{win.peakFish}/100</span>
             <span className="text-yellow-400 text-sm">{"★".repeat(win.peakStars)}</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: win.slBg, color: win.slFg }}>
@@ -408,7 +408,7 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
               <div key={row.time}
                 className="flex flex-col items-center gap-0.5 bg-yellow-400/10 ring-1 ring-yellow-400/40 rounded px-1.5 py-1 min-w-[44px]">
                 <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
-                <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}%</span>
+                <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
                 <span className="text-yellow-400 text-[9px]">{"★".repeat(row.fishStars)}</span>
                 <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
                   {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
@@ -474,7 +474,7 @@ export function SickieView({ data }: Props) {
   const windows = useMemo(() => buildWindows(data, criteria), [data, criteria]);
 
   return (
-    <div className="overflow-y-auto p-3 flex flex-col gap-3 pb-8">
+    <div className="sickie-view overflow-y-auto p-3 flex flex-col gap-3 pb-8">
       {/* Header */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
         <h2 className="text-[var(--action)] font-black text-lg" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>

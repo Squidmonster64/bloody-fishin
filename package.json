@@ -11,9 +11,14 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run && node --test suite-nav.test.mjs",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "native:sync": "pnpm build && cap sync ios",
+    "ios:sync": "pnpm native:sync",
+    "ios:open": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@hookform/resolvers": "^5.2.2",
     "@modelcontextprotocol/express": "2.0.0",
     "@modelcontextprotocol/node": "2.0.0",
@@ -74,6 +79,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
     "@types/express": "4.17.21",

@@ -13,5 +13,12 @@ export function forecastInstant(local: string, timezone: string): Date {
   }
   return new Date(instant);
 }
+
+/** End label for an hourly provider bucket whose timestamp marks its start. */
+export function hourBucketEnd(local: string): string {
+  const instant = new Date(`${local.slice(0, 16)}:00Z`);
+  instant.setUTCHours(instant.getUTCHours() + 1);
+  return instant.toISOString().slice(0, 16);
+}
 /** Meteorological bearings describe where wind comes FROM; arrows point TO. */
 export function windArrowRotation(from: number): number { return ((from + 180) % 360 + 360) % 360; }

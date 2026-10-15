@@ -88,10 +88,6 @@ export function meetsCriteria(
 
 /** Determine if an hour is daylight given sunrise/sunset strings ("HH:MM") */
 export function isDaylight(hour: number, sunrise: string, sunset: string): boolean {
-  const [srH, srM] = sunrise.split(":").map(Number);
-  const [ssH, ssM] = sunset.split(":").map(Number);
-  if (isNaN(srH) || isNaN(ssH)) return true; // assume daylight if unknown
-  const srFrac = srH + srM / 60;
-  const ssFrac = ssH + ssM / 60;
-  return hour >= srFrac && hour <= ssFrac;
+  return isDaylightHour(hour, sunrise, sunset);
 }
+import { isDaylightHour } from "@shared/scoring";

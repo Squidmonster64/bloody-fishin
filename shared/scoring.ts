@@ -129,7 +129,10 @@ export function parseHM(s: string): number | null {
 export function isDaylightHour(hour: number, sunrise: string, sunset: string): boolean {
   const sr = parseHM(sunrise);
   const ss = parseHM(sunset);
-  return Number.isFinite(hour) && sr != null && ss != null && hour >= sr && hour <= ss;
+  // Forecast rows represent [hour, hour + 1), not an instantaneous reading.
+  // Require the complete bucket to be daylight so a 18:00 row is not called
+  // daylight when sunset is 18:08.
+  return Number.isFinite(hour) && sr != null && ss != null && hour >= sr && hour + 1 <= ss;
 }
 
 export function moonTransitTimes(date: Date, sunriseStr: string, sunsetStr: string) {

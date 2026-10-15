@@ -1,6 +1,8 @@
 import { getOfficialMarine } from "./officialMarine.js";
 import express from "express";
 import { createServer } from "http";
+import { randomUUID } from "crypto";
+import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { briefMarkdown, buildBrief, resolveLocation } from "./briefing.js";
@@ -35,12 +37,51 @@ function applyRateLimit(req: express.Request, res: express.Response): boolean {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
+
+  const staticPath =
+    process.env.NODE_ENV === "production"
+      ? path.resolve(__dirname, "public")
+      : path.resolve(__dirname, "..", "dist", "public");
+
+  app.use((req, res, next) => {
+    const requestId = typeof req.headers["x-request-id"] === "string" ? req.headers["x-request-id"].slice(0, 80) : randomUUID();
+    const startedAt = Date.now();
+    res.setHeader("X-Request-Id", requestId);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.on("finish", () => {
+      if (!req.path.endsWith("health") && req.path !== "/livez" && req.path !== "/readyz") {
+        console.log(JSON.stringify({ requestId, method: req.method, path: req.path, status: res.statusCode, durationMs: Date.now() - startedAt }));
+      }
+    });
+    next();
+  });
+
+  app.get("/livez", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ ok: true });
+  });
+
+  app.get("/readyz", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      await fs.access(path.join(staticPath, "index.html"));
+      res.json({ ok: true, stage: process.env.APP_STAGE ?? "production" });
+    } catch {
+      res.status(503).json({ ok: false, error: "static build unavailable" });
+    }
+  });
 
   app.get("/health", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     res.json({
       ok: true,
       service: "bloody-fishin",
-      stage: "beta",
+      stage: process.env.APP_STAGE ?? "production",
       readerVersion: READER_VERSION,
       forecastVersion: "2026-09-26-marine-v2",
       commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
@@ -61,6 +102,7 @@ async function startServer() {
       if (!applyRateLimit(req, res)) return;
       const key = `md:${briefCacheKey(req)}`;
       const cached = getCached<string>(key);
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       if (cached) {
         res.setHeader("X-Brief-Cache", "HIT");
         res.type("text/markdown; charset=utf-8").send(cached);
@@ -84,6 +126,7 @@ async function startServer() {
       const key = `json:${briefCacheKey(req)}`;
       const cached = getCached<unknown>(key);
       res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       if (cached) {
         res.setHeader("X-Brief-Cache", "HIT");
         res.json(cached);
@@ -107,6 +150,7 @@ async function startServer() {
       if (!applyRateLimit(req, res)) return;
       const location = await resolveLocation(req.query);
       res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=1800");
       res.json(location);
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : "Unable to resolve location." });
@@ -178,12 +222,6 @@ async function startServer() {
     },
   );
 
-  // Serve static files from dist/public in production
-  const staticPath =
-    process.env.NODE_ENV === "production"
-      ? path.resolve(__dirname, "public")
-      : path.resolve(__dirname, "..", "dist", "public");
-
   app.get("/", async (req, res) => {
     try {
       await serveRoot(req, res, staticPath);
@@ -192,7 +230,7 @@ async function startServer() {
     }
   });
 
-  app.use(express.static(staticPath, { index: false }));
+  app.use(express.static(staticPath, { index: false, maxAge: "1h" }));
 
   // Optional full HTML injection with live forecast snapshot
   app.get("/snapshot", async (req, res) => {
@@ -222,6 +260,20 @@ async function startServer() {
   });
 
   const port = process.env.PORT || 3000;
+
+  server.requestTimeout = 30_000;
+  server.headersTimeout = 35_000;
+  server.keepAliveTimeout = 5_000;
+
+  const shutdown = (signal: string) => {
+    console.log(JSON.stringify({ event: "shutdown", signal }));
+    server.close(error => {
+      process.exitCode = error ? 1 : 0;
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);

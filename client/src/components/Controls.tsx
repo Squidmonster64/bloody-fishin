@@ -75,7 +75,8 @@ export function Controls({
   }
 
   return (
-    <div className="bg-[var(--surface)] border-b border-[var(--border)] px-3 py-1.5 flex flex-wrap items-center gap-2">
+    <div className="controls-bar bg-[var(--surface)] border-b border-[var(--border)]">
+      <div className="app-shell controls-inner px-3 py-2 flex flex-wrap items-center gap-2 min-[700px]:px-4">
       <div className="controls-location flex w-full items-center gap-2 sm:w-auto sm:flex-1 sm:max-w-md">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap font-semibold">
           Location
@@ -155,8 +156,8 @@ export function Controls({
           onClick={onRefresh}
           disabled={state.loading}
           className="flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded border border-[var(--action)] bg-[color-mix(in_srgb,var(--action)_15%,transparent)] px-2.5 py-1.5 text-sm font-bold text-[var(--action)] transition-colors hover:bg-[var(--action)] hover:text-[var(--app-bg)] disabled:cursor-wait disabled:opacity-60"
-          title="Refresh live forecast"
-          aria-label="Refresh live forecast"
+          title="Refresh model forecast"
+          aria-label="Refresh model forecast"
         >
           <span className={state.loading ? "animate-spin" : ""}>↻</span>
           <span className="hidden lg:inline">Refresh</span>
@@ -336,6 +337,7 @@ export function Controls({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

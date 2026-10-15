@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import {
   fetchFishingData,
-  getTimezone,
   LOCATIONS,
   type AppData,
   type Location,
@@ -62,14 +61,13 @@ export function useFishingData() {
       hourlyDay: cached?.data.daily[0]?.date ?? s.hourlyDay,
     }));
     try {
-      const tz = await getTimezone(loc.lat, loc.lon);
-      const data = await fetchFishingData(loc, days, tz);
+      const data = await fetchFishingData(loc, days);
       saveForecastCache(loc, days, data);
       setState(s => ({
         ...s,
         loading: false,
         data,
-        timezone: tz,
+        timezone: data.timezone,
         cacheSavedAt: null,
         refreshFailed: false,
         hourlyDay: s.hourlyDay || (data.daily[0]?.date ?? null),

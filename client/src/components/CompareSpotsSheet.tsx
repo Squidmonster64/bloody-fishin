@@ -4,7 +4,7 @@
  * useful on a 375px iPhone SE in either orientation.
  */
 import { useEffect, useMemo, useState } from "react";
-import { fetchFishingData, getTimezone, LOCATIONS, type AppData, type Location } from "@/lib/fishingEngine";
+import { fetchFishingData, LOCATIONS, type AppData, type Location } from "@/lib/fishingEngine";
 import type { MySpot } from "@/hooks/useMySpots";
 
 function isSame(a: Location, b: Location) { return a.lat === b.lat && a.lon === b.lon; }
@@ -21,7 +21,7 @@ function within<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 function SpotLine({ name, day, winner }: { name: string; day: AppData["daily"][number]; winner: boolean }) {
   return <div className={`rounded-lg border p-3 ${winner ? "border-[var(--success)]/70 bg-[color-mix(in_srgb,var(--success)_10%,transparent)]" : "border-[var(--border)] bg-[var(--app-bg)]"}`}>
-    <div className="flex items-start justify-between gap-2"><p className="text-sm font-bold text-[var(--text)]">{winner && "🏆 "}{name}</p><span className="text-sm font-black text-[var(--action)]">{day.peakFish}%</span></div>
+    <div className="flex items-start justify-between gap-2"><p className="text-sm font-bold text-[var(--text)]">{winner && "🏆 "}{name}</p><span className="text-sm font-black text-[var(--action)]" title="Fishing heuristic index">{day.peakFish}/100</span></div>
     <p className="mt-1 text-xs text-[var(--text-muted)]">🎣 {day.bestFishStars}★ · 💨 {day.maxWind?.toFixed(0) ?? "—"}kt · 🌊 {day.maxSwell?.toFixed(1) ?? "—"}m</p>
     <p className={`mt-1 text-[11px] font-semibold ${day.isGolden ? "text-yellow-300" : "text-[var(--text-muted)]"}`}>{day.isGolden ? "⭐ Golden conditions detected" : "No golden-day flag"}</p>
   </div>;
@@ -39,8 +39,7 @@ export function CompareSpotsSheet({ baseData, savedSpots, onClose }: { baseData:
     if (!selected) return;
     setLoading(true); setError("");
     try {
-      const tz = await within(getTimezone(selected.lat, selected.lon), 8000);
-      setCompareData(await within(fetchFishingData(selected, baseData.daily.length, tz), 15000));
+      setCompareData(await within(fetchFishingData(selected, baseData.daily.length), 15000));
     } catch { setError("Could not load the comparison forecast within 15 seconds. Check reception, then tap Compare to retry."); }
     finally { setLoading(false); }
   }

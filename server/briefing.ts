@@ -1,5 +1,5 @@
 import { getOfficialMarine } from "./officialMarine.js";
-import { localHourKey } from "../shared/forecastTime.js";
+import { hourBucketEnd, localHourKey } from "../shared/forecastTime.js";
 /**
  * Public, keyless briefing service for people and browsing-enabled LLMs.
  * It queries Open-Meteo directly at request time; no user spot or profile data
@@ -10,6 +10,9 @@ import { precipitationMm, precipitationTotal } from "../shared/precipitation.js"
 import {
   fishingScore,
   hasMarineForVessel,
+  moonIllumination,
+  moonPhaseEmoji,
+  moonPhaseName,
   moonTransitTimes,
   isDaylightHour,
   rateSL20,
@@ -27,7 +30,7 @@ type Hour = {
   windDirDeg: number | null;
   thunderstorm: boolean;
   precipitationMm: number | null; rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
-  swellP: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
+  swellP: number | null; swellDir: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
   sunrise: string; sunset: string;
   fishScore: number; fishStars: number; sl20: SL20Rating; marineDataAvailable: boolean;
 };
@@ -54,6 +57,16 @@ const PLACE_ALIASES: Record<string, string> = {
   broome: "Broome, Australia",
 };
 
+function providerUrl(variable: "OPEN_METEO_WEATHER_URL" | "OPEN_METEO_MARINE_URL" | "OPEN_METEO_GEOCODING_URL", fallback: string) {
+  return new URL(process.env[variable]?.trim() || fallback);
+}
+
+function attachProviderKey(url: URL) {
+  const apiKey = process.env.OPEN_METEO_API_KEY?.trim();
+  if (apiKey) url.searchParams.set("apikey", apiKey);
+  return url;
+}
+
 const VESSELS: Record<string, Criteria> = {
   tinnie: { minRank: 2, minStars: 3, maxWind: 12, maxGust: 17, maxSwell: 0.5, maxChop: 0.3, maxRain: 50, daylightOnly: true, minHours: 3 },
   sl20: { minRank: 2, minStars: 4, maxWind: 10, maxGust: 14, maxSwell: 0.99, maxChop: null, maxRain: 0, daylightOnly: true, minHours: 3 },
@@ -77,11 +90,12 @@ async function resolvePlace(place: string): Promise<Location> {
   const alias = PLACE_ALIASES[place.trim().toLowerCase()];
   const searchTerm = alias ?? place;
   const search = async (term: string) => {
-    const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+    const url = providerUrl("OPEN_METEO_GEOCODING_URL", "https://geocoding-api.open-meteo.com/v1/search");
     url.searchParams.set("name", term);
     url.searchParams.set("count", "5");
     url.searchParams.set("language", "en");
     url.searchParams.set("format", "json");
+    attachProviderKey(url);
     const response = await fetchWithTimeout(url.toString(), { timeoutMs: 10_000 });
     if (!response.ok) throw new Error("Place lookup is temporarily unavailable.");
     return response.json() as Promise<{
@@ -175,7 +189,7 @@ function makeWindows(hours: Hour[], criteria: Criteria, mode: "wind" | "vessel")
   }
   if (run.length >= criteria.minHours) windows.push(run);
   return windows.map((run) => ({
-    start: formatHour(run[0].time), end: formatHour(run[run.length - 1].time), durationHours: run.length,
+    start: formatHour(run[0].time), end: formatHour(hourBucketEnd(run[run.length - 1].time)), durationHours: run.length,
     averageWindKt: Number((run.reduce((sum, item) => sum + (item.windKt ?? 0), 0) / run.length).toFixed(1)),
     maxWindKt: Math.max(...run.map((item) => item.windKt ?? 0)),
     bestFishScore: Math.max(...run.map((item) => item.fishScore)),
@@ -184,29 +198,59 @@ function makeWindows(hours: Hour[], criteria: Criteria, mode: "wind" | "vessel")
   }));
 }
 
-async function forecast(location: Location, days: number): Promise<{ timezone: string; hours: Hour[]; marineDataAvailableThrough: string | null; providerGrid: { weather: { lat: number; lon: number }; marine: { lat: number; lon: number } } }> {
-  const weather = new URL("https://api.open-meteo.com/v1/forecast");
-  weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation,weather_code", cell_selection: "sea", daily: "sunrise,sunset", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
-  const marine = new URL("https://marine-api.open-meteo.com/v1/marine");
-  marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
-  const [weatherResponse, marineResponse] = await Promise.all([fetchWithTimeout(weather.toString(), { timeoutMs: 12_000 }), fetchWithTimeout(marine.toString(), { timeoutMs: 12_000 }).catch(() => null)]);
+async function forecast(location: Location, days: number): Promise<{
+  timezone: string;
+  hours: Hour[];
+  marineDataAvailableThrough: string | null;
+  providerGrid: {
+    weather: { lat: number; lon: number };
+    wind: { lat: number; lon: number };
+    marine: { lat: number; lon: number };
+  };
+}> {
+  const weather = providerUrl("OPEN_METEO_WEATHER_URL", "https://api.open-meteo.com/v1/forecast");
+  weather.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "temperature_2m,precipitation_probability,precipitation,weather_code", cell_selection: "land", daily: "sunrise,sunset", timezone: "auto", forecast_days: String(days) }).toString();
+  const wind = providerUrl("OPEN_METEO_WEATHER_URL", "https://api.open-meteo.com/v1/forecast");
+  wind.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wind_speed_10m,wind_direction_10m,wind_gusts_10m", cell_selection: "sea", wind_speed_unit: "kn", timezone: "auto", forecast_days: String(days) }).toString();
+  const marine = providerUrl("OPEN_METEO_MARINE_URL", "https://marine-api.open-meteo.com/v1/marine");
+  marine.search = new URLSearchParams({ latitude: String(location.lat), longitude: String(location.lon), hourly: "wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,sea_level_height_msl", timezone: "auto", forecast_days: String(Math.min(days, 8)), cell_selection: "sea" }).toString();
+  attachProviderKey(weather);
+  attachProviderKey(wind);
+  attachProviderKey(marine);
+  const [weatherResponse, windResponse, marineResponse] = await Promise.all([
+    fetchWithTimeout(weather.toString(), { timeoutMs: 12_000 }),
+    fetchWithTimeout(wind.toString(), { timeoutMs: 12_000 }),
+    fetchWithTimeout(marine.toString(), { timeoutMs: 12_000 }).catch(() => null),
+  ]);
   if (!weatherResponse.ok) throw new Error(`Weather provider returned HTTP ${weatherResponse.status}.`);
+  if (!windResponse.ok) throw new Error(`Offshore wind provider returned HTTP ${windResponse.status}.`);
   const weatherData = await weatherResponse.json() as any;
+  const windData = await windResponse.json() as any;
   const marineData = marineResponse?.ok ? await marineResponse.json() as any : { hourly: {} };
   const wh = weatherData.hourly ?? {};
+  const windh = windData.hourly ?? {};
   const mh = marineData.hourly ?? {};
   if (!Array.isArray(wh.time) || wh.time.length === 0) {
     throw new Error("Malformed provider data: weather.hourly.time is missing.");
   }
+  if (!Array.isArray(windh.time) || windh.time.length === 0) {
+    throw new Error("Malformed provider data: wind.hourly.time is missing.");
+  }
+  const windIndex = new Map<string, number>(windh.time.map((time: string, index: number) => [time, index]));
   const marineIndex = new Map<string, number>((Array.isArray(mh.time) ? mh.time : []).map((time: string, index: number) => [time, index]));
   const dailyByDate = new Map<string, { sunrise: string; sunset: string }>((weatherData.daily?.time ?? []).map((date: string, index: number) => [date, { sunrise: weatherData.daily.sunrise?.[index] ?? "", sunset: weatherData.daily.sunset?.[index] ?? "" }]));
   const raw = wh.time.map((time: string, index: number) => {
+    const windAt = windIndex.get(time);
     const marineAt = marineIndex.get(time);
-    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: wh.wind_speed_10m?.[index] ?? null, gustKt: wh.wind_gusts_10m?.[index] ?? null, thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[index]), windDirDeg: wh.wind_direction_10m?.[index] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, precipitationMm: precipitationMm(wh.precipitation?.[index]), temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
+    return { time, date: time.slice(0, 10), hour: Number(time.slice(11, 13)), windKt: windAt === undefined ? null : windh.wind_speed_10m?.[windAt] ?? null, gustKt: windAt === undefined ? null : windh.wind_gusts_10m?.[windAt] ?? null, thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[index]), windDirDeg: windAt === undefined ? null : windh.wind_direction_10m?.[windAt] ?? null, rainProb: wh.precipitation_probability?.[index] ?? null, precipitationMm: precipitationMm(wh.precipitation?.[index]), temp: wh.temperature_2m?.[index] ?? null, waveH: marineAt === undefined ? null : mh.wave_height?.[marineAt] ?? null, swellH: marineAt === undefined ? null : mh.swell_wave_height?.[marineAt] ?? null, swellP: marineAt === undefined ? null : mh.swell_wave_period?.[marineAt] ?? null, swellDir: marineAt === undefined ? null : mh.swell_wave_direction?.[marineAt] ?? null, windWaveH: marineAt === undefined ? null : mh.wind_wave_height?.[marineAt] ?? null, seaLevel: marineAt === undefined ? null : mh.sea_level_height_msl?.[marineAt] ?? null, marineDataAvailable: marineAt !== undefined };
   });
   return {
     timezone: weatherData.timezone ?? "UTC",
-    providerGrid: { weather: { lat: weatherData.latitude, lon: weatherData.longitude }, marine: { lat: marineData.latitude, lon: marineData.longitude } },
+    providerGrid: {
+      weather: { lat: weatherData.latitude, lon: weatherData.longitude },
+      wind: { lat: windData.latitude, lon: windData.longitude },
+      marine: { lat: marineData.latitude, lon: marineData.longitude },
+    },
     marineDataAvailableThrough: (mh.time ?? []).at(-1)?.slice(0, 10) ?? null,
     hours: raw.map((item: any, index: number) => {
       const previous = raw[index - 1]?.seaLevel;
@@ -253,7 +297,9 @@ export async function buildBrief(request: Request) {
   const futureHours = data.hours.filter((hour) => hour.time >= localHourKey(data.timezone, now));
   const windows = makeWindows(futureHours, criteria, mode).slice(0, 8);
   const dailyOutlook = Array.from(new Set(futureHours.map((hour) => hour.date))).map((date) => {
-    const rows = futureHours.filter((hour) => hour.date === date);
+    // "Daily" means the full local calendar day. Remaining-hour decisions are
+    // already represented by nextWindows/upcomingHours.
+    const rows = data.hours.filter((hour) => hour.date === date);
     const marineDataAvailable = rows.some((hour) => hour.marineDataAvailable);
     const temps = rows.map((hour) => hour.temp).filter((t): t is number => t !== null && Number.isFinite(t));
     const range = (values: Array<number | null>) => {
@@ -261,28 +307,35 @@ export async function buildBrief(request: Request) {
       return { min: valid.length ? Math.min(...valid) : null, max: valid.length ? Math.max(...valid) : null };
     };
     const rain = range(rows.map(hour => hour.rainProb));
+    const wind = range(rows.map(hour => hour.windKt));
+    const gust = range(rows.map(hour => hour.gustKt));
     const swell = range(rows.map(hour => hour.swellH));
     const period = range(rows.map(hour => hour.swellP));
     const chop = range(rows.map(hour => hour.windWaveH));
+    const sun = { sunrise: rows[0]?.sunrise || "", sunset: rows[0]?.sunset || "" };
+    const moon = moonTransitTimes(new Date(`${date}T12:00:00Z`), sun.sunrise, sun.sunset);
     return {
       date,
       marineDataAvailable,
       thunderstorm: rows.some(hour => hour.thunderstorm),
       maxRainChance: rain.max,
-      // Use the full local calendar day, not only the remaining forecast hours.
-      precipitationTotalMm: precipitationTotal(data.hours.filter(hour => hour.date === date).map(hour => hour.precipitationMm)),
-      maxHourlyPrecipitationMm: range(data.hours.filter(hour => hour.date === date).map(hour => hour.precipitationMm)).max,
+      precipitationTotalMm: precipitationTotal(rows.map(hour => hour.precipitationMm)),
+      maxHourlyPrecipitationMm: range(rows.map(hour => hour.precipitationMm)).max,
       minSwellM: swell.min,
       maxSwellM: swell.max,
       minSwellPeriodS: period.min,
       maxSwellPeriodS: period.max,
       maxWindChopM: chop.max,
-      maxWindKt: Math.max(...rows.map((hour) => hour.windKt ?? 0)),
-      maxGustKt: Math.max(...rows.map((hour) => hour.gustKt ?? 0)),
+      minWindKt: wind.min,
+      maxWindKt: wind.max,
+      maxGustKt: gust.max,
       maxTempC: temps.length ? Math.max(...temps) : null,
       minTempC: temps.length ? Math.min(...temps) : null,
       sunrise: rows[0]?.sunrise || null,
       sunset: rows[0]?.sunset || null,
+      moonName: moonPhaseName(moon.phase),
+      moonEmoji: moonPhaseEmoji(moon.phase),
+      moonIllumination: moonIllumination(moon.phase),
       bestFishScore: Math.max(...rows.map((hour) => hour.fishScore)),
       bestFishStars: Math.max(...rows.map((hour) => hour.fishStars)),
       weatherAndFishingOnly: !marineDataAvailable,
@@ -293,10 +346,42 @@ export async function buildBrief(request: Request) {
   const bestUpcoming = windows.length
     ? [...windows].sort((a, b) => b.bestFishScore - a.bestFishScore || b.durationHours - a.durationHours)[0]
     : null;
+  const serializeHour = (hour: Hour) => ({
+    time: formatHour(hour.time),
+    daylight: hour.daylight,
+    marineDataAvailable: hour.marineDataAvailable,
+    tempC: hour.temp,
+    windKt: hour.windKt,
+    windDirDeg: hour.windDirDeg,
+    gustKt: hour.gustKt,
+    thunderstorm: hour.thunderstorm,
+    swellM: hour.swellH,
+    swellPeriodS: hour.swellP,
+    swellDirDeg: hour.swellDir,
+    waveM: hour.waveH,
+    windChopM: hour.windWaveH,
+    seaLevelM: hour.seaLevel,
+    rainChance: hour.rainProb,
+    precipitationMm: hour.precipitationMm,
+    tideRate: hour.tideRate,
+    fishScore: hour.fishScore,
+    fishStars: hour.fishStars,
+    sl20: hour.marineDataAvailable ? hour.sl20.label : null,
+    sunrise: hour.sunrise || null,
+    sunset: hour.sunset || null,
+  });
   return {
     generatedAt: now.toISOString(),
     officialMarine,
-    dataNotes: { wind: "Sea grid; direction is FROM true north", swellPeriod: "Model mean swell period", seaLevel: "Metres above mean sea level, not chart datum", rating: "Gusts >=21 kt: Marginal; >=28 kt or thunderstorm risk: Avoid. App thresholds, not BOM warning categories." },
+    dataNotes: {
+      temperature: "Coastal land-grid air-temperature forecast; not a live observation or sea-surface temperature",
+      rain: "Coastal land-grid forecast probability and modelled hourly amount; not observed rain",
+      wind: "Offshore sea-grid forecast; direction is FROM true north",
+      swellPeriod: "Model mean swell period",
+      seaLevel: "Model metres above mean sea level, not chart datum or an official harbour tide",
+      fishing: "Planning heuristic from approximate moon/sun and model sea-level timing; stars are not an observed bite forecast",
+      rating: "Gusts >=21 kt: Marginal; >=28 kt or thunderstorm risk: Avoid. App thresholds, not BOM warning categories.",
+    },
     location,
     timezone: data.timezone,
     providerGrid: data.providerGrid,
@@ -308,28 +393,10 @@ export async function buildBrief(request: Request) {
     nextUsable,
     bestUpcoming,
     dailyOutlook,
-    upcomingHours: futureHours.slice(0, allHours ? 14 * 24 : 36).map((hour) => ({
-      time: formatHour(hour.time),
-      daylight: hour.daylight,
-      marineDataAvailable: hour.marineDataAvailable,
-      tempC: hour.temp,
-      windKt: hour.windKt,
-      windDirDeg: hour.windDirDeg,
-      gustKt: hour.gustKt,
-      thunderstorm: hour.thunderstorm,
-      swellM: hour.swellH,
-      swellPeriodS: hour.swellP,
-      windChopM: hour.windWaveH,
-      seaLevelM: hour.seaLevel,
-      rainChance: hour.rainProb,
-      precipitationMm: hour.precipitationMm,
-      tideRate: hour.tideRate,
-      fishScore: hour.fishScore,
-      fishStars: hour.fishStars,
-      sl20: hour.marineDataAvailable ? hour.sl20.label : null,
-      sunrise: hour.sunrise || null,
-      sunset: hour.sunset || null,
-    })),
+    // Backward-compatible native/web extension: daily cards can render the
+    // complete local calendar day while decision windows remain future-only.
+    forecastHours: allHours ? data.hours.map(serializeHour) : undefined,
+    upcomingHours: futureHours.slice(0, allHours ? 14 * 24 : 36).map(serializeHour),
   };
 }
 
@@ -351,14 +418,14 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
   ];
   if (brief.marineDataWarning) lines.push("", `> **Marine-data warning:** ${brief.marineDataWarning}`);
   if (!brief.nextWindows.length) lines.push("No qualifying window appears in this forecast range. Loosen the limits or increase `days`.");
-  else for (const window of brief.nextWindows) lines.push(`- **${window.start} → ${window.end}** (${window.durationHours} h): avg wind ${window.averageWindKt} kt, max ${window.maxWindKt} kt, Boating ${window.sl20}, best fishing ${window.bestFishScore}% (${window.bestFishStars}★).`);
+  else for (const window of brief.nextWindows) lines.push(`- **${window.start} → ${window.end}** (${window.durationHours} h): avg wind ${window.averageWindKt} kt, max ${window.maxWindKt} kt, Boating ${window.sl20}, best fishing heuristic ${window.bestFishScore}/100 (${window.bestFishStars}★).`);
   const showRange = (min: number | null, max: number | null) => min === null || max === null ? "—" : min === max ? String(min) : `${min}–${max}`;
-  lines.push("", "## Daily outlook", "Rain is the highest hourly probability, not a daily probability or rainfall amount. Amounts are modelled precipitation (rain + showers + snow water equivalent), not amounts conditional on rain occurring. Totals cover the full local calendar day; hourly amounts cover the preceding hour. Other ranges cover the forecast hours included for each date.",
+  lines.push("", "## Daily outlook", "Air temperature and rain use a coastal land-grid forecast; wind and gust use an offshore sea-grid forecast. Rain is the highest hourly probability, not a daily probability or rainfall amount. Amounts are modelled precipitation (rain + showers + snow water equivalent), not amounts conditional on rain occurring. All daily ranges and totals cover the full local calendar day; hourly amounts cover the preceding hour.",
     "| Date | Max wind kt | Max gust kt | Max hourly rain chance | Total precipitation mm/day | Peak mm/hour | Swell m | Swell period s | Max chop m |",
     "|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const day of brief.dailyOutlook) lines.push(`| ${day.date} | ${day.maxWindKt} | ${day.maxGustKt} | ${day.maxRainChance === null ? "—" : day.maxRainChance + "%"} | ${day.precipitationTotalMm ?? "—"} | ${day.maxHourlyPrecipitationMm ?? "—"} | ${showRange(day.minSwellM, day.maxSwellM)} | ${showRange(day.minSwellPeriodS, day.maxSwellPeriodS)} | ${day.maxWindChopM ?? "—"} |`);
   lines.push("", brief.upcomingHours.length > 36 ? "## Hourly forecast export" : "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain chance | Precipitation mm/hour | Fish | Boating |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
-  for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.precipitationMm ?? "—"} | ${hour.fishScore}% (${hour.fishStars}★) | ${hour.sl20} |`);
+  for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.precipitationMm ?? "—"} | ${hour.fishScore}/100 (${hour.fishStars}★) | ${hour.sl20} |`);
   const fishingOnly = brief.dailyOutlook.filter((day) => day.weatherAndFishingOnly);
   if (fishingOnly.length) {
     lines.push("", "## Extended fishing outlook — marine data unavailable", "| Date | Max wind kt | Max gust kt | Best fishing | Note |", "|---|---:|---:|---:|---|");
