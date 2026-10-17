@@ -4,9 +4,11 @@
 #         ./scripts/cf-deploy.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Use npx to fetch the pinned pnpm when it is not installed (no sudo needed).
+if ! command -v pnpm >/dev/null 2>&1; then pnpm() { npx --yes pnpm@10.4.1 "$@"; }; fi
 : "${CLOUDFLARE_API_TOKEN:?Run: export CLOUDFLARE_API_TOKEN=<your token> first}"
 command -v node >/dev/null || { echo "Node 22+ is required (https://nodejs.org)"; exit 1; }
-corepack enable >/dev/null 2>&1 || true
+true
 pnpm install --frozen-lockfile
 pnpm exec vite build
 pnpm exec wrangler whoami
