@@ -109,3 +109,6 @@ temp/
 .webdev/
 
 .project-config.json
+
+.wrangler/
+.dev.vars

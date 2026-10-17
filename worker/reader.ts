@@ -1,0 +1,160 @@
+/**
+ * Worker-native reader shell (bots and text clients get Markdown; browsers get the SPA).
+ * Mirrors server/spaShell.ts without Node `fs`/Express. Keep behaviour in step with it
+ * until the Railway service is retired.
+ */
+import { briefMarkdown, buildBrief } from "../server/briefing.js";
+import { getCached, setCached } from "../server/ops.js";
+
+export const READER_VERSION = "2";
+
+type BriefReq = Parameters<typeof buildBrief>[0];
+
+const PLACEHOLDER = "<!--READER_BRIEF-->";
+
+const READER_STYLES = `<style id="reader-shell-styles">
+#reader-shell{font-family:Inter,system-ui,sans-serif;background:#152018;color:#f2efe7;padding:1rem 1.25rem 2rem;line-height:1.5}
+#reader-shell h1{color:#f2efe7;font-size:1.15rem;margin:0 0 .5rem}
+#reader-shell a{color:#ef7c35}
+#reader-shell pre{white-space:pre-wrap;word-break:break-word;background:#1d2a20;border:1px solid #35463a;border-radius:.375rem;padding:.75rem;font-size:.75rem;max-height:70vh;overflow:auto}
+.js #reader-shell{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>`;
+
+const READER_LINKS = `<link rel="alternate" type="application/json" href="/brief.json?spot=freo&amp;days=7" title="Forecast JSON" />
+<link rel="alternate" type="text/markdown" href="/brief?spot=freo&amp;days=7" title="Forecast Markdown" />`;
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** True when the client likely cannot use the React SPA. */
+export function prefersMachineReadable(headers: Headers, query: Record<string, string>): boolean {
+  const accept = (headers.get("accept") || "").toLowerCase();
+  const ua = (headers.get("user-agent") || "").toLowerCase();
+  const format = (query.format ?? "").toLowerCase();
+  if (format === "text" || format === "markdown" || format === "md" || format === "json") return true;
+  if (/text\/markdown/.test(accept) && !/text\/html/.test(accept)) return true;
+  if (/application\/json/.test(accept) && !/text\/html/.test(accept)) return true;
+  return /bot|crawler|spider|slurp|facebookexternalhit|twitterbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkshare|w3c_validator|redditbot|applebot|whatsapp|telegrambot|googlebot|bingbot|duckduckbot|baiduspider|yandexbot|exabot|facebot|ia_archiver|gptbot|chatgpt|claude|anthropic|bytespider|cohere|perplexity|youbot/i.test(
+    ua,
+  );
+}
+
+export async function defaultBriefMarkdown(): Promise<string> {
+  const key = "reader:default-brief-md";
+  const cached = getCached<string>(key);
+  if (cached) return cached;
+  try {
+    const brief = await buildBrief({ query: { spot: "freo", days: "7", mode: "wind" } } as unknown as BriefReq);
+    const md = briefMarkdown(brief);
+    setCached(key, md, 5 * 60_000);
+    return md;
+  } catch {
+    return [
+      "# Bloody Dave's Fishing Planner — Public Forecast Brief",
+      "",
+      "Live forecast snapshot is temporarily unavailable.",
+      "",
+      "Use these machine-readable endpoints:",
+      "- /brief?spot=freo&days=7",
+      "- /brief.json?spot=freo&days=7",
+      "- /health",
+    ].join("\n");
+  }
+}
+
+function readerBriefBlock(markdown: string): string {
+  return `<section id="reader-brief" aria-label="Forecast text snapshot">
+<h2>Current forecast (Fremantle Offshore, 7 days)</h2>
+<p>Machine-readable endpoints: <a href="/brief?spot=freo&amp;days=7">/brief</a> · <a href="/brief.json?spot=freo&amp;days=7">/brief.json</a> · <a href="/health">/health</a> · <a href="/locations?spot=freo">/locations</a></p>
+<pre>${escapeHtml(markdown)}</pre>
+</section>`;
+}
+
+function readerShellHeader(): string {
+  return `<div id="reader-shell">
+<header>
+<h1>Bloody Dave's Fishing Planner</h1>
+<p>Interactive planner for Boating and fishing conditions. The full app needs JavaScript. Automated readers should use the server endpoints below.</p>
+<ul>
+<li><a href="/brief?spot=freo&amp;days=7">Markdown forecast — /brief</a></li>
+<li><a href="/brief.json?spot=freo&amp;days=7">JSON forecast — /brief.json</a></li>
+<li><a href="/?format=markdown">This page as markdown — ?format=markdown</a></li>
+<li><a href="/health">Health — /health</a></li>
+</ul>
+</header>`;
+}
+
+function readerShellFooter(): string {
+  return `<noscript><p><strong>JavaScript is disabled.</strong> Use the links above or the forecast snapshot below.</p></noscript>
+</div>`;
+}
+
+/** Inject reader content into the index.html shell. `template` is the built index.html text, or null. */
+export async function renderIndexHtml(template: string | null, injectBrief = true): Promise<string> {
+  if (template === null) {
+    return `<!doctype html><html><body><h1>Bloody Dave's Fishing Planner</h1><p><a href="/brief.json?spot=freo&amp;days=7">JSON forecast</a> · <a href="/brief?spot=freo&amp;days=7">Markdown forecast</a></p></body></html>`;
+  }
+  let html = template;
+  if (!injectBrief) return html;
+
+  const brief = readerBriefBlock(await defaultBriefMarkdown());
+
+  if (html.includes(PLACEHOLDER)) return html.replace(PLACEHOLDER, brief);
+
+  if (!html.includes('id="reader-shell"')) {
+    if (!html.includes("reader-shell-styles")) {
+      html = html.includes("</head>")
+        ? html.replace("</head>", `${READER_LINKS}\n${READER_STYLES}\n<script>document.documentElement.classList.add("js");</script>\n</head>`)
+        : html;
+    }
+    const shell = `${readerShellHeader()}${brief}${readerShellFooter()}`;
+    html = html.includes('<div id="root"></div>')
+      ? html.replace('<div id="root"></div>', `${shell}\n<div id="root"></div>`)
+      : html.replace("</body>", `${shell}\n</body>`);
+  } else if (!html.includes('id="reader-brief"')) {
+    html = html.replace("<!--READER_BRIEF-->", brief).replace("</header>", `</header>${brief}`);
+  }
+  return html;
+}
+
+/**
+ * Root handler. Returns a Response for machine-readable requests, or null when the caller
+ * should serve the static SPA shell.
+ */
+export async function serveRoot(
+  headers: Headers,
+  query: Record<string, string>,
+): Promise<Response | null> {
+  const format = (query.format ?? "").toLowerCase();
+  const briefQuery = { spot: "freo", days: "7", mode: "wind", ...query };
+
+  if (format === "json") {
+    const brief = await buildBrief({ query: briefQuery } as unknown as BriefReq);
+    return new Response(JSON.stringify(brief), {
+      headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" },
+    });
+  }
+
+  if (format === "markdown" || format === "md" || format === "text") {
+    const brief = await buildBrief({ query: briefQuery } as unknown as BriefReq);
+    return new Response(briefMarkdown(brief), { headers: { "content-type": "text/markdown; charset=utf-8" } });
+  }
+
+  const accept = (headers.get("accept") || "").toLowerCase();
+  if (/text\/markdown/.test(accept) && !/text\/html/.test(accept)) {
+    return new Response(await defaultBriefMarkdown(), { headers: { "content-type": "text/markdown; charset=utf-8" } });
+  }
+
+  if (prefersMachineReadable(headers, query)) {
+    return new Response(await defaultBriefMarkdown(), {
+      headers: {
+        "content-type": "text/markdown; charset=utf-8",
+        "cache-control": "no-store",
+        "x-reader-format": "markdown",
+        "x-reader-version": READER_VERSION,
+      },
+    });
+  }
+  return null;
+}
