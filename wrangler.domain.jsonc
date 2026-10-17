@@ -1,0 +1,20 @@
+{
+  // Same Worker as wrangler.jsonc, plus the custom domain. Used by scripts/cf-attach-domain.sh
+  // only after the workers.dev deployment has been verified.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bloody-fishin-staging",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [{ "pattern": "boating.bloodydaves.com", "custom_domain": true }],
+  "assets": {
+    "directory": "./dist/public",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "run_worker_first": ["/*", "!/assets/*"]
+  },
+  "vars": { "APP_STAGE": "staging" },
+  "observability": { "enabled": true }
+}

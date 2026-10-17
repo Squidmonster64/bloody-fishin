@@ -21,7 +21,7 @@ pnpm cf:deploy   # build + deploy (needs `wrangler login` or CLOUDFLARE_API_TOKE
 
 1. Deploy, then check `/health`, `/brief.json?spot=freo&days=5&hours=all`, `/mcp`, and `/`.
 2. Check CPU time on `/brief.json` in the Workers dashboard (free plan limit is 10 ms/request).
-3. Attach `boating.bloodydaves.com` as a custom domain on the Worker.
+3. Attach `boating.bloodydaves.com` with `scripts/cf-attach-domain.sh` (uses `wrangler.domain.jsonc`).
 4. Later: move `weather.` and `www.` the same way, set `VITE_API_ORIGIN` for the iOS build, retire Railway.
 
 ## Known differences from Express
@@ -29,3 +29,9 @@ pnpm cf:deploy   # build + deploy (needs `wrangler login` or CLOUDFLARE_API_TOKE
 - Rate limit and cache are per-isolate memory (best effort), not shared globally.
 - Client IP comes from `CF-Connecting-IP`.
 - `worker/reader.ts` duplicates `server/spaShell.ts` reader logic without Node `fs`; keep in step until Railway is retired.
+
+## Scripts
+
+`scripts/cf-deploy.sh` (build + deploy to workers.dev), `scripts/cf-verify.sh <url>` (smoke test
+and timings), `scripts/cf-attach-domain.sh` (custom domain, asks for confirmation). Each reads
+`CLOUDFLARE_API_TOKEN` from the environment; the token is never written to disk.
