@@ -1,0 +1,9 @@
+# Rules for this repository (owner's standing instructions)
+
+- Work only on branch `fix/phase1-safety`. Never switch to, merge into, or push any branch.
+- NEVER run `pnpm cf:deploy`, `wrangler deploy`, `cap sync`, `railway`, or anything that publishes or deploys. Deploying needs the owner's explicit approval, given in chat, every time.
+- Never `git push`. Commit locally, one commit per card.
+- Never print, read out or commit secrets (.env, .dev.vars, tokens, keys).
+- Run `pnpm check` and `pnpm test` after every card. If tests fail, fix them or stop and report. Never weaken or delete an existing test to make it pass.
+- Do not touch the limits that card 07 will change. Cards 01–06 only.
+- When a card is ambiguous, stop and ask. Don't guess.
