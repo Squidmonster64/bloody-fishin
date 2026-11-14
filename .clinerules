@@ -7,3 +7,7 @@
 - Run `pnpm check` and `pnpm test` after every card. If tests fail, fix them or stop and report. Never weaken or delete an existing test to make it pass.
 - Do not touch the limits that card 07 will change. Cards 01–06 only.
 - When a card is ambiguous, stop and ask. Don't guess.
+
+## Known failure that predates this work (checked 14 Nov 2026)
+- `suite-nav.test.mjs` line 69 expects `label="Coastal air forecast"` in DecisionView.tsx. It already fails on the untouched base commit 93078fc: commit 0195af3 (15 Oct) renamed the labels and the test was not updated. Do NOT fix or change that test. The bar is: `pnpm check` passes, all Vitest tests pass, and `node --test suite-nav.test.mjs` shows no failure other than this one.
+- pnpm is not on PATH. Use `./node_modules/.bin/pnpm` or `npx pnpm@10.4.1`.
