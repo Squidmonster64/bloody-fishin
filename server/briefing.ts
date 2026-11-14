@@ -31,7 +31,7 @@ type Hour = {
   windDirDeg: number | null;
   thunderstorm: boolean;
   precipitationMm: number | null; rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
-  swellP: number | null; swellDir: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
+  swellP: number | null; swellDir: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean | null;
   sunrise: string; sunset: string;
   fishScore: number; fishStars: number; sl20: SL20Rating; call: HourCall; marineDataAvailable: boolean;
 };
@@ -160,7 +160,7 @@ function criteriaFromQuery(query: Request["query"]) {
     maxSwell: optionalNumberParam(query.maxSwell, 0, 20) ?? base.maxSwell,
     maxChop: optionalNumberParam(query.maxChop, 0, 10) ?? base.maxChop,
     maxRain: optionalNumberParam(query.maxRain, 0, 100) ?? base.maxRain,
-    daylightOnly: query.daylight === "1" || query.daylight === "true" || (query.daylight === undefined && mode === "vessel" && base.daylightOnly),
+    daylightOnly: query.daylight === "1" || query.daylight === "true" || (query.daylight === undefined && base.daylightOnly),
     minHours: numberParam(query.minHours, base.minHours, 1, 24),
   };
   return { vessel: VESSELS[vessel] ? vessel : "sl20", criteria, mode };
@@ -171,8 +171,9 @@ function eligible(hour: Hour, criteria: Criteria, mode: "wind" | "vessel") {
   if ((hour.windKt ?? Infinity) > criteria.maxWind) return false;
   if (criteria.maxGust !== null && (hour.gustKt ?? Infinity) > criteria.maxGust) return false;
   if (criteria.daylightOnly && !hour.daylight) return false;
+  if (hour.fishStars < criteria.minStars) return false;
   if (mode === "wind") return true;
-  if (hour.sl20.rank < criteria.minRank || hour.fishStars < criteria.minStars) return false;
+  if (hour.sl20.rank < criteria.minRank) return false;
   if (criteria.maxSwell !== null && (hour.swellH ?? Infinity) > criteria.maxSwell) return false;
   if (criteria.maxChop !== null && (hour.windWaveH ?? Infinity) > criteria.maxChop) return false;
   if (criteria.maxRain !== null && (hour.rainProb ?? Infinity) > criteria.maxRain) return false;
@@ -195,7 +196,7 @@ function makeWindows(hours: Hour[], criteria: Criteria, mode: "wind" | "vessel")
     maxWindKt: Math.max(...run.map((item) => item.windKt ?? 0)),
     bestFishScore: Math.max(...run.map((item) => item.fishScore)),
     bestFishStars: Math.max(...run.map((item) => item.fishStars)),
-    sl20: Array.from(new Set(run.map((item) => item.sl20.label))).join(" / "),
+    sl20: Array.from(new Set(run.map((item) => item.daylight === false ? "Night" : item.sl20.label))).join(" / "),
   }));
 }
 
@@ -258,7 +259,7 @@ async function forecast(location: Location, days: number): Promise<{
       const next = raw[index + 1]?.seaLevel;
       const tideRate = item.seaLevel === null ? null : next !== null && previous !== null && next !== undefined && previous !== undefined ? (next - previous) / 2 : next !== null && next !== undefined ? next - item.seaLevel : previous !== null && previous !== undefined ? item.seaLevel - previous : null;
       const sun = dailyByDate.get(item.date) ?? { sunrise: "", sunset: "" };
-      const daylight = isDaylightHour(item.hour, sun.sunrise, sun.sunset);
+      const daylight = sun.sunrise && sun.sunset ? isDaylightHour(item.hour, sun.sunrise, sun.sunset) : null;
       const moonTimes = moonTransitTimes(new Date(`${item.date}T12:00:00Z`), sun.sunrise, sun.sunset);
       const solunar = fishingScore({
         hour: item.hour,
@@ -369,7 +370,7 @@ export async function buildBrief(request: Request) {
     fishScore: hour.fishScore,
     fishStars: hour.fishStars,
     call: { state: hour.call.state, reasons: hour.call.reasons },
-    sl20: hour.marineDataAvailable ? hour.sl20.label : null,
+    sl20: hour.daylight && hour.marineDataAvailable ? hour.sl20.label : null,
     sunrise: hour.sunrise || null,
     sunset: hour.sunset || null,
   });
@@ -404,9 +405,7 @@ export async function buildBrief(request: Request) {
 }
 
 export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
-  const filter = brief.query.mode === "wind"
-    ? `wind ≤ ${brief.query.criteria.maxWind} kt`
-    : `${brief.query.vessel.toUpperCase()} vessel criteria${brief.query.criteria.minStars > 1 ? " with bite-time filter" : ""}`;
+  const filter = `${brief.query.mode === "wind" ? `wind ≤ ${brief.query.criteria.maxWind} kt` : `${brief.query.vessel.toUpperCase()} vessel criteria`}${brief.query.criteria.minStars > 1 ? " with bite-time filter" : ""}`;
   const lines = [
     "# Bloody Dave's Fishing Planner — Public Forecast Brief",
     "",
@@ -430,7 +429,7 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
     "|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const day of brief.dailyOutlook) lines.push(`| ${day.date} | ${day.maxWindKt} | ${day.maxGustKt} | ${day.maxRainChance === null ? "—" : day.maxRainChance + "%"} | ${day.precipitationTotalMm ?? "—"} | ${day.maxHourlyPrecipitationMm ?? "—"} | ${showRange(day.minSwellM, day.maxSwellM)} | ${showRange(day.minSwellPeriodS, day.maxSwellPeriodS)} | ${day.maxWindChopM ?? "—"} |`);
   lines.push("", brief.upcomingHours.length > 36 ? "## Hourly forecast export" : "## Next 36 hours", "| Local time | Daylight | Wind kt | Gust kt | Swell m | Chop m | Rain chance | Precipitation mm/hour | Fish | Boating |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
-  for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.precipitationMm ?? "—"} | ${hour.fishScore}/100 (${hour.fishStars}★) | ${hour.sl20} |`);
+  for (const hour of brief.upcomingHours) lines.push(`| ${hour.time} | ${hour.daylight ? "Yes" : "No"} | ${hour.windKt ?? "—"} | ${hour.gustKt ?? "—"} | ${hour.swellM ?? "—"} | ${hour.windChopM ?? "—"} | ${hour.rainChance ?? "—"}% | ${hour.precipitationMm ?? "—"} | ${hour.fishScore}/100 (${hour.fishStars}★) | ${hour.daylight === false ? "Night" : hour.sl20 ?? "—"} |`);
   const fishingOnly = brief.dailyOutlook.filter((day) => day.weatherAndFishingOnly);
   if (fishingOnly.length) {
     lines.push("", "## Extended fishing outlook — marine data unavailable", "| Date | Max wind kt | Max gust kt | Best fishing | Note |", "|---|---:|---:|---:|---|");

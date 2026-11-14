@@ -93,6 +93,8 @@ export function assessHour(input: HourInput): HourCall {
     input.gustKt,
     input.thunderstorm,
   );
+  if (input.daylight === false) return { state: "outside", legacy, reasons: ["dark"] };
+  if (input.daylight === null) return { state: "no-call", legacy, reasons: ["missing-data"] };
   const wind = Math.max(0, input.windKt ?? 0);
   const gust = Math.max(0, input.gustKt ?? 0);
   const swell = Math.max(0, input.swellH ?? 0);

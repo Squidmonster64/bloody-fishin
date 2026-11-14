@@ -6,6 +6,7 @@ import {
   assessHour,
   fishingScore as sharedFishingScore,
   moonTransitTimes as sharedMoonTransitTimes,
+  isDaylightHour,
   rateSL20 as sharedRateSL20,
 } from "@shared/scoring";
 import {
@@ -81,6 +82,24 @@ describe("scoring authority — client re-export parity", () => {
         windKt: 8, gustKt: 11, windDirDeg: 90, swellH: null, swellP: null,
         waveH: null, windWaveH: null, thunderstorm: false, daylight: true,
       }).state).toBe("no-call");
+    });
+
+    it("gates dark buckets and unknown daylight without changing the legacy rating", () => {
+      const input = {
+        windKt: 8, gustKt: 11, windDirDeg: 90, swellH: 0.8, swellP: 12,
+        waveH: 1, windWaveH: 0.2, thunderstorm: false,
+      };
+      const darkRating = assessHour({ ...input, daylight: isDaylightHour(2, "05:10", "18:55") });
+      expect(darkRating).toMatchObject({ state: "outside", reasons: ["dark"], legacy: { label: "Excellent" } });
+      expect(isDaylightHour(18, "05:10", "18:08")).toBe(false);
+      expect(assessHour({ ...input, daylight: isDaylightHour(18, "05:10", "18:08") }).reasons).toEqual(["dark"]);
+      expect(isDaylightHour(5, "05:10", "18:55")).toBe(false);
+      expect(assessHour({ ...input, daylight: isDaylightHour(5, "05:10", "18:55") }).reasons).toEqual(["dark"]);
+      expect(isDaylightHour(6, "05:10", "18:55")).toBe(true);
+      expect(assessHour({ ...input, daylight: null })).toMatchObject({
+        state: "no-call",
+        reasons: ["missing-data"],
+      });
     });
   });
 

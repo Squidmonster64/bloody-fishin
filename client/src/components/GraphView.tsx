@@ -321,7 +321,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       <div className="overflow-x-auto px-2 pb-2 scrollbar-hide">
         <div className="flex gap-1 min-w-max pt-2">
           {dayRows.map((row) => {
-            const sl = callForRow(row).legacy;
+            const call = callForRow(row);
+            const sl = call.legacy;
+            const noCall = call.state === "no-call";
             const isActive = row.time === activeTime;
             return (
               <div key={row.time}
@@ -332,8 +334,9 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
                 <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
                 <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
                 <span className="text-[9px]">{"★".repeat(row.fishStars)}{"☆".repeat(5 - row.fishStars)}</span>
-                <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
-                  {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
+                <span className={`text-[9px] font-bold px-1 rounded ${noCall || call.reasons.includes("dark") ? "text-[var(--text-muted)]" : ""}`}
+                  style={noCall || call.reasons.includes("dark") ? undefined : { backgroundColor: sl.bg, color: sl.fg }}>
+                  {call.reasons.includes("dark") ? "Night" : noCall ? "—" : sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
                 </span>
                 {row.windKt != null && (
                   <span

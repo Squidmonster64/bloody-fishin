@@ -127,7 +127,7 @@ function nextTideAfter(data: AppData, current: HourRow | null): TideExtreme | nu
 }
 
 function isUsefulHour(row: HourRow): boolean {
-  return !row.thunderstorm && hasMarineForVessel(row) && row.slRank >= 2;
+  return !row.thunderstorm && hasMarineForVessel(row) && callForRow(row).state === "inside";
 }
 
 function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
@@ -204,14 +204,18 @@ export function findNextUsefulWindow(data: AppData, current: HourRow | null): De
 
 function assessGoNoGo(sl: SL20Rating | null, row: HourRow | null, marineMissing: boolean): GoNoGo {
   if (!row) return "outlook";
-  if (marineMissing || !sl) return "outlook";
-  if (sl.label === "Avoid") return "no-go";
-  if (sl.label === "Marginal" || (row.gustKt != null && row.gustKt >= 22)) return "caution";
-  if (sl.rank >= 2) return "go";
+  const call = callForRow(row);
+  if (marineMissing || call.state === "no-call" || !sl) return "outlook";
+  if (call.state === "outside") return "no-go";
+  if (call.state === "marginal" || (row.gustKt != null && row.gustKt >= 22)) return "caution";
+  if (call.state === "inside") return "go";
   return "caution";
 }
 
 function buildHeadline(goNoGo: GoNoGo, sl: SL20Rating | null, row: HourRow | null, nextUseful: DecisionWindow | null): { headline: string; supporting: string } {
+  if (row && callForRow(row).reasons.includes("dark")) {
+    return { headline: "Night — no boating call.", supporting: "This hour is outside daylight." };
+  }
   if (!row) {
     return {
       headline: "Waiting on conditions",
@@ -263,8 +267,10 @@ function buildHeadline(goNoGo: GoNoGo, sl: SL20Rating | null, row: HourRow | nul
 function buildWhy(row: HourRow | null, sl: SL20Rating | null, conditions: ConditionSnap, marineOk: boolean): string[] {
   const why: string[] = [];
   if (!row) return why;
-  if (sl && marineOk) why.push(`SL20 ${sl.label} from wind ${fmt(conditions.windKt, 0)} kt and period-aware swell.`);
-  else why.push(`Vessel SL20 not authoritative this hour — marine swell/chop fields are incomplete.`);
+  const call = callForRow(row);
+  if (call.reasons.includes("dark")) why.push("Night — outside daylight.");
+  else if (call.state === "no-call" || !sl || !marineOk) why.push("Vessel SL20 not authoritative this hour — marine or daylight data is incomplete.");
+  else why.push(`SL20 ${sl.label} from wind ${fmt(conditions.windKt, 0)} kt and period-aware swell.`);
   why.push(`Fishing outlook ${row.fishStars}★ is a planning heuristic from approximate moon, sun and model sea-level timing.`);
   if (conditions.gustKt != null && conditions.windKt != null && conditions.gustKt - conditions.windKt >= 8) {
     why.push(`Gust spread is ${Math.round(conditions.gustKt - conditions.windKt)} kt — expect a bumpier ride than mean wind suggests.`);
@@ -277,9 +283,10 @@ function buildWhy(row: HourRow | null, sl: SL20Rating | null, conditions: Condit
 
 function buildRisks(row: HourRow | null, sl: SL20Rating | null, conditions: ConditionSnap, marineMissing: boolean): string[] {
   const risks: string[] = [];
+  const dark = row ? callForRow(row).reasons.includes("dark") : false;
   if (marineMissing) risks.push("Marine swell/tide feed is incomplete — vessel assessment unavailable (not a complete SL20 call).");
-  if (sl?.label === "Avoid") risks.push("Avoid rating: wind, chop or steep short-period swell is outside small-boat comfort.");
-  if (sl?.label === "Marginal") risks.push("Marginal: only for experienced skippers and suitable vessels.");
+  if (!dark && sl?.label === "Avoid") risks.push("Avoid rating: wind, chop or steep short-period swell is outside small-boat comfort.");
+  if (!dark && sl?.label === "Marginal") risks.push("Marginal: only for experienced skippers and suitable vessels.");
   if (conditions.gustKt != null && conditions.gustKt >= 25) risks.push(`Gusts near ${Math.round(conditions.gustKt)} kt — ramp and open-water risk.`);
   if (conditions.swellH != null && conditions.swellH >= 1.5) risks.push(`Swell ${fmt(conditions.swellH)} m — bar and beam-sea risk.`);
   if (conditions.rainProb != null && conditions.rainProb >= 70) risks.push("High rain probability — reduced visibility and comfort.");
@@ -311,8 +318,9 @@ export function buildDecisionBrief(
   const marineMissing = Boolean(data.marineUnavailable) || data.merged.slice(0, 24).every(r => !hasMarineForVessel(r));
   const currentMarineOk = current ? hasMarineForVessel(current) : false;
   // Compute SL20 for diagnostics, but do not present an authoritative vessel call without marine fields.
-  const computedSl = current ? callForRow(current).legacy : null;
-  const currentSl = currentMarineOk ? computedSl : null;
+  const currentCall = current ? callForRow(current) : null;
+  const computedSl = currentCall?.legacy ?? null;
+  const currentSl = currentMarineOk && currentCall?.state !== "no-call" ? computedSl : null;
   const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
   const futureData = { ...data, merged: data.merged.filter(row => row.time >= localHourKey(data.timezone, when)) };
   const bestWindows = buildBestWindows(futureData);
@@ -344,7 +352,7 @@ export function buildDecisionBrief(
     goNoGo,
     headline,
     supporting,
-    why: buildWhy(current, currentSl ?? computedSl, conditions, currentMarineOk),
+    why: buildWhy(current, currentSl, conditions, currentMarineOk),
     risks,
     conditions,
     nextTide: nextTideAfter(data, current),

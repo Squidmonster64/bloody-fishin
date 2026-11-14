@@ -431,7 +431,7 @@ async function fetchFishingDataDirect(loc: Location, days: number, timezone: str
     rows.forEach(row => {
       row.sunrise = sunrise;
       row.sunset = sunset;
-      row.daylight = isDaylightHour(row.hour, sunrise, sunset);
+      row.daylight = sunrise && sunset ? isDaylightHour(row.hour, sunrise, sunset) : null;
       const f = fishingScore({
         hour: row.hour, seaLevelRate: row.tideRate, sunrise, sunset, moonTimes,
       });

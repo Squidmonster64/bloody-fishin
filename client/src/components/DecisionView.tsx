@@ -52,10 +52,10 @@ function formatWaterLine(row: HourRow | null, seaLevel: number | null): string {
 }
 
 function hourTone(row: HourRow): "good" | "poor" | "outlook" {
-  if (!hasMarineForVessel(row)) return "outlook";
-  const sl = callForRow(row).legacy;
-  if (sl.label === "Avoid" || sl.label === "Marginal") return "poor";
-  if (sl.rank >= 2) return "good";
+  const call = callForRow(row);
+  if (call.reasons.includes("dark") || call.state === "no-call" || !hasMarineForVessel(row)) return "outlook";
+  if (call.state === "outside" || call.state === "marginal") return "poor";
+  if (call.state === "inside") return "good";
   return "poor";
 }
 
@@ -97,8 +97,9 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
       }),
     [data, fetchedAt, cacheSavedAt],
   );
-  const style = GO_STYLES[brief.goNoGo];
-  const kind = windowKind(brief.goNoGo);
+  const currentIsDark = Boolean(brief.current && callForRow(brief.current).reasons.includes("dark"));
+  const style = GO_STYLES[currentIsDark ? "outlook" : brief.goNoGo];
+  const kind = currentIsDark ? "OUTLOOK" : windowKind(brief.goNoGo);
   const c = brief.conditions;
 
   const windowRange = brief.nextUseful
@@ -132,7 +133,9 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           </div>
           <div className="shrink-0 text-right">
             <p className={`text-[11px] font-bold tracking-[0.14em] ${style.badge}`}>{style.label}</p>
-            {brief.currentSl ? (
+            {currentIsDark ? (
+              <span className="mt-1 block text-[10px] font-bold text-[var(--text-muted)]">Night</span>
+            ) : brief.currentSl ? (
               <div className="mt-1">
                 <SlPill label={`Boating ${brief.currentSl.label}`} bg={brief.currentSl.bg} fg={brief.currentSl.fg} />
               </div>
@@ -191,7 +194,10 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           <div className="decision-timeline-grid flex gap-1 min-w-max">
             {timeline.map(row => {
               const tone = hourTone(row);
-              const sl = callForRow(row).legacy;
+              const call = callForRow(row);
+              const sl = call.legacy;
+              const isDark = call.reasons.includes("dark");
+              const isNoCall = call.state === "no-call";
               return (
                 <div
                   key={row.time}
@@ -210,7 +216,11 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
                   <span className="text-[9px] tabular-nums" style={{ color: windColor(row.windKt) }}>
                     {row.windKt != null ? `${Math.round(row.windKt)}kt` : "—"}
                   </span>
-                  {hasMarineForVessel(row) ? (
+                  {isDark ? (
+                    <span className="text-[8px] text-[var(--text-muted)]">Night</span>
+                  ) : isNoCall ? (
+                    <span className="text-[8px] text-[var(--text-muted)]">n/a</span>
+                  ) : hasMarineForVessel(row) ? (
                     <span className="text-[8px] font-bold leading-none" style={{ color: sl.fg }}>
                       {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
                     </span>

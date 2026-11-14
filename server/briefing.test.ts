@@ -117,6 +117,12 @@ describe("briefing windows ignore fishing scores by default", () => {
       expect(filteredBrief.query.criteria.minStars).toBe(4);
       expect(filteredBrief.nextWindows).toHaveLength(0);
       expect(briefMarkdown(filteredBrief)).toContain("with bite-time filter");
+
+      const windFilteredBrief = await buildBrief(fakeReq({
+        lat: "-33.5", lon: "115.4", days: "3", mode: "wind", minStars: "4",
+      }));
+      expect(windFilteredBrief.nextWindows).toHaveLength(0);
+      expect(briefMarkdown(windFilteredBrief)).toContain("with bite-time filter");
     } finally {
       vi.unstubAllGlobals();
     }
@@ -137,6 +143,28 @@ describe("briefing windows ignore fishing scores by default", () => {
       expect(brief.bestUpcoming?.durationHours).toBe(6);
       expect(brief.bestUpcoming?.bestFishStars).toBe(2);
       expect(brief.nextWindows.some(window => window.bestFishStars === 5)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("daylight requirements for machine windows", () => {
+  it("excludes W7 night windows by default in mode=wind and includes them with daylight=0", async () => {
+    const hours = [1, 2, 3, 4];
+    const date = findFutureDate(hours, stars => stars.length === hours.length, 0);
+    mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
+    try {
+      const defaultBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", mode: "wind" }));
+      expect(defaultBrief.query.criteria.daylightOnly).toBe(true);
+      expect(defaultBrief.nextWindows).toHaveLength(0);
+      expect(defaultBrief.upcomingHours.every(hour => hour.call.state === "outside" && hour.call.reasons.includes("dark"))).toBe(true);
+      expect(defaultBrief.upcomingHours.every(hour => hour.sl20 === null)).toBe(true);
+      expect(briefMarkdown(defaultBrief)).toContain("| Night |");
+
+      const optedOut = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", mode: "wind", daylight: "0" }));
+      expect(optedOut.query.criteria.daylightOnly).toBe(false);
+      expect(optedOut.nextWindows).toHaveLength(1);
     } finally {
       vi.unstubAllGlobals();
     }
@@ -234,7 +262,7 @@ describe("provider failure surfaces", () => {
     expect(brief.marineDataAvailableThrough).toBeNull();
     expect(brief.upcomingHours.map(h => h.daylight)).toEqual([false, true, true]);
     expect(brief.upcomingHours.every(h => h.sl20 === null)).toBe(true);
-    expect(brief.upcomingHours.every(h => h.call.state === "no-call")).toBe(true);
+    expect(brief.upcomingHours.map(h => h.call.state)).toEqual(["outside", "no-call", "no-call"]);
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
     expect(brief.upcomingHours[0]).toHaveProperty("tempC");
     expect(brief.upcomingHours[0]).toHaveProperty("waveM");

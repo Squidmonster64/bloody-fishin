@@ -139,6 +139,25 @@ describe("buildDecisionBrief", () => {
     expect(brief.freshnessTone).toBe("live");
   });
 
+  it("does not give a positive call or headline at night", () => {
+    const dateStr = "2026-08-23";
+    const data = fixture({
+      hours: [hour({
+        time: `${dateStr}T02:00`,
+        hour: 2,
+        dateStr,
+        daylight: false,
+        fishStars: 5,
+      })],
+    });
+    const brief = buildDecisionBrief(data, {
+      when: new Date("2026-08-22T18:10:00Z"),
+    });
+    expect(brief.goNoGo).not.toBe("go");
+    expect(brief.headline).toMatch(/^Night/);
+    expect(brief.headline).not.toMatch(/Good to go|Excellent window/);
+  });
+
   it("returns no-go when current hour is avoid-rated", () => {
     const dateStr = "2026-08-23";
     const data = fixture({
