@@ -84,6 +84,25 @@ describe("scoring authority — client re-export parity", () => {
       }).state).toBe("no-call");
     });
 
+    it("fails closed for missing wind or gust and caps unknown swell at Marginal", () => {
+      const base = {
+        windKt: 8, gustKt: 11, windDirDeg: 90, swellH: 0.5, swellP: 12,
+        waveH: 0.7, windWaveH: 0.2, thunderstorm: false, daylight: true,
+      };
+      expect(assessHour({ ...base, windKt: null })).toMatchObject({
+        state: "no-call",
+        reasons: ["missing-data"],
+      });
+      expect(assessHour({ ...base, gustKt: null })).toMatchObject({
+        state: "no-call",
+        reasons: ["missing-data"],
+      });
+      expect(assessHour({ ...base, swellH: null, waveH: 0.6 })).toMatchObject({
+        state: "marginal",
+        reasons: ["missing-data"],
+      });
+    });
+
     it("gates dark buckets and unknown daylight without changing the legacy rating", () => {
       const input = {
         windKt: 8, gustKt: 11, windDirDeg: 90, swellH: 0.8, swellP: 12,

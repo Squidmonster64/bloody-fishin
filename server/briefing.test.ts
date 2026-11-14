@@ -2,12 +2,55 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Request } from "express";
 import { fishingScore, moonTransitTimes } from "../shared/scoring";
 import { validateCoordinates, validateForecastDays } from "../shared/http";
-import { buildBrief, briefMarkdown, resolveLocation } from "./briefing";
+import { meetsCriteria, VESSEL_PRESETS } from "../client/src/lib/sickieCriteria";
+import { buildBrief, briefMarkdown, eligible, resolveLocation } from "./briefing";
 import { consumeRateLimit, getCached, resetOpsState, setCached } from "./ops";
 
 function fakeReq(query: Record<string, string>): Request {
   return { query } as unknown as Request;
 }
+
+describe("server and client eligibility for null data", () => {
+  it("matches all combinations of missing wind, gust, swell, chop and rain", () => {
+    const vesselCriteria = VESSEL_PRESETS.sl20.criteria;
+    const serverCriteria = {
+      minRank: vesselCriteria.minSL20Rank,
+      minStars: vesselCriteria.minFishStars,
+      maxWind: vesselCriteria.maxWindKt,
+      maxGust: vesselCriteria.maxGustKt,
+      maxSwell: vesselCriteria.maxSwellH,
+      maxChop: 0.3,
+      maxRain: vesselCriteria.maxRainProb,
+      daylightOnly: false,
+      minHours: vesselCriteria.minWindowHours,
+    };
+    const clientCriteria = { ...vesselCriteria, maxWindWaveH: 0.3 };
+
+    for (const windKt of [null, 8]) for (const gustKt of [null, 11]) {
+      for (const swellH of [null, 0.5]) for (const windWaveH of [null, 0.2]) {
+        for (const rainProb of [null, 0]) {
+          const serverRating = { label: "Go" as const, rank: 2, bg: "", fg: "" };
+          const hour = {
+            time: "2026-08-23T09:00", date: "2026-08-23", hour: 9,
+            windKt, gustKt, windDirDeg: 90, thunderstorm: false,
+            precipitationMm: 0, rainProb, temp: 18, waveH: 0.7, swellH, swellP: 12,
+            swellDir: 180, windWaveH, seaLevel: 0.5, tideRate: 0.1, daylight: true,
+            sunrise: "05:10", sunset: "18:55", fishScore: 50, fishStars: 1,
+            sl20: serverRating, call: { state: "inside" as const, legacy: serverRating, reasons: [] },
+            marineDataAvailable: true,
+          };
+          const clientRow = {
+            windKt, gustKt, swellH, windWaveH, rainProb,
+            slRank: 2, fishStars: 1, thunderstorm: false,
+          };
+          expect(eligible(hour, serverCriteria, "vessel")).toBe(
+            meetsCriteria(clientRow, clientCriteria),
+          );
+        }
+      }
+    }
+  });
+});
 
 function findFutureDate(hours: number[], starsMatch: (stars: number[]) => boolean, tideRate: number, afterDate?: string): string {
   const sunrise = "05:10";

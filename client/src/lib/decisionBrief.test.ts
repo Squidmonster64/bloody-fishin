@@ -158,6 +158,32 @@ describe("buildDecisionBrief", () => {
     expect(brief.headline).not.toMatch(/Good to go|Excellent window/);
   });
 
+  it("keeps a four-hour-old forecast call but gives no call after six hours", () => {
+    const dateStr = "2026-08-23";
+    const now = new Date("2026-08-23T01:10:00Z");
+    const data = fixture({
+      hours: [hour({
+        time: `${dateStr}T09:00`,
+        hour: 9,
+        dateStr,
+      })],
+    });
+    const fourHoursOld = buildDecisionBrief(data, {
+      when: now,
+      cacheSavedAt: "2026-08-22T21:10:00Z",
+    });
+    expect(fourHoursOld.goNoGo).toBe("go");
+    expect(fourHoursOld.freshnessTone).toBe("stale");
+
+    const sevenHoursOld = buildDecisionBrief(data, {
+      when: now,
+      cacheSavedAt: "2026-08-22T18:10:00Z",
+    });
+    expect(sevenHoursOld.goNoGo).toBe("outlook");
+    expect(sevenHoursOld.headline).toMatch(/^No call\. Forecast is 7 h old\./);
+    expect(sevenHoursOld.currentSl).toBeNull();
+  });
+
   it("returns no-go when current hour is avoid-rated", () => {
     const dateStr = "2026-08-23";
     const data = fixture({

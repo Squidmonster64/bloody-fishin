@@ -166,7 +166,7 @@ function criteriaFromQuery(query: Request["query"]) {
   return { vessel: VESSELS[vessel] ? vessel : "sl20", criteria, mode };
 }
 
-function eligible(hour: Hour, criteria: Criteria, mode: "wind" | "vessel") {
+export function eligible(hour: Hour, criteria: Criteria, mode: "wind" | "vessel") {
   if (hour.thunderstorm) return false;
   if ((hour.windKt ?? Infinity) > criteria.maxWind) return false;
   if (criteria.maxGust !== null && (hour.gustKt ?? Infinity) > criteria.maxGust) return false;

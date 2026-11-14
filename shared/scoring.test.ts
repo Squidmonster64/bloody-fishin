@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assessHour,
   fishingScore,
   hasMarineForVessel,
   moonIllumination,
@@ -52,9 +53,12 @@ describe("rateSL20 boundaries", () => {
     expect(long.rank).toBeGreaterThanOrEqual(shortish.rank);
   });
 
-  it("still returns a label when marine values are missing (callers must gate authority)", () => {
-    const rating = rateSL20(8, null, null, null, null);
-    expect(rating.label).toBe("Excellent");
+  it("returns no-call when required boating data is missing", () => {
+    const call = assessHour({
+      windKt: 8, gustKt: 11, windDirDeg: 90, swellH: null, swellP: null,
+      waveH: null, windWaveH: null, thunderstorm: false, daylight: true,
+    });
+    expect(call.state).toBe("no-call");
     expect(hasMarineForVessel({ swellH: null, waveH: null, windWaveH: null })).toBe(false);
   });
 });

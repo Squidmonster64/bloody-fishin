@@ -16,6 +16,11 @@ import {
 
 export type GoNoGo = "go" | "caution" | "no-go" | "outlook";
 
+const FORECAST_AGE_LIMITS_HOURS = {
+  staleBanner: 3,
+  noCall: 6,
+} as const;
+
 export interface ConditionSnap {
   windKt: number | null;
   gustKt: number | null;
@@ -308,6 +313,12 @@ export function freshnessFromFetchedAt(fetchedAt: string | null, now = new Date(
   return { freshnessLabel: `Saved forecast · ${days}d old — refresh before you leave`, freshnessTone: "stale" };
 }
 
+function forecastAgeHours(fetchedAt: string | null, now: Date): number | null {
+  if (!fetchedAt) return null;
+  const timestamp = Date.parse(fetchedAt);
+  return Number.isFinite(timestamp) ? Math.max(0, (now.getTime() - timestamp) / 3_600_000) : null;
+}
+
 export function buildDecisionBrief(
   data: AppData,
   opts?: { fetchedAt?: string | null; cacheSavedAt?: string | null; when?: Date },
@@ -320,19 +331,34 @@ export function buildDecisionBrief(
   // Compute SL20 for diagnostics, but do not present an authoritative vessel call without marine fields.
   const currentCall = current ? callForRow(current) : null;
   const computedSl = currentCall?.legacy ?? null;
-  const currentSl = currentMarineOk && currentCall?.state !== "no-call" ? computedSl : null;
   const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
   const futureData = { ...data, merged: data.merged.filter(row => row.time >= localHourKey(data.timezone, when)) };
   const bestWindows = buildBestWindows(futureData);
   const nextUseful = findNextUsefulWindow(futureData, current);
-  const goNoGo = assessGoNoGo(currentSl, current, marineMissing || !currentMarineOk);
-  const { headline, supporting } = buildHeadline(goNoGo, currentSl, current, nextUseful);
-  const local = localParts(data.timezone, when);
   // If we are showing a saved copy, never claim "Live" from the embedded fetch time.
   const fetchedAt = opts?.cacheSavedAt
     ? opts.cacheSavedAt
     : (opts?.fetchedAt ?? data.fetchedAt ?? null);
-  const freshness = freshnessFromFetchedAt(fetchedAt, when);
+  const ageHours = forecastAgeHours(fetchedAt, when);
+  const staleForecast = ageHours !== null && ageHours > FORECAST_AGE_LIMITS_HOURS.staleBanner;
+  const staleHeadline = ageHours !== null && ageHours > FORECAST_AGE_LIMITS_HOURS.noCall
+    ? {
+        headline: `No call. Forecast is ${Math.round(ageHours)} h old. Refresh before you plan.`,
+        supporting: "Refresh the forecast before planning a trip.",
+      }
+    : null;
+  const currentSl = !staleHeadline && currentMarineOk && currentCall?.state !== "no-call" ? computedSl : null;
+  let freshness = freshnessFromFetchedAt(fetchedAt, when);
+  if (staleForecast && freshness.freshnessTone !== "stale") {
+    const roundedAge = Math.round(ageHours);
+    freshness = {
+      freshnessLabel: `Saved forecast · ${roundedAge}h old — refresh before you leave`,
+      freshnessTone: "stale",
+    };
+  }
+  const goNoGo = staleHeadline ? "outlook" : assessGoNoGo(currentSl, current, marineMissing || !currentMarineOk);
+  const { headline, supporting } = staleHeadline ?? buildHeadline(goNoGo, currentSl, current, nextUseful);
+  const local = localParts(data.timezone, when);
 
   const risks = buildRisks(current, currentSl, conditions, marineMissing);
   if (current?.thunderstorm) risks.unshift("Thunderstorm risk — avoid boating; check the official forecast.");

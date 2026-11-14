@@ -99,31 +99,34 @@ export function assessHour(input: HourInput): HourCall {
     input.gustKt,
     input.thunderstorm,
   );
-  if (input.daylight === false) return { state: "outside", legacy, reasons: ["dark"] };
   if (input.daylight === null) return { state: "no-call", legacy, reasons: ["missing-data"] };
-  const wind = Math.max(0, input.windKt ?? 0);
-  const gust = Math.max(0, input.gustKt ?? 0);
-  const swell = Math.max(0, input.swellH ?? 0);
+  if (input.windKt === null || input.gustKt === null) {
+    return { state: "no-call", legacy, reasons: ["missing-data"] };
+  }
+  if (input.daylight === false) return { state: "outside", legacy, reasons: ["dark"] };
+  if (!hasMarineForVessel(input)) return { state: "no-call", legacy, reasons: ["missing-data"] };
+  const wind = Math.max(0, input.windKt);
+  const gust = Math.max(0, input.gustKt);
+  const swell = input.swellH === null ? null : Math.max(0, input.swellH);
   const period = Math.max(1, input.swellP ?? 9);
   const totalWave = Math.max(0, input.waveH ?? 0);
-  const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
-  const windChop = Math.max(0, input.windWaveH ?? inferredWindChop);
+  const inferredWindChop = swell === null ? null : Math.max(0, totalWave - swell * 0.72);
+  const windChop = input.windWaveH === null ? inferredWindChop : Math.max(0, input.windWaveH);
   const reasons: ReasonCode[] = [];
 
   if (input.thunderstorm) reasons.push("thunderstorm");
   if (wind >= 15) reasons.push("wind");
   if (gust >= 21) reasons.push("gust");
-  if (windChop > 1.1) reasons.push("chop");
-  if (swell > SWELL_LIMITS.marginalM) reasons.push("swell");
-  if (period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortMarginalM) reasons.push("short-swell");
+  if (windChop !== null && windChop > 1.1) reasons.push("chop");
+  if (swell !== null && swell > SWELL_LIMITS.marginalM) reasons.push("swell");
+  if (swell !== null && period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortMarginalM) reasons.push("short-swell");
 
-  const state = !hasMarineForVessel(input)
-    ? "no-call"
-    : legacy.rank >= 2
-      ? "inside"
-      : legacy.rank === 1
-        ? "marginal"
-        : "outside";
+  if (input.swellH === null && (input.waveH !== null || input.windWaveH !== null)) {
+    reasons.push("missing-data");
+    const state = legacy.rank === 0 ? "outside" : "marginal";
+    return { state, legacy, reasons };
+  }
+  const state = legacy.rank >= 2 ? "inside" : legacy.rank === 1 ? "marginal" : "outside";
   return { state, legacy, reasons };
 }
 

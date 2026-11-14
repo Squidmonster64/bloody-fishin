@@ -78,11 +78,11 @@ export function meetsCriteria(
   if (row.thunderstorm) return false;
   if (row.slRank < criteria.minSL20Rank) return false;
   if (row.fishStars < criteria.minFishStars) return false;
-  if (row.windKt != null && row.windKt > criteria.maxWindKt) return false;
-  if (criteria.maxGustKt != null && (row.gustKt ?? Infinity) > criteria.maxGustKt) return false;
-  if (criteria.maxSwellH != null && row.swellH != null && row.swellH > criteria.maxSwellH) return false;
-  if (criteria.maxWindWaveH != null && row.windWaveH != null && row.windWaveH > criteria.maxWindWaveH) return false;
-  if (criteria.maxRainProb != null && row.rainProb != null && row.rainProb > criteria.maxRainProb) return false;
+  if (row.windKt == null || row.windKt > criteria.maxWindKt) return false;
+  if (criteria.maxGustKt != null && (row.gustKt == null || row.gustKt > criteria.maxGustKt)) return false;
+  if (criteria.maxSwellH != null && (row.swellH == null || row.swellH > criteria.maxSwellH)) return false;
+  if (criteria.maxWindWaveH != null && (row.windWaveH == null || row.windWaveH > criteria.maxWindWaveH)) return false;
+  if (criteria.maxRainProb != null && (row.rainProb == null || row.rainProb > criteria.maxRainProb)) return false;
   return true;
 }
 
