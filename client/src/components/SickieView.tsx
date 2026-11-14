@@ -6,7 +6,7 @@ import { hourBucketEnd, localHourKey } from "@shared/forecastTime";
  */
 import { useState, useMemo } from "react";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
-import { rateSL20, fmt, windColor, swellColor } from "@/lib/fishingEngine";
+import { callForRow, fmt, windColor, swellColor } from "@/lib/fishingEngine";
 import {
   meetsCriteria, isDaylight,
   VESSEL_PRESETS, DEFAULT_CRITERIA,
@@ -74,7 +74,7 @@ function flush(
   const peakStars = Math.max(...hours.map(h => h.fishStars));
   const winds = hours.map(h => h.windKt).filter((v): v is number => v != null);
   const swells = hours.map(h => h.swellH).filter((v): v is number => v != null);
-  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH, first.gustKt, first.thunderstorm);
+  const sl = hours.map(hour => callForRow(hour).legacy).reduce((worst, rating) => rating.rank < worst.rank ? rating : worst);
 
   const dl = daylightByDate[first.dateStr];
   const daylightHours = dl
@@ -403,7 +403,7 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
       <div className="overflow-x-auto px-3 py-2 bg-[var(--surface)] scrollbar-hide">
         <div className="flex gap-1 min-w-max">
           {win.hours.map(row => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+            const sl = callForRow(row).legacy;
             return (
               <div key={row.time}
                 className="flex flex-col items-center gap-0.5 bg-yellow-400/10 ring-1 ring-yellow-400/40 rounded px-1.5 py-1 min-w-[44px]">

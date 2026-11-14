@@ -31,6 +31,9 @@ function hour(partial: Partial<HourRow> & Pick<HourRow, "time" | "hour" | "dateS
     shortLabel: "",
     hourLabel: partial.hourLabel ?? `${String(partial.hour).padStart(2, "0")}:00`,
     isDayStart: partial.hour === 0,
+    daylight: partial.daylight ?? true,
+    sunrise: partial.sunrise ?? "06:30",
+    sunset: partial.sunset ?? "18:00",
     temp: 18,
     windKt,
     windDir: 225,
@@ -182,6 +185,21 @@ describe("marine honesty", () => {
             rainProb: 0,
           }, criteria)).toBe(true);
         }
+      });
+
+      describe("worst-hour window label", () => {
+        it("labels a three-hour A1, A1, B3 window Marginal", () => {
+          const dateStr = "2026-08-24";
+          const hours = [
+            hour({ time: `${dateStr}T07:00`, hour: 7, dateStr }),
+            hour({ time: `${dateStr}T08:00`, hour: 8, dateStr }),
+            hour({
+              time: `${dateStr}T09:00`, hour: 9, dateStr,
+              windKt: 15, gustKt: 19, windWaveH: 0.5, swellH: 1, swellP: 11,
+            }),
+          ];
+          expect(buildChronologicalWindows(dataFromHours(hours))[0]?.sl.label).toBe("Marginal");
+        });
       });
 
       it("does not turn a Marginal W3 night hour into a useful window with four stars", () => {

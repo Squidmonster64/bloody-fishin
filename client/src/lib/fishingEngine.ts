@@ -2,6 +2,7 @@ import type { OfficialMarine } from "@shared/officialMarine";
 import { forecastInstant } from "@shared/forecastTime";
 import { precipitationMm } from "@shared/precipitation";
 import {
+  assessHour,
   fishingScore,
   hasMarineForVessel,
   isDaylightHour,
@@ -13,6 +14,8 @@ import {
   moonTransitTimes,
   parseHM,
   rateSL20,
+  type HourCall,
+  type HourInput,
   type FishingOpts,
   type SL20Rating,
 } from "@shared/scoring";
@@ -26,6 +29,7 @@ import {
 import { fetchFishingDataFromBackend } from "@/lib/forecastApi";
 
 export {
+  assessHour,
   fishingScore,
   hasMarineForVessel,
   isDaylightHour,
@@ -38,7 +42,7 @@ export {
   parseHM,
   rateSL20,
 };
-export type { FishingOpts, SL20Rating };
+export type { FishingOpts, HourCall, HourInput, SL20Rating };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,6 +61,9 @@ export interface HourRow {
   shortLabel: string;
   hourLabel: string;
   isDayStart: boolean;
+  daylight: boolean | null;
+  sunrise: string;
+  sunset: string;
   temp: number | null;
   windKt: number | null;
   windDir: number | null;
@@ -84,6 +91,20 @@ export interface TideExtreme {
   height: number;
   hour: number;
   dateStr: string;
+}
+
+export function callForRow(row: HourRow): HourCall {
+  return assessHour({
+    windKt: row.windKt,
+    gustKt: row.gustKt,
+    windDirDeg: row.windDir,
+    swellH: row.swellH,
+    swellP: row.swellP,
+    waveH: row.waveH,
+    windWaveH: row.windWaveH,
+    thunderstorm: row.thunderstorm ?? false,
+    daylight: row.daylight,
+  });
 }
 
 export interface DayData {
@@ -363,6 +384,9 @@ async function fetchFishingDataDirect(loc: Location, days: number, timezone: str
       shortLabel: [0, 6, 12, 18].includes(hour) ? `${dayName} ${String(hour).padStart(2, "0")}` : "",
       hourLabel: `${String(hour).padStart(2, "0")}:00`,
       isDayStart: hour === 0,
+      daylight: null,
+      sunrise: "",
+      sunset: "",
       temp:      (wh.temperature_2m || [])[i] ?? null,
       windKt:    wi === undefined ? null : (windh.wind_speed_10m || [])[wi] ?? null,
       windDir:   wi === undefined ? null : (windh.wind_direction_10m || [])[wi] ?? null,
@@ -405,13 +429,15 @@ async function fetchFishingDataDirect(loc: Location, days: number, timezone: str
     const moonTimes = moonTransitTimes(dayMidday, sunrise, sunset);
 
     rows.forEach(row => {
+      row.sunrise = sunrise;
+      row.sunset = sunset;
+      row.daylight = isDaylightHour(row.hour, sunrise, sunset);
       const f = fishingScore({
         hour: row.hour, seaLevelRate: row.tideRate, sunrise, sunset, moonTimes,
       });
       row.fishScore = f.score;
       row.fishStars = f.stars;
-      const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
-      row.slRank = sl.rank;
+      row.slRank = callForRow(row).legacy.rank;
       row.golden = isGolden({
         windKt: row.windKt,
         gustKt: row.gustKt,

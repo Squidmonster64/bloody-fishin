@@ -108,6 +108,10 @@ describe("briefing windows ignore fishing scores by default", () => {
         start: `${date} 07:00`,
         end: `${date} 10:00`,
       });
+      expect(defaultBrief.upcomingHours[0]).toMatchObject({
+        sl20: "Excellent",
+        call: { state: "inside", reasons: [] },
+      });
 
       const filteredBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", minStars: "4" }));
       expect(filteredBrief.query.criteria.minStars).toBe(4);
@@ -230,6 +234,7 @@ describe("provider failure surfaces", () => {
     expect(brief.marineDataAvailableThrough).toBeNull();
     expect(brief.upcomingHours.map(h => h.daylight)).toEqual([false, true, true]);
     expect(brief.upcomingHours.every(h => h.sl20 === null)).toBe(true);
+    expect(brief.upcomingHours.every(h => h.call.state === "no-call")).toBe(true);
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
     expect(brief.upcomingHours[0]).toHaveProperty("tempC");
     expect(brief.upcomingHours[0]).toHaveProperty("waveM");

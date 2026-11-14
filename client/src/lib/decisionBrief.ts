@@ -7,7 +7,7 @@ import {
   degToCompass,
   fmt,
   hasMarineForVessel,
-  rateSL20,
+  callForRow,
   type AppData,
   type HourRow,
   type SL20Rating,
@@ -137,7 +137,7 @@ function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
   const winds = bucket.map(h => h.windKt).filter((v): v is number => v != null);
   const swells = bucket.map(h => h.swellH).filter((v): v is number => v != null);
   const marineOk = bucket.some(h => hasMarineForVessel(h));
-  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH, first.gustKt, first.thunderstorm);
+  const sl = bucket.map(row => callForRow(row).legacy).reduce((worst, rating) => rating.rank < worst.rank ? rating : worst);
   const peakFish = Math.max(...bucket.map(h => h.fishScore));
   const peakStars = Math.max(...bucket.map(h => h.fishStars));
   const dt = new Date(first.dateStr + "T12:00:00");
@@ -311,9 +311,7 @@ export function buildDecisionBrief(
   const marineMissing = Boolean(data.marineUnavailable) || data.merged.slice(0, 24).every(r => !hasMarineForVessel(r));
   const currentMarineOk = current ? hasMarineForVessel(current) : false;
   // Compute SL20 for diagnostics, but do not present an authoritative vessel call without marine fields.
-  const computedSl = current
-    ? rateSL20(current.windKt, current.swellH, current.swellP, current.waveH, current.windWaveH, current.gustKt, current.thunderstorm)
-    : null;
+  const computedSl = current ? callForRow(current).legacy : null;
   const currentSl = currentMarineOk ? computedSl : null;
   const marineHorizonShort = (data.requestedDays ?? data.daily.length) > 8;
   const futureData = { ...data, merged: data.merged.filter(row => row.time >= localHourKey(data.timezone, when)) };

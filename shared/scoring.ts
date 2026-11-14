@@ -10,6 +10,28 @@ export interface SL20Rating {
   rank: number;
 }
 
+export type CallState = "inside" | "marginal" | "outside" | "no-call";
+export type ReasonCode = "wind" | "gust" | "chop" | "swell" | "short-swell" | "thunderstorm"
+  | "dark" | "warning" | "warning-unchecked" | "missing-data" | "stale";
+
+export interface HourInput {
+  windKt: number | null;
+  gustKt: number | null;
+  windDirDeg: number | null;
+  swellH: number | null;
+  swellP: number | null;
+  waveH: number | null;
+  windWaveH: number | null;
+  thunderstorm: boolean;
+  daylight: boolean | null;
+}
+
+export interface HourCall {
+  state: CallState;
+  legacy: SL20Rating;
+  reasons: ReasonCode[];
+}
+
 /**
  * SL20 boating rating.
  *
@@ -59,6 +81,43 @@ export function rateSL20(
     return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
   }
   return { label: "Go", bg: "rgba(126,184,247,0.2)", fg: "#7eb8f7", rank: 2 };
+}
+
+export function assessHour(input: HourInput): HourCall {
+  const legacy = rateSL20(
+    input.windKt,
+    input.swellH,
+    input.swellP,
+    input.waveH,
+    input.windWaveH,
+    input.gustKt,
+    input.thunderstorm,
+  );
+  const wind = Math.max(0, input.windKt ?? 0);
+  const gust = Math.max(0, input.gustKt ?? 0);
+  const swell = Math.max(0, input.swellH ?? 0);
+  const period = Math.max(1, input.swellP ?? 9);
+  const totalWave = Math.max(0, input.waveH ?? 0);
+  const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
+  const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
+  const windChop = Math.max(0, input.windWaveH ?? inferredWindChop);
+  const reasons: ReasonCode[] = [];
+
+  if (input.thunderstorm) reasons.push("thunderstorm");
+  if (wind >= 15) reasons.push("wind");
+  if (gust >= 21) reasons.push("gust");
+  if (windChop > 1.1) reasons.push("chop");
+  if (period < 10 && swell * periodFactor > 1.35) reasons.push("swell");
+  if (period < 8 && swell > 1.2) reasons.push("short-swell");
+
+  const state = !hasMarineForVessel(input)
+    ? "no-call"
+    : legacy.rank >= 2
+      ? "inside"
+      : legacy.rank === 1
+        ? "marginal"
+        : "outside";
+  return { state, legacy, reasons };
 }
 
 export function isGolden(input: {

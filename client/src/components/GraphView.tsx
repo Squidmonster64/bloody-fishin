@@ -14,7 +14,7 @@ import {
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 import type { AppData } from "@/lib/fishingEngine";
-import { rateSL20, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
+import { callForRow, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
 import type { FishingState } from "@/hooks/useFishingData";
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip, Legend, zoomPlugin);
@@ -321,7 +321,7 @@ export function GraphView({ data, hourlyDay, onDayChange, vis, onToggleVis }: Pr
       <div className="overflow-x-auto px-2 pb-2 scrollbar-hide">
         <div className="flex gap-1 min-w-max pt-2">
           {dayRows.map((row) => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+            const sl = callForRow(row).legacy;
             const isActive = row.time === activeTime;
             return (
               <div key={row.time}

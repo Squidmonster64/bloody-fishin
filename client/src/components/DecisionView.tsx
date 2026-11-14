@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from "react";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
-import { fmt, hasMarineForVessel, rateSL20, windColor, swellColor } from "@/lib/fishingEngine";
+import { callForRow, fmt, hasMarineForVessel, windColor, swellColor } from "@/lib/fishingEngine";
 import {
   buildDecisionBrief,
   formatSwellLine,
@@ -53,7 +53,7 @@ function formatWaterLine(row: HourRow | null, seaLevel: number | null): string {
 
 function hourTone(row: HourRow): "good" | "poor" | "outlook" {
   if (!hasMarineForVessel(row)) return "outlook";
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+  const sl = callForRow(row).legacy;
   if (sl.label === "Avoid" || sl.label === "Marginal") return "poor";
   if (sl.rank >= 2) return "good";
   return "poor";
@@ -191,7 +191,7 @@ export function DecisionView({ data, fetchedAt, cacheSavedAt, onOpenView, onRefr
           <div className="decision-timeline-grid flex gap-1 min-w-max">
             {timeline.map(row => {
               const tone = hourTone(row);
-              const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+              const sl = callForRow(row).legacy;
               return (
                 <div
                   key={row.time}

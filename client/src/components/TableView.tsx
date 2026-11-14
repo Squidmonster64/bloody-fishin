@@ -4,7 +4,7 @@
  */
 import { precipitationTotal } from "@shared/precipitation";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
-import { rateSL20, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
+import { callForRow, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
 
 interface Props { data: AppData; }
 
@@ -13,7 +13,7 @@ function GoldenBadge() {
 }
 
 function Row({ row }: { row: HourRow }) {
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+  const sl = callForRow(row).legacy;
   const dt = new Date(row.time);
   const dayLabel = row.isDayStart
     ? dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })

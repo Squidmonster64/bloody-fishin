@@ -10,12 +10,13 @@ import { precipitationMm, precipitationTotal } from "../shared/precipitation.js"
 import {
   fishingScore,
   hasMarineForVessel,
+  assessHour,
   moonIllumination,
   moonPhaseEmoji,
   moonPhaseName,
   moonTransitTimes,
   isDaylightHour,
-  rateSL20,
+  type HourCall,
   type SL20Rating,
 } from "../shared/scoring.js";
 import {
@@ -32,7 +33,7 @@ type Hour = {
   precipitationMm: number | null; rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
   swellP: number | null; swellDir: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean;
   sunrise: string; sunset: string;
-  fishScore: number; fishStars: number; sl20: SL20Rating; marineDataAvailable: boolean;
+  fishScore: number; fishStars: number; sl20: SL20Rating; call: HourCall; marineDataAvailable: boolean;
 };
 
 type Criteria = {
@@ -267,8 +268,8 @@ async function forecast(location: Location, days: number): Promise<{
         moonTimes,
       });
       const marineDataAvailable = hasMarineForVessel(item);
-      const sl20 = rateSL20(item.windKt, item.swellH, item.swellP, item.waveH, item.windWaveH, item.gustKt, item.thunderstorm);
-      return { ...item, tideRate, daylight, sunrise: sun.sunrise, sunset: sun.sunset, fishScore: solunar.score, fishStars: solunar.stars, sl20, marineDataAvailable } as Hour;
+      const call = assessHour({ ...item, daylight });
+      return { ...item, tideRate, daylight, sunrise: sun.sunrise, sunset: sun.sunset, fishScore: solunar.score, fishStars: solunar.stars, sl20: call.legacy, call, marineDataAvailable } as Hour;
     }),
   };
 }
@@ -290,7 +291,8 @@ export async function buildBrief(request: Request) {
   for (const hour of data.hours) {
     if (officialMarine.days.some(day => day.date === hour.date && day.thunderstorm)) {
       hour.thunderstorm = true;
-      hour.sl20 = rateSL20(hour.windKt, hour.swellH, hour.swellP, hour.waveH, hour.windWaveH, hour.gustKt, true);
+      hour.call = assessHour({ ...hour, thunderstorm: true });
+      hour.sl20 = hour.call.legacy;
     }
   }
   const now = new Date();
@@ -366,6 +368,7 @@ export async function buildBrief(request: Request) {
     tideRate: hour.tideRate,
     fishScore: hour.fishScore,
     fishStars: hour.fishStars,
+    call: { state: hour.call.state, reasons: hour.call.reasons },
     sl20: hour.marineDataAvailable ? hour.sl20.label : null,
     sunrise: hour.sunrise || null,
     sunset: hour.sunset || null,
