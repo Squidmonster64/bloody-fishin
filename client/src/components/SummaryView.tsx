@@ -2,7 +2,7 @@
  * SummaryView — Daily cards each with an hourly fishing % strip.
  */
 import type { AppData, DayData, HourRow } from "@/lib/fishingEngine";
-import { rateSL20, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
+import { callForRow, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
 
 interface Props { data: AppData; }
 
@@ -22,15 +22,18 @@ function range(min: number | null | undefined, max: number | null | undefined, u
 }
 
 function HourCell({ row }: { row: HourRow }) {
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+  const call = callForRow(row);
+  const sl = call.legacy;
+  const noCall = call.state === "no-call";
   return (
     <div className={`daily-hour-cell flex flex-col items-center gap-0.5 rounded px-1 py-1 min-w-[44px] flex-shrink-0
       ${row.golden ? "ring-1 ring-yellow-400 bg-yellow-400/10" : "bg-[var(--surface)]"}`}>
       <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
       <span className="text-[12px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
       <StarRow stars={row.fishStars} />
-      <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
-        {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
+      <span className={`text-[9px] font-bold px-1 rounded ${noCall || call.reasons.includes("dark") ? "text-[var(--text-muted)]" : ""}`}
+        style={noCall || call.reasons.includes("dark") ? undefined : { backgroundColor: sl.bg, color: sl.fg }}>
+        {call.reasons.includes("dark") ? "Night" : noCall ? "—" : sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
       </span>
       {row.windKt != null && (
         <span className="text-[9px]" style={{ color: windColor(row.windKt) }}>{Math.round(row.windKt)}kt {degToCompass(row.windDir)}</span>
@@ -45,7 +48,8 @@ function HourCell({ row }: { row: HourRow }) {
 function DayCard({ day }: { day: DayData }) {
   const dt = new Date(day.date + "T12:00:00");
   const dateLabel = dt.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" });
-  const sl9 = rateSL20(day.morning?.windKt, day.morning?.swellH, day.morning?.swellP, day.morning?.waveH, day.morning?.windWaveH, day.morning?.gustKt, day.morning?.thunderstorm);
+  const morningCall = day.morning ? callForRow(day.morning) : null;
+  const sl9 = morningCall?.legacy ?? null;
 
   return (
     <div className={`daily-card bg-[var(--surface)] border rounded-xl overflow-hidden transition-all duration-200
@@ -71,9 +75,12 @@ function DayCard({ day }: { day: DayData }) {
             <span className="text-[var(--action)] font-bold text-sm" title="Heuristic planning index, not an observed bite probability">{day.peakFish}/100</span>
             <StarRow stars={day.bestFishStars} />
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: sl9.bg, color: sl9.fg }}>
-            {sl9.label}
-          </span>
+          {sl9 && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${morningCall?.state === "no-call" || morningCall?.reasons.includes("dark") ? "text-[var(--text-muted)]" : ""}`}
+              style={morningCall?.state === "no-call" || morningCall?.reasons.includes("dark") ? undefined : { backgroundColor: sl9.bg, color: sl9.fg }}>
+              {morningCall?.reasons.includes("dark") ? "Night" : morningCall?.state === "no-call" ? "—" : sl9.label}
+            </span>
+          )}
           <span className="text-[var(--text-muted)] text-[10px]">24-hour detail</span>
         </div>
       </div>

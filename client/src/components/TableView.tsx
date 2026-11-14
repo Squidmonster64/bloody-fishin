@@ -4,7 +4,7 @@
  */
 import { precipitationTotal } from "@shared/precipitation";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
-import { rateSL20, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
+import { callForRow, windColor, swellColor, degToCompass, fmt } from "@/lib/fishingEngine";
 
 interface Props { data: AppData; }
 
@@ -13,7 +13,9 @@ function GoldenBadge() {
 }
 
 function Row({ row }: { row: HourRow }) {
-  const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+  const call = callForRow(row);
+  const sl = call.legacy;
+  const noCall = call.state === "no-call";
   const dt = new Date(row.time);
   const dayLabel = row.isDayStart
     ? dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })
@@ -37,8 +39,9 @@ function Row({ row }: { row: HourRow }) {
       </td>
       {/* SL20 */}
       <td className="px-2 py-1.5 text-center whitespace-nowrap">
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
-          {sl.label}
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${noCall || call.reasons.includes("dark") ? "text-[var(--text-muted)]" : ""}`}
+          style={noCall || call.reasons.includes("dark") ? undefined : { backgroundColor: sl.bg, color: sl.fg }}>
+          {call.reasons.includes("dark") ? "Night" : noCall ? "—" : sl.label}
         </span>
       </td>
       {/* Wind */}

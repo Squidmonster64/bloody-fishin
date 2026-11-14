@@ -2,6 +2,7 @@ import type { OfficialMarine } from "@shared/officialMarine";
 import { forecastInstant } from "@shared/forecastTime";
 import { fetchWithTimeout, HttpError, validateCoordinates, validateForecastDays } from "@shared/http";
 import { moonIllumination, moonPhaseEmoji, moonPhaseName, moonTransitTimes, type SL20Rating } from "@shared/scoring";
+import type { WindWarning } from "@shared/scoring";
 import { apiUrl } from "@/lib/apiOrigin";
 import type { AppData, DayData, HourRow, Location, TideExtreme } from "@/lib/fishingEngine";
 
@@ -14,6 +15,8 @@ type BriefHour = {
   windDirDeg: number | null;
   gustKt: number | null;
   thunderstorm: boolean;
+  windWarning?: WindWarning;
+  warningsChecked?: boolean;
   rainChance: number | null;
   precipitationMm: number | null;
   waveM?: number | null;
@@ -103,11 +106,16 @@ function rowFromBrief(hour: BriefHour, timezone: string): HourRow {
     shortLabel: [0, 6, 12, 18].includes(hourOfDay) ? `${dateStr} ${String(hourOfDay).padStart(2, "0")}` : "",
     hourLabel: `${String(hourOfDay).padStart(2, "0")}:00`,
     isDayStart: hourOfDay === 0,
+    daylight: hour.daylight,
+    sunrise: hour.sunrise ?? "",
+    sunset: hour.sunset ?? "",
     temp: hour.tempC,
     windKt: hour.windKt,
     windDir: hour.windDirDeg,
     gustKt: hour.gustKt,
     thunderstorm: hour.thunderstorm,
+    windWarning: hour.windWarning ?? "none",
+    warningsChecked: hour.warningsChecked ?? false,
     rainProb: hour.rainChance,
     precipitationMm: hour.precipitationMm,
     waveH: hour.waveM ?? null,

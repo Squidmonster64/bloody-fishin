@@ -6,7 +6,7 @@ import { hourBucketEnd, localHourKey } from "@shared/forecastTime";
  */
 import { useState, useMemo } from "react";
 import type { AppData, HourRow } from "@/lib/fishingEngine";
-import { rateSL20, fmt, windColor, swellColor } from "@/lib/fishingEngine";
+import { callForRow, fmt, windColor, swellColor } from "@/lib/fishingEngine";
 import {
   meetsCriteria, isDaylight,
   VESSEL_PRESETS, DEFAULT_CRITERIA,
@@ -49,7 +49,7 @@ function buildWindows(data: AppData, criteria: SickieCriteria): SickieWindow[] {
       current = [];
     }
     const daylight = daylightByDate[row.dateStr];
-    const daylightPasses = !criteria.daylightOnly || !daylight || isDaylight(row.hour, daylight.sunrise, daylight.sunset);
+    const daylightPasses = !criteria.daylightOnly || Boolean(daylight && isDaylight(row.hour, daylight.sunrise, daylight.sunset));
     if (meetsCriteria(row, criteria) && daylightPasses) {
       current.push(row);
     } else {
@@ -74,7 +74,9 @@ function flush(
   const peakStars = Math.max(...hours.map(h => h.fishStars));
   const winds = hours.map(h => h.windKt).filter((v): v is number => v != null);
   const swells = hours.map(h => h.swellH).filter((v): v is number => v != null);
-  const sl = rateSL20(first.windKt, first.swellH, first.swellP, first.waveH, first.windWaveH, first.gustKt, first.thunderstorm);
+  const sl = hours.map(hour => callForRow(hour).legacy).reduce((worst, rating) => rating.rank < worst.rank ? rating : worst);
+  const hasDarkHour = hours.some(hour => callForRow(hour).reasons.includes("dark"));
+  const hasNoCallHour = hours.some(hour => callForRow(hour).state === "no-call");
 
   const dl = daylightByDate[first.dateStr];
   const daylightHours = dl
@@ -90,7 +92,9 @@ function flush(
     hours, peakFish, peakStars,
     minWind: winds.length ? Math.min(...winds) : null,
     maxSwell: swells.length ? Math.max(...swells) : null,
-    slLabel: sl.label, slBg: sl.bg, slFg: sl.fg,
+    slLabel: hasDarkHour ? "Night" : hasNoCallHour ? "—" : sl.label,
+    slBg: hasDarkHour || hasNoCallHour ? "" : sl.bg,
+    slFg: hasDarkHour || hasNoCallHour ? "var(--text-muted)" : sl.fg,
     hasDaylight, allNight,
   });
 }
@@ -148,7 +152,7 @@ function CriteriaPanel({
     criteria.maxWindWaveH != null ? `chop ≤${criteria.maxWindWaveH}m` : null,
     criteria.maxSwellH != null ? `swell ≤${criteria.maxSwellH}m` : "swell: model",
     criteria.maxRainProb != null ? `rain ≤${criteria.maxRainProb}%` : null,
-    `${criteria.minFishStars}★+ fish`,
+    criteria.minFishStars > 1 ? "with bite-time filter" : null,
     criteria.daylightOnly ? "daylight" : null,
     `${criteria.minWindowHours}hr min`,
   ].filter(Boolean).join(" · ");
@@ -281,7 +285,7 @@ function CriteriaPanel({
               📖 How the algorithm works
             </summary>
             <div className="mt-2 text-[10px] text-[var(--text-muted)] space-y-1 leading-relaxed bg-[var(--app-bg)] rounded p-3 border border-[var(--border)]">
-              <p><strong className="text-[var(--text)]">Boating Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell modifies the rating only when it is uncomfortable or unsafe: wind chop &gt;1.1m, very short-period swell, or steep short swell can downgrade it; clean long-period groundswell is discounted rather than judged from total wave height alone. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
+              <p><strong className="text-[var(--text)]">Boating Rank</strong> — Wind is primary: Go below 15kt, Marginal from 15–20kt, and Avoid above 20kt. Swell over 1.5m is Marginal and over 2.2m is outside limits at any period; short-period swell is judged more harshly. Wind chop &gt;1.1m can also downgrade the rating. Excellent is wind≤10kt, chop≤0.35m and swell&lt;1.0m. Always check official warnings and your vessel limits.</p>
               <p><strong className="text-[var(--text)]">Fishing heuristic index (0–100)</strong> — This planning aid uses approximate moon and sun timing plus model sea-level movement. It is not a measured bite probability. Weather remains separate, so rain or wind cannot quietly alter the index.</p>
               <p><strong className="text-[var(--text)]">Golden Window</strong> — The SL20 default is daylight, wind≤10kt, swell&lt;1.0m, rain chance 0%, fishing≥4★, and at least three consecutive qualifying hours.</p>
               <p><strong className="text-[var(--text)]">Vessel profile</strong> — Each hour must meet your steady wind, optional gust, groundswell, wind-chop, rain, fishing and SL20 limits. Every saved vessel keeps its own criteria.</p>
@@ -385,7 +389,7 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
             <span className="text-[var(--action)] font-bold text-lg">{win.peakFish}/100</span>
             <span className="text-yellow-400 text-sm">{"★".repeat(win.peakStars)}</span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: win.slBg, color: win.slFg }}>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={win.slLabel === "Night" || win.slLabel === "—" ? { color: win.slFg } : { backgroundColor: win.slBg, color: win.slFg }}>
             {win.slLabel}
           </span>
         </div>
@@ -403,15 +407,18 @@ function WindowCard({ win, idx, locationName, timezone }: { win: SickieWindow; i
       <div className="overflow-x-auto px-3 py-2 bg-[var(--surface)] scrollbar-hide">
         <div className="flex gap-1 min-w-max">
           {win.hours.map(row => {
-            const sl = rateSL20(row.windKt, row.swellH, row.swellP, row.waveH, row.windWaveH, row.gustKt, row.thunderstorm);
+            const call = callForRow(row);
+            const sl = call.legacy;
+            const noCall = call.state === "no-call";
             return (
               <div key={row.time}
                 className="flex flex-col items-center gap-0.5 bg-yellow-400/10 ring-1 ring-yellow-400/40 rounded px-1.5 py-1 min-w-[44px]">
                 <span className="text-[9px] text-[var(--text-muted)] font-mono">{row.hourLabel}</span>
                 <span className="text-[11px] font-bold" style={{ color: "#f59e0b" }}>{row.fishScore}/100</span>
                 <span className="text-yellow-400 text-[9px]">{"★".repeat(row.fishStars)}</span>
-                <span className="text-[9px] font-bold px-1 rounded" style={{ backgroundColor: sl.bg, color: sl.fg }}>
-                  {sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
+                <span className={`text-[9px] font-bold px-1 rounded ${noCall || call.reasons.includes("dark") ? "text-[var(--text-muted)]" : ""}`}
+                  style={noCall || call.reasons.includes("dark") ? undefined : { backgroundColor: sl.bg, color: sl.fg }}>
+                  {call.reasons.includes("dark") ? "Night" : noCall ? "—" : sl.label === "Excellent" ? "EXC" : sl.label === "Marginal" ? "MAR" : sl.label}
                 </span>
                 {row.windKt != null && (
                   <span className="text-[9px]" style={{ color: windColor(row.windKt) }}>{Math.round(row.windKt)}kt</span>

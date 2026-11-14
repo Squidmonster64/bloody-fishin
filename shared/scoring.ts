@@ -10,14 +10,55 @@ export interface SL20Rating {
   rank: number;
 }
 
+export type CallState = "inside" | "marginal" | "outside" | "no-call";
+export type ReasonCode = "wind" | "gust" | "chop" | "swell" | "short-swell" | "thunderstorm"
+  | "dark" | "warning" | "warning-unchecked" | "missing-data" | "stale";
+
+export interface HourInput {
+  windKt: number | null;
+  gustKt: number | null;
+  windDirDeg: number | null;
+  swellH: number | null;
+  swellP: number | null;
+  waveH: number | null;
+  windWaveH: number | null;
+  thunderstorm: boolean;
+  daylight: boolean | null;
+}
+
+export interface HourCall {
+  state: CallState;
+  legacy: SL20Rating;
+  reasons: ReasonCode[];
+}
+
+export type WindWarning = "none" | "strong" | "gale" | "storm" | "hurricane";
+export const WARNINGS_UNCHECKED_CAP = "marginal" as const;
+
+const OUTSIDE_RATING: SL20Rating = {
+  label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0,
+};
+const MARGINAL_RATING: SL20Rating = {
+  label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1,
+};
+
+// proposal, pending skipper validation
+const SWELL_LIMITS = {
+  marginalM: 1.5,
+  outsideM: 2.2,
+  shortPeriodS: 8,
+  shortMarginalM: 1.2,
+  shortOutsideM: 2.0,
+} as const;
+
 /**
  * SL20 boating rating.
  *
  * Wind sets the primary band: Go below 15 kt, Marginal from 15–20 kt and
  * Avoid above 20 kt. Gusts >=21 kt are Marginal, >=28 kt are Avoid;
- * thunderstorm risk is Avoid. These are app limits, not official warnings. Swell is a separate period-aware modifier: short-period
- * swell and wind chop can downgrade a rating, while clean long-period swell
- * is treated more gently than total wave height. It is a small-boat planning
+ * thunderstorm risk is Avoid. These are app limits, not official warnings.
+ * Swell over 1.5 m is Marginal and over 2.2 m is outside limits at any period;
+ * short-period swell is judged more harshly. It is a small-boat planning
  * guide, not a substitute for skipper judgement or official marine warnings.
  */
 export function rateSL20(
@@ -36,29 +77,84 @@ export function rateSL20(
   const period = Math.max(1, swellP ?? 9);
   const totalWave = Math.max(0, waveH ?? 0);
 
-  // Long-period groundswell is generally more orderly than short-period chop.
-  // The factor represents the portion of swell height that affects a 20 ft
-  // runabout's ride. Short-period swell gets the full penalty; 13+ sec swell
-  // is discounted to 45%.
-  const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
   // Prefer marine API's wind-wave value. If unavailable, infer chop conservatively
   // from the portion of total wave not accounted for by the primary swell.
   const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
   const windChop = Math.max(0, windWaveH ?? inferredWindChop);
-  const shortPeriodSwell = swell * periodFactor;
 
-  // Wind is the clear primary classification. Severe chop or steep, short swell
-  // can still override a calm wind rating, but clean groundswell alone cannot.
-  if (thunderstorm || gust >= 28 || wind > 20 || windChop > 1.5 || (period < 8 && swell > 2.0)) {
+  // Wind is the clear primary classification. Severe chop and swell can override it.
+  if (thunderstorm || gust >= 28 || wind > 20 || windChop > 1.5 ||
+    (period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortOutsideM) ||
+    swell > SWELL_LIMITS.outsideM) {
     return { label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0 };
   }
-  if (gust >= 21 || wind >= 15 || windChop > 1.1 || (period < 8 && swell > 1.2) || (period < 10 && shortPeriodSwell > 1.35)) {
+  if (gust >= 21 || wind >= 15 || windChop > 1.1 ||
+    (period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortMarginalM) ||
+    swell > SWELL_LIMITS.marginalM) {
     return { label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1 };
   }
   if (gust <= 14 && wind <= 10 && windChop <= 0.35 && swell < 1.0) {
     return { label: "Excellent", bg: "rgba(62,207,142,0.2)", fg: "#3ecf8e", rank: 3 };
   }
   return { label: "Go", bg: "rgba(126,184,247,0.2)", fg: "#7eb8f7", rank: 2 };
+}
+
+export function assessHour(input: HourInput): HourCall {
+  const legacy = rateSL20(
+    input.windKt,
+    input.swellH,
+    input.swellP,
+    input.waveH,
+    input.windWaveH,
+    input.gustKt,
+    input.thunderstorm,
+  );
+  if (input.daylight === null) return { state: "no-call", legacy, reasons: ["missing-data"] };
+  if (input.windKt === null || input.gustKt === null) {
+    return { state: "no-call", legacy, reasons: ["missing-data"] };
+  }
+
+  if (input.daylight === false) return { state: "outside", legacy, reasons: ["dark"] };
+  if (!hasMarineForVessel(input)) return { state: "no-call", legacy, reasons: ["missing-data"] };
+  const wind = Math.max(0, input.windKt);
+  const gust = Math.max(0, input.gustKt);
+  const swell = input.swellH === null ? null : Math.max(0, input.swellH);
+  const period = Math.max(1, input.swellP ?? 9);
+  const totalWave = Math.max(0, input.waveH ?? 0);
+  const inferredWindChop = swell === null ? null : Math.max(0, totalWave - swell * 0.72);
+  const windChop = input.windWaveH === null ? inferredWindChop : Math.max(0, input.windWaveH);
+  const reasons: ReasonCode[] = [];
+
+  if (input.thunderstorm) reasons.push("thunderstorm");
+  if (wind >= 15) reasons.push("wind");
+  if (gust >= 21) reasons.push("gust");
+  if (windChop !== null && windChop > 1.1) reasons.push("chop");
+  if (swell !== null && swell > SWELL_LIMITS.marginalM) reasons.push("swell");
+  if (swell !== null && period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortMarginalM) reasons.push("short-swell");
+
+  if (input.swellH === null && (input.waveH !== null || input.windWaveH !== null)) {
+    reasons.push("missing-data");
+    const state = legacy.rank === 0 ? "outside" : "marginal";
+    return { state, legacy, reasons };
+  }
+  const state = legacy.rank >= 2 ? "inside" : legacy.rank === 1 ? "marginal" : "outside";
+  return { state, legacy, reasons };
+}
+
+export function applyOfficialMarineWarning(
+  call: HourCall,
+  windWarning: WindWarning,
+  warningsChecked: boolean,
+): HourCall {
+  if (windWarning !== "none") {
+    return { state: "outside", legacy: OUTSIDE_RATING, reasons: [...call.reasons, "warning"] };
+  }
+  if (warningsChecked) return call;
+  const capped = {
+    state: call.state === "inside" ? WARNINGS_UNCHECKED_CAP : call.state,
+    legacy: call.legacy.rank > MARGINAL_RATING.rank ? MARGINAL_RATING : call.legacy,
+  };
+  return { ...capped, reasons: [...call.reasons, "warning-unchecked"] };
 }
 
 export function isGolden(input: {

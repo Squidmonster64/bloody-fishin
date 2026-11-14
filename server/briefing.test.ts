@@ -1,11 +1,136 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Request } from "express";
+import { fishingScore, moonTransitTimes } from "../shared/scoring";
 import { validateCoordinates, validateForecastDays } from "../shared/http";
-import { resolveLocation } from "./briefing";
+import { meetsCriteria, VESSEL_PRESETS } from "../client/src/lib/sickieCriteria";
+import { buildBrief, briefMarkdown, eligible, resolveLocation } from "./briefing";
+import { resetOfficialMarineCache } from "./officialMarine";
 import { consumeRateLimit, getCached, resetOpsState, setCached } from "./ops";
 
 function fakeReq(query: Record<string, string>): Request {
   return { query } as unknown as Request;
+}
+
+describe("server and client eligibility for null data", () => {
+  it("matches all combinations of missing wind, gust, swell, chop and rain", () => {
+    const vesselCriteria = VESSEL_PRESETS.sl20.criteria;
+    const serverCriteria = {
+      minRank: vesselCriteria.minSL20Rank,
+      minStars: vesselCriteria.minFishStars,
+      maxWind: vesselCriteria.maxWindKt,
+      maxGust: vesselCriteria.maxGustKt,
+      maxSwell: vesselCriteria.maxSwellH,
+      maxChop: 0.3,
+      maxRain: vesselCriteria.maxRainProb,
+      daylightOnly: false,
+      minHours: vesselCriteria.minWindowHours,
+    };
+    const clientCriteria = { ...vesselCriteria, maxWindWaveH: 0.3 };
+
+    for (const windKt of [null, 8]) for (const gustKt of [null, 11]) {
+      for (const swellH of [null, 0.5]) for (const windWaveH of [null, 0.2]) {
+        for (const rainProb of [null, 0]) {
+          const serverRating = { label: "Go" as const, rank: 2, bg: "", fg: "" };
+          const hour = {
+            time: "2026-08-23T09:00", date: "2026-08-23", hour: 9,
+            windKt, gustKt, windDirDeg: 90, thunderstorm: false,
+            precipitationMm: 0, rainProb, temp: 18, waveH: 0.7, swellH, swellP: 12,
+            swellDir: 180, windWaveH, seaLevel: 0.5, tideRate: 0.1, daylight: true,
+            sunrise: "05:10", sunset: "18:55", fishScore: 50, fishStars: 1,
+            sl20: serverRating, call: { state: "inside" as const, legacy: serverRating, reasons: [] },
+            marineDataAvailable: true,
+          };
+          const clientRow = {
+            windKt, gustKt, swellH, windWaveH, rainProb,
+            slRank: 2, fishStars: 1, thunderstorm: false,
+          };
+          expect(eligible(hour, serverCriteria, "vessel")).toBe(
+            meetsCriteria(clientRow, clientCriteria),
+          );
+        }
+      }
+    }
+  });
+});
+
+function findFutureDate(hours: number[], starsMatch: (stars: number[]) => boolean, tideRate: number, afterDate?: string): string {
+  const sunrise = "05:10";
+  const sunset = "18:55";
+  const start = afterDate ? new Date(`${afterDate}T12:00:00Z`) : new Date();
+  start.setUTCHours(12, 0, 0, 0);
+  for (let offset = 1; offset <= 365; offset++) {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + offset);
+    const moonTimes = moonTransitTimes(date, sunrise, sunset);
+    const stars = hours.map(hour => fishingScore({ hour, seaLevelRate: tideRate, sunrise, sunset, moonTimes }).stars);
+    if (starsMatch(stars)) return date.toISOString().slice(0, 10);
+  }
+  throw new Error("Could not find a future date for the forecast fixture.");
+}
+
+function mockForecastFetch(periods: Array<{ date: string; hours: number[]; seaLevelStart: number; seaLevelStep: number }>) {
+  resetOfficialMarineCache();
+  const rows = periods.flatMap(period => period.hours.map((hour, index) => ({
+    time: `${period.date}T${String(hour).padStart(2, "0")}:00`,
+    seaLevel: period.seaLevelStart + period.seaLevelStep * index,
+  })));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url === "https://www.bom.gov.au/wa/forecasts/perth-waters.shtml") {
+      const issuedAt = new Date(Date.now() - 60_000 + 8 * 60 * 60 * 1000);
+      const hour = issuedAt.getUTCHours();
+      const issueHour = hour % 12 || 12;
+      const minute = String(issuedAt.getUTCMinutes()).padStart(2, "0");
+      const period = hour >= 12 ? "pm" : "am";
+      const weekday = issuedAt.toLocaleString("en-AU", { weekday: "long", timeZone: "UTC" });
+      const month = issuedAt.toLocaleString("en-AU", { month: "long", timeZone: "UTC" });
+      return new Response(`<p>Forecast issued at ${issueHour}:${minute} ${period} WST on ${weekday} ${issuedAt.getUTCDate()} ${month} ${issuedAt.getUTCFullYear()}.</p>
+        <h2>Forecast for ${weekday} until midnight</h2><dl><dt>Winds</dt><dd>Variable below 10 knots.</dd><dt>Weather</dt><dd>Fine.</dd></dl>`);
+    }
+    if (url.includes("marine-api")) {
+      return new Response(JSON.stringify({
+        latitude: -33.5,
+        longitude: 115.4,
+        hourly: {
+          time: rows.map(row => row.time),
+          wave_height: rows.map(() => 0.8),
+          swell_wave_height: rows.map(() => 0.8),
+          swell_wave_period: rows.map(() => 12),
+          swell_wave_direction: rows.map(() => 180),
+          wind_wave_height: rows.map(() => 0.2),
+          sea_level_height_msl: rows.map(row => row.seaLevel),
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (new URL(url).searchParams.get("hourly")?.includes("wind_speed_10m")) {
+      return new Response(JSON.stringify({
+        latitude: -33.5,
+        longitude: 115.4,
+        hourly: {
+          time: rows.map(row => row.time),
+          wind_speed_10m: rows.map(() => 8),
+          wind_direction_10m: rows.map(() => 90),
+          wind_gusts_10m: rows.map(() => 11),
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({
+      latitude: -33.5,
+      longitude: 115.4,
+      timezone: "Australia/Perth",
+      hourly: {
+        time: rows.map(row => row.time),
+        temperature_2m: rows.map(() => 20),
+        precipitation_probability: rows.map(() => 0),
+        precipitation: rows.map(() => 0),
+        weather_code: rows.map(() => 0),
+      },
+      daily: {
+        time: [...new Set(periods.map(period => period.date))],
+        sunrise: [...new Set(periods.map(period => period.date))].map(date => `${date}T05:10`),
+        sunset: [...new Set(periods.map(period => period.date))].map(date => `${date}T18:55`),
+      },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }));
 }
 
 describe("briefing input validation", () => {
@@ -23,6 +148,106 @@ describe("briefing input validation", () => {
     expect(validateForecastDays(0)).toMatch(/Forecast days/);
     expect(validateForecastDays(15)).toMatch(/Forecast days/);
     expect(validateCoordinates(-32.06, 115.65)).toBeNull();
+  });
+});
+
+describe("briefing windows ignore fishing scores by default", () => {
+  it("caps uncovered calls and states that BOM warnings were not checked", async () => {
+    const hours = [9];
+    const date = findFutureDate(hours, () => true, 0);
+    mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
+    try {
+      const brief = await buildBrief(fakeReq({ lat: "4.17", lon: "73.51", days: "3" }));
+      expect(brief.officialMarine).toMatchObject({ status: "outside-coverage", warningsChecked: false, zones: [] });
+      expect(brief.upcomingHours[0].call).toMatchObject({
+        state: "marginal",
+        reasons: ["warning-unchecked"],
+      });
+      expect(briefMarkdown(brief)).toContain("Warnings not checked. Open the BOM forecast.");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("returns W1 at two stars by default and keeps minStars as an explicit bite-time filter", async () => {
+    const hours = [7, 8, 9];
+    const date = findFutureDate(hours, stars => stars.every(star => star === 2), 0);
+    mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
+    try {
+      const defaultBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3" }));
+      expect(defaultBrief.query.criteria.minStars).toBe(1);
+      expect(defaultBrief.nextWindows).toHaveLength(1);
+      expect(defaultBrief.nextWindows[0]).toMatchObject({
+        start: `${date} 07:00`,
+        end: `${date} 10:00`,
+      });
+      expect(defaultBrief.upcomingHours[0]).toMatchObject({
+        sl20: "Excellent",
+        call: { state: "inside", reasons: [] },
+      });
+      expect(defaultBrief.officialMarine).toMatchObject({
+        status: "available",
+        warningsChecked: true,
+        zones: [{ area: "Perth Local Waters", status: "available" }],
+      });
+      expect(defaultBrief.upcomingHours[0]).toMatchObject({ windWarning: "none", warningsChecked: true });
+      expect(briefMarkdown(defaultBrief)).toContain("Warnings checked.");
+
+      const filteredBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3", minStars: "4" }));
+      expect(filteredBrief.query.criteria.minStars).toBe(4);
+      expect(filteredBrief.nextWindows).toHaveLength(0);
+      expect(briefMarkdown(filteredBrief)).toContain("with bite-time filter");
+
+      const windFilteredBrief = await buildBrief(fakeReq({
+        lat: "-32.06", lon: "115.65", days: "3", mode: "wind", minStars: "4",
+      }));
+      expect(windFilteredBrief.nextWindows).toHaveLength(0);
+      expect(briefMarkdown(windFilteredBrief)).toContain("with bite-time filter");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("ranks W9's longer, earlier two-star window above the shorter five-star window", async () => {
+    const longerHours = [6, 7, 8, 9, 10, 11];
+    const longerDate = findFutureDate(longerHours, stars => stars.every(star => star === 2), 0);
+    const shorterHours = [7, 8, 9];
+    const shorterDate = findFutureDate(shorterHours, stars => stars.includes(5), 0.25, longerDate);
+    mockForecastFetch([
+      { date: longerDate, hours: longerHours, seaLevelStart: 0.5, seaLevelStep: 0 },
+      { date: shorterDate, hours: shorterHours, seaLevelStart: 0.5, seaLevelStep: 0.25 },
+    ]);
+    try {
+      const brief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "5" }));
+      expect(brief.bestUpcoming?.start).toBe(`${longerDate} 06:00`);
+      expect(brief.bestUpcoming?.durationHours).toBe(6);
+      expect(brief.bestUpcoming?.bestFishStars).toBe(2);
+      expect(brief.nextWindows.some(window => window.bestFishStars === 5)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("daylight requirements for machine windows", () => {
+  it("excludes W7 night windows by default in mode=wind and includes them with daylight=0", async () => {
+    const hours = [1, 2, 3, 4];
+    const date = findFutureDate(hours, stars => stars.length === hours.length, 0);
+    mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
+    try {
+      const defaultBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", mode: "wind" }));
+      expect(defaultBrief.query.criteria.daylightOnly).toBe(true);
+      expect(defaultBrief.nextWindows).toHaveLength(0);
+      expect(defaultBrief.upcomingHours.every(hour => hour.call.state === "outside" && hour.call.reasons.includes("dark"))).toBe(true);
+      expect(defaultBrief.upcomingHours.every(hour => hour.sl20 === null)).toBe(true);
+      expect(briefMarkdown(defaultBrief)).toContain("| Night |");
+
+      const optedOut = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", mode: "wind", daylight: "0" }));
+      expect(optedOut.query.criteria.daylightOnly).toBe(false);
+      expect(optedOut.nextWindows).toHaveLength(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
@@ -117,6 +342,7 @@ describe("provider failure surfaces", () => {
     expect(brief.marineDataAvailableThrough).toBeNull();
     expect(brief.upcomingHours.map(h => h.daylight)).toEqual([false, true, true]);
     expect(brief.upcomingHours.every(h => h.sl20 === null)).toBe(true);
+    expect(brief.upcomingHours.map(h => h.call.state)).toEqual(["outside", "no-call", "no-call"]);
     expect(brief.upcomingHours[0].fishScore).toBeGreaterThan(0);
     expect(brief.upcomingHours[0]).toHaveProperty("tempC");
     expect(brief.upcomingHours[0]).toHaveProperty("waveM");
