@@ -32,14 +32,23 @@ export interface HourCall {
   reasons: ReasonCode[];
 }
 
+// proposal, pending skipper validation
+const SWELL_LIMITS = {
+  marginalM: 1.5,
+  outsideM: 2.2,
+  shortPeriodS: 8,
+  shortMarginalM: 1.2,
+  shortOutsideM: 2.0,
+} as const;
+
 /**
  * SL20 boating rating.
  *
  * Wind sets the primary band: Go below 15 kt, Marginal from 15–20 kt and
  * Avoid above 20 kt. Gusts >=21 kt are Marginal, >=28 kt are Avoid;
- * thunderstorm risk is Avoid. These are app limits, not official warnings. Swell is a separate period-aware modifier: short-period
- * swell and wind chop can downgrade a rating, while clean long-period swell
- * is treated more gently than total wave height. It is a small-boat planning
+ * thunderstorm risk is Avoid. These are app limits, not official warnings.
+ * Swell over 1.5 m is Marginal and over 2.2 m is outside limits at any period;
+ * short-period swell is judged more harshly. It is a small-boat planning
  * guide, not a substitute for skipper judgement or official marine warnings.
  */
 export function rateSL20(
@@ -58,23 +67,20 @@ export function rateSL20(
   const period = Math.max(1, swellP ?? 9);
   const totalWave = Math.max(0, waveH ?? 0);
 
-  // Long-period groundswell is generally more orderly than short-period chop.
-  // The factor represents the portion of swell height that affects a 20 ft
-  // runabout's ride. Short-period swell gets the full penalty; 13+ sec swell
-  // is discounted to 45%.
-  const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
   // Prefer marine API's wind-wave value. If unavailable, infer chop conservatively
   // from the portion of total wave not accounted for by the primary swell.
   const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
   const windChop = Math.max(0, windWaveH ?? inferredWindChop);
-  const shortPeriodSwell = swell * periodFactor;
 
-  // Wind is the clear primary classification. Severe chop or steep, short swell
-  // can still override a calm wind rating, but clean groundswell alone cannot.
-  if (thunderstorm || gust >= 28 || wind > 20 || windChop > 1.5 || (period < 8 && swell > 2.0)) {
+  // Wind is the clear primary classification. Severe chop and swell can override it.
+  if (thunderstorm || gust >= 28 || wind > 20 || windChop > 1.5 ||
+    (period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortOutsideM) ||
+    swell > SWELL_LIMITS.outsideM) {
     return { label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0 };
   }
-  if (gust >= 21 || wind >= 15 || windChop > 1.1 || (period < 8 && swell > 1.2) || (period < 10 && shortPeriodSwell > 1.35)) {
+  if (gust >= 21 || wind >= 15 || windChop > 1.1 ||
+    (period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortMarginalM) ||
+    swell > SWELL_LIMITS.marginalM) {
     return { label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1 };
   }
   if (gust <= 14 && wind <= 10 && windChop <= 0.35 && swell < 1.0) {
@@ -100,7 +106,6 @@ export function assessHour(input: HourInput): HourCall {
   const swell = Math.max(0, input.swellH ?? 0);
   const period = Math.max(1, input.swellP ?? 9);
   const totalWave = Math.max(0, input.waveH ?? 0);
-  const periodFactor = period >= 14 ? 0.35 : period >= 12 ? 0.45 : period >= 10 ? 0.60 : period >= 8 ? 0.80 : 1.0;
   const inferredWindChop = Math.max(0, totalWave - swell * 0.72);
   const windChop = Math.max(0, input.windWaveH ?? inferredWindChop);
   const reasons: ReasonCode[] = [];
@@ -109,8 +114,8 @@ export function assessHour(input: HourInput): HourCall {
   if (wind >= 15) reasons.push("wind");
   if (gust >= 21) reasons.push("gust");
   if (windChop > 1.1) reasons.push("chop");
-  if (period < 10 && swell * periodFactor > 1.35) reasons.push("swell");
-  if (period < 8 && swell > 1.2) reasons.push("short-swell");
+  if (swell > SWELL_LIMITS.marginalM) reasons.push("swell");
+  if (period < SWELL_LIMITS.shortPeriodS && swell > SWELL_LIMITS.shortMarginalM) reasons.push("short-swell");
 
   const state = !hasMarineForVessel(input)
     ? "no-call"

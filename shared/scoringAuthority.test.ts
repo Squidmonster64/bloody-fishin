@@ -101,6 +101,40 @@ describe("scoring authority — client re-export parity", () => {
         reasons: ["missing-data"],
       });
     });
+
+    it("applies swell-height limits at every period and preserves the harsher short-period rules", () => {
+      const assess = (swellH: number, swellP: number | null, windKt = 10, gustKt = 13, windWaveH = 0.3) =>
+        assessHour({
+          windKt, gustKt, windDirDeg: 225, swellH, swellP,
+          waveH: swellH + windWaveH, windWaveH, thunderstorm: false, daylight: true,
+        });
+
+      const a4 = assess(4, 14);
+      expect(a4.state).toBe("outside");
+      expect(a4.reasons).toContain("swell");
+      const a5 = assess(1.8, 13);
+      expect(a5.state).toBe("marginal");
+      expect(a5.reasons).toContain("swell");
+      const a6 = assess(1.6, 9);
+      expect(a6.state).toBe("marginal");
+      expect(a6.reasons).toContain("swell");
+      expect(assess(1.4, 12, 8, 11, 0.2).state).toBe("inside");
+      expect(assess(1.5, 12, 8, 11, 0.2).state).toBe("inside");
+      expect(assess(1.51, 12, 8, 11, 0.2).state).toBe("marginal");
+      expect(assess(2.2, 12, 8, 11, 0.2).state).toBe("marginal");
+      expect(assess(2.21, 12, 8, 11, 0.2).state).toBe("outside");
+      const a8 = assess(1.3, 7);
+      expect(a8.state).toBe("marginal");
+      expect(a8.reasons).toContain("short-swell");
+      const a9 = assess(2.1, 7, 8, 11, 0.2);
+      expect(a9.state).toBe("outside");
+      expect(a9.reasons).toContain("short-swell");
+      expect(assess(1.8, null, 8, 11, 0.2).state).toBe("marginal");
+
+      for (const period of [null, 7, 8, 9, 10, 12, 14]) {
+        expect(assess(2.21, period, 8, 11, 0.2).state).toBe("outside");
+      }
+    });
   });
 
   describe("rating entry point guard", () => {
