@@ -40,31 +40,31 @@ export const VESSEL_PRESETS: Record<VesselPreset, { label: string; emoji: string
     label: "Tinnie / Dinghy",
     emoji: "🛶",
     description: "Small open boat — calm conditions only",
-    criteria: { minSL20Rank: 2, minFishStars: 3, maxWindKt: 12, maxGustKt: 17, maxSwellH: 0.5, maxWindWaveH: 0.3, maxRainProb: 50, daylightOnly: true, minWindowHours: 3 },
+    criteria: { minSL20Rank: 2, minFishStars: 1, maxWindKt: 12, maxGustKt: 17, maxSwellH: 0.5, maxWindWaveH: 0.3, maxRainProb: 50, daylightOnly: true, minWindowHours: 3 },
   },
   sl20: {
     label: "SL20 / Half-cabin",
     emoji: "⛵",
-    description: "Golden default — daylight, ≤10 kt wind, ≤14 kt gusts, <1.0 m swell, no rain, 4★+ fishing",
-    criteria: { minSL20Rank: 2, minFishStars: 4, maxWindKt: 10, maxGustKt: 14, maxSwellH: 0.99, maxWindWaveH: null, maxRainProb: 0, daylightOnly: true, minWindowHours: 3 },
+    description: "Golden default — daylight, ≤10 kt wind, ≤14 kt gusts, <1.0 m swell, no rain",
+    criteria: { minSL20Rank: 2, minFishStars: 1, maxWindKt: 10, maxGustKt: 14, maxSwellH: 0.99, maxWindWaveH: null, maxRainProb: 0, daylightOnly: true, minWindowHours: 3 },
   },
   offshore: {
     label: "Offshore Cruiser",
     emoji: "🚢",
     description: "Large vessel — can handle rougher conditions",
-    criteria: { minSL20Rank: 1, minFishStars: 3, maxWindKt: 22, maxGustKt: 30, maxSwellH: 2.0, maxWindWaveH: 1.0, maxRainProb: 85, daylightOnly: false, minWindowHours: 3 },
+    criteria: { minSL20Rank: 1, minFishStars: 1, maxWindKt: 22, maxGustKt: 30, maxSwellH: 2.0, maxWindWaveH: 1.0, maxRainProb: 85, daylightOnly: false, minWindowHours: 3 },
   },
   kayak: {
     label: "Kayak / SUP",
     emoji: "🏄",
     description: "Human-powered — needs near-flat conditions",
-    criteria: { minSL20Rank: 3, minFishStars: 3, maxWindKt: 8, maxGustKt: 12, maxSwellH: 0.3, maxWindWaveH: 0.2, maxRainProb: 40, daylightOnly: true, minWindowHours: 3 },
+    criteria: { minSL20Rank: 3, minFishStars: 1, maxWindKt: 8, maxGustKt: 12, maxSwellH: 0.3, maxWindWaveH: 0.2, maxRainProb: 40, daylightOnly: true, minWindowHours: 3 },
   },
   custom: {
     label: "Custom",
     emoji: "⚙️",
     description: "Set your own thresholds",
-    criteria: { minSL20Rank: 2, minFishStars: 4, maxWindKt: 15, maxGustKt: 22, maxSwellH: 1.0, maxWindWaveH: 0.65, maxRainProb: 70, daylightOnly: true, minWindowHours: 3 },
+    criteria: { minSL20Rank: 2, minFishStars: 1, maxWindKt: 15, maxGustKt: 22, maxSwellH: 1.0, maxWindWaveH: 0.65, maxRainProb: 70, daylightOnly: true, minWindowHours: 3 },
   },
 };
 

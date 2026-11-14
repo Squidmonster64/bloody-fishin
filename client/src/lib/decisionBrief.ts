@@ -127,13 +127,7 @@ function nextTideAfter(data: AppData, current: HourRow | null): TideExtreme | nu
 }
 
 function isUsefulHour(row: HourRow): boolean {
-  // Useful planning hour: daylight-friendly boat rating or strong fishing signal.
-  // Vessel usefulness requires marine fields; fishing-only usefulness can still count.
-  if (row.thunderstorm) return false;
-  const marineOk = hasMarineForVessel(row);
-  if (marineOk && row.slRank >= 2) return true;
-  if (row.fishStars >= 4 && (!marineOk || row.slRank >= 1)) return true;
-  return false;
+  return !row.thunderstorm && hasMarineForVessel(row) && row.slRank >= 2;
 }
 
 function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
@@ -150,8 +144,6 @@ function windowFromBucket(bucket: HourRow[]): DecisionWindow | null {
   const dateLabel = dt.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
   const drivers: string[] = [];
   if (marineOk && sl.rank >= 2) drivers.push(`${sl.label} boat rating`);
-  else if (!marineOk) drivers.push("fishing outlook (marine incomplete)");
-  if (peakStars >= 4) drivers.push(`${peakStars}★ fishing`);
   if (winds.length && Math.max(...winds) <= 12) drivers.push("lighter wind");
   return {
     date: first.dateStr,
@@ -192,9 +184,8 @@ export function buildChronologicalWindows(data: AppData): DecisionWindow[] {
 export function buildBestWindows(data: AppData, limit = 4): DecisionWindow[] {
   return buildChronologicalWindows(data)
     .sort((a, b) => {
-      const score = (w: DecisionWindow) =>
-        (w.vesselAssessment ? w.sl.rank * 20 : 0) + w.peakStars * 8 + Math.min(w.hours, 6);
-      return score(b) - score(a) || a.date.localeCompare(b.date) || a.startHour.localeCompare(b.startHour);
+      const vesselRank = (w: DecisionWindow) => w.vesselAssessment ? w.sl.rank : 0;
+      return vesselRank(b) - vesselRank(a) || b.hours - a.hours || a.date.localeCompare(b.date) || a.startHour.localeCompare(b.startHour);
     })
     .slice(0, limit);
 }
@@ -292,7 +283,6 @@ function buildRisks(row: HourRow | null, sl: SL20Rating | null, conditions: Cond
   if (conditions.gustKt != null && conditions.gustKt >= 25) risks.push(`Gusts near ${Math.round(conditions.gustKt)} kt — ramp and open-water risk.`);
   if (conditions.swellH != null && conditions.swellH >= 1.5) risks.push(`Swell ${fmt(conditions.swellH)} m — bar and beam-sea risk.`);
   if (conditions.rainProb != null && conditions.rainProb >= 70) risks.push("High rain probability — reduced visibility and comfort.");
-  if (row && row.fishStars <= 2 && (sl?.rank ?? 0) >= 2) risks.push("Boatable, but fishing score is soft — do not expect a hot bite.");
   return risks;
 }
 

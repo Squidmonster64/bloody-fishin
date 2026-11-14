@@ -68,10 +68,10 @@ function attachProviderKey(url: URL) {
 }
 
 const VESSELS: Record<string, Criteria> = {
-  tinnie: { minRank: 2, minStars: 3, maxWind: 12, maxGust: 17, maxSwell: 0.5, maxChop: 0.3, maxRain: 50, daylightOnly: true, minHours: 3 },
-  sl20: { minRank: 2, minStars: 4, maxWind: 10, maxGust: 14, maxSwell: 0.99, maxChop: null, maxRain: 0, daylightOnly: true, minHours: 3 },
-  offshore: { minRank: 1, minStars: 3, maxWind: 22, maxGust: 30, maxSwell: 2, maxChop: 1, maxRain: 85, daylightOnly: false, minHours: 3 },
-  kayak: { minRank: 3, minStars: 3, maxWind: 8, maxGust: 12, maxSwell: 0.3, maxChop: 0.2, maxRain: 40, daylightOnly: true, minHours: 3 },
+  tinnie: { minRank: 2, minStars: 1, maxWind: 12, maxGust: 17, maxSwell: 0.5, maxChop: 0.3, maxRain: 50, daylightOnly: true, minHours: 3 },
+  sl20: { minRank: 2, minStars: 1, maxWind: 10, maxGust: 14, maxSwell: 0.99, maxChop: null, maxRain: 0, daylightOnly: true, minHours: 3 },
+  offshore: { minRank: 1, minStars: 1, maxWind: 22, maxGust: 30, maxSwell: 2, maxChop: 1, maxRain: 85, daylightOnly: false, minHours: 3 },
+  kayak: { minRank: 3, minStars: 1, maxWind: 8, maxGust: 12, maxSwell: 0.3, maxChop: 0.2, maxRain: 40, daylightOnly: true, minHours: 3 },
 };
 
 const numberParam = (value: unknown, fallback: number, min: number, max: number) => {
@@ -344,7 +344,7 @@ export async function buildBrief(request: Request) {
   const marineDataWarning = days > 8 ? "Days 9–14 include weather, sun/moon/tide fishing scores and fishing stars, but no swell, chop, tide-height or SL20 vessel assessment. Do not use them for boating or Sickie decisions." : null;
   const nextUsable = windows[0] ?? null;
   const bestUpcoming = windows.length
-    ? [...windows].sort((a, b) => b.bestFishScore - a.bestFishScore || b.durationHours - a.durationHours)[0]
+    ? [...windows].sort((a, b) => b.durationHours - a.durationHours || a.start.localeCompare(b.start))[0]
     : null;
   const serializeHour = (hour: Hour) => ({
     time: formatHour(hour.time),
@@ -401,7 +401,9 @@ export async function buildBrief(request: Request) {
 }
 
 export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
-  const filter = brief.query.mode === "wind" ? `wind ≤ ${brief.query.criteria.maxWind} kt` : `${brief.query.vessel.toUpperCase()} vessel criteria`;
+  const filter = brief.query.mode === "wind"
+    ? `wind ≤ ${brief.query.criteria.maxWind} kt`
+    : `${brief.query.vessel.toUpperCase()} vessel criteria${brief.query.criteria.minStars > 1 ? " with bite-time filter" : ""}`;
   const lines = [
     "# Bloody Dave's Fishing Planner — Public Forecast Brief",
     "",

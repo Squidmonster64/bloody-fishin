@@ -148,7 +148,7 @@ function CriteriaPanel({
     criteria.maxWindWaveH != null ? `chop ≤${criteria.maxWindWaveH}m` : null,
     criteria.maxSwellH != null ? `swell ≤${criteria.maxSwellH}m` : "swell: model",
     criteria.maxRainProb != null ? `rain ≤${criteria.maxRainProb}%` : null,
-    `${criteria.minFishStars}★+ fish`,
+    criteria.minFishStars > 1 ? "with bite-time filter" : null,
     criteria.daylightOnly ? "daylight" : null,
     `${criteria.minWindowHours}hr min`,
   ].filter(Boolean).join(" · ");

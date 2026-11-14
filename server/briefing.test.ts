@@ -1,11 +1,80 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Request } from "express";
+import { fishingScore, moonTransitTimes } from "../shared/scoring";
 import { validateCoordinates, validateForecastDays } from "../shared/http";
-import { resolveLocation } from "./briefing";
+import { buildBrief, briefMarkdown, resolveLocation } from "./briefing";
 import { consumeRateLimit, getCached, resetOpsState, setCached } from "./ops";
 
 function fakeReq(query: Record<string, string>): Request {
   return { query } as unknown as Request;
+}
+
+function findFutureDate(hours: number[], starsMatch: (stars: number[]) => boolean, tideRate: number, afterDate?: string): string {
+  const sunrise = "05:10";
+  const sunset = "18:55";
+  const start = afterDate ? new Date(`${afterDate}T12:00:00Z`) : new Date();
+  start.setUTCHours(12, 0, 0, 0);
+  for (let offset = 1; offset <= 365; offset++) {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + offset);
+    const moonTimes = moonTransitTimes(date, sunrise, sunset);
+    const stars = hours.map(hour => fishingScore({ hour, seaLevelRate: tideRate, sunrise, sunset, moonTimes }).stars);
+    if (starsMatch(stars)) return date.toISOString().slice(0, 10);
+  }
+  throw new Error("Could not find a future date for the forecast fixture.");
+}
+
+function mockForecastFetch(periods: Array<{ date: string; hours: number[]; seaLevelStart: number; seaLevelStep: number }>) {
+  const rows = periods.flatMap(period => period.hours.map((hour, index) => ({
+    time: `${period.date}T${String(hour).padStart(2, "0")}:00`,
+    seaLevel: period.seaLevelStart + period.seaLevelStep * index,
+  })));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url.includes("marine-api")) {
+      return new Response(JSON.stringify({
+        latitude: -33.5,
+        longitude: 115.4,
+        hourly: {
+          time: rows.map(row => row.time),
+          wave_height: rows.map(() => 0.8),
+          swell_wave_height: rows.map(() => 0.8),
+          swell_wave_period: rows.map(() => 12),
+          swell_wave_direction: rows.map(() => 180),
+          wind_wave_height: rows.map(() => 0.2),
+          sea_level_height_msl: rows.map(row => row.seaLevel),
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (new URL(url).searchParams.get("hourly")?.includes("wind_speed_10m")) {
+      return new Response(JSON.stringify({
+        latitude: -33.5,
+        longitude: 115.4,
+        hourly: {
+          time: rows.map(row => row.time),
+          wind_speed_10m: rows.map(() => 8),
+          wind_direction_10m: rows.map(() => 90),
+          wind_gusts_10m: rows.map(() => 11),
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({
+      latitude: -33.5,
+      longitude: 115.4,
+      timezone: "Australia/Perth",
+      hourly: {
+        time: rows.map(row => row.time),
+        temperature_2m: rows.map(() => 20),
+        precipitation_probability: rows.map(() => 0),
+        precipitation: rows.map(() => 0),
+        weather_code: rows.map(() => 0),
+      },
+      daily: {
+        time: [...new Set(periods.map(period => period.date))],
+        sunrise: [...new Set(periods.map(period => period.date))].map(date => `${date}T05:10`),
+        sunset: [...new Set(periods.map(period => period.date))].map(date => `${date}T18:55`),
+      },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }));
 }
 
 describe("briefing input validation", () => {
@@ -23,6 +92,50 @@ describe("briefing input validation", () => {
     expect(validateForecastDays(0)).toMatch(/Forecast days/);
     expect(validateForecastDays(15)).toMatch(/Forecast days/);
     expect(validateCoordinates(-32.06, 115.65)).toBeNull();
+  });
+});
+
+describe("briefing windows ignore fishing scores by default", () => {
+  it("returns W1 at two stars by default and keeps minStars as an explicit bite-time filter", async () => {
+    const hours = [7, 8, 9];
+    const date = findFutureDate(hours, stars => stars.every(star => star === 2), 0);
+    mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
+    try {
+      const defaultBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3" }));
+      expect(defaultBrief.query.criteria.minStars).toBe(1);
+      expect(defaultBrief.nextWindows).toHaveLength(1);
+      expect(defaultBrief.nextWindows[0]).toMatchObject({
+        start: `${date} 07:00`,
+        end: `${date} 10:00`,
+      });
+
+      const filteredBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", minStars: "4" }));
+      expect(filteredBrief.query.criteria.minStars).toBe(4);
+      expect(filteredBrief.nextWindows).toHaveLength(0);
+      expect(briefMarkdown(filteredBrief)).toContain("with bite-time filter");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("ranks W9's longer, earlier two-star window above the shorter five-star window", async () => {
+    const longerHours = [6, 7, 8, 9, 10, 11];
+    const longerDate = findFutureDate(longerHours, stars => stars.every(star => star === 2), 0);
+    const shorterHours = [7, 8, 9];
+    const shorterDate = findFutureDate(shorterHours, stars => stars.includes(5), 0.25, longerDate);
+    mockForecastFetch([
+      { date: longerDate, hours: longerHours, seaLevelStart: 0.5, seaLevelStep: 0 },
+      { date: shorterDate, hours: shorterHours, seaLevelStart: 0.5, seaLevelStep: 0.25 },
+    ]);
+    try {
+      const brief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "5" }));
+      expect(brief.bestUpcoming?.start).toBe(`${longerDate} 06:00`);
+      expect(brief.bestUpcoming?.durationHours).toBe(6);
+      expect(brief.bestUpcoming?.bestFishStars).toBe(2);
+      expect(brief.nextWindows.some(window => window.bestFishStars === 5)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

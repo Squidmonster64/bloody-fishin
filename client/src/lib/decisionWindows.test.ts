@@ -7,6 +7,7 @@ import {
   findNextUsefulWindow,
   freshnessFromFetchedAt,
 } from "@/lib/decisionBrief";
+import { meetsCriteria, VESSEL_PRESETS } from "@/lib/sickieCriteria";
 import { rateSL20, fishingScore, moonTransitTimes } from "@shared/scoring";
 
 function hour(partial: Partial<HourRow> & Pick<HourRow, "time" | "hour" | "dateStr">): HourRow {
@@ -164,6 +165,75 @@ describe("marine honesty", () => {
       fishStars: 4,
       fishScore: 75,
       slRank: 3,
+    });
+
+    describe("bite-time independent boating windows", () => {
+      it("accepts every W1 hour with two fishing stars on the default sl20 criteria", () => {
+        const criteria = VESSEL_PRESETS.sl20.criteria;
+        for (const h of [7, 8, 9]) {
+          expect(meetsCriteria({
+            slRank: 2,
+            fishStars: 2,
+            windKt: 8,
+            gustKt: 11,
+            thunderstorm: false,
+            swellH: 0.8,
+            windWaveH: 0.2,
+            rainProb: 0,
+          }, criteria)).toBe(true);
+        }
+      });
+
+      it("does not turn a Marginal W3 night hour into a useful window with four stars", () => {
+        const dateStr = "2026-08-24";
+        const data = dataFromHours([4, 5].map(hourOfDay => hour({
+          time: `${dateStr}T${String(hourOfDay).padStart(2, "0")}:00`,
+          hour: hourOfDay,
+          dateStr,
+          windKt: 18,
+          gustKt: 23,
+          fishStars: 4,
+          slRank: 1,
+        })));
+        expect(buildChronologicalWindows(data)).toEqual([]);
+      });
+
+      it("does not treat a four-star hour without marine data as useful", () => {
+        const dateStr = "2026-08-24";
+        const data = dataFromHours([7, 8].map(hourOfDay => hour({
+          time: `${dateStr}T${String(hourOfDay).padStart(2, "0")}:00`,
+          hour: hourOfDay,
+          dateStr,
+          swellH: null,
+          waveH: null,
+          windWaveH: null,
+          fishStars: 5,
+          slRank: 3,
+        })));
+        expect(buildChronologicalWindows(data)).toEqual([]);
+      });
+
+      it("ranks a longer two-star tomorrow window above a shorter five-star later window", () => {
+        const tomorrow = "2026-08-24";
+        const later = "2026-08-26";
+        const hours = [
+          ...[6, 7, 8, 9, 10, 11].map(hourOfDay => hour({
+            time: `${tomorrow}T${String(hourOfDay).padStart(2, "0")}:00`,
+            hour: hourOfDay,
+            dateStr: tomorrow,
+            fishStars: 2,
+            slRank: 2,
+          })),
+          ...[7, 8, 9].map(hourOfDay => hour({
+            time: `${later}T${String(hourOfDay).padStart(2, "0")}:00`,
+            hour: hourOfDay,
+            dateStr: later,
+            fishStars: 5,
+            slRank: 2,
+          })),
+        ];
+        expect(buildBestWindows(dataFromHours(hours))[0]?.date).toBe(tomorrow);
+      });
     });
     const data = dataFromHours([row], { marineUnavailable: true, marineThrough: null });
     const brief = buildDecisionBrief(data, { when: new Date("2026-08-23T01:10:00Z") });
