@@ -32,6 +32,8 @@ function hour(partial: Partial<HourRow> & Pick<HourRow, "time" | "hour" | "dateS
     hourLabel: partial.hourLabel ?? `${String(partial.hour).padStart(2, "0")}:00`,
     isDayStart: partial.hour === 0,
     daylight: partial.daylight ?? true,
+    windWarning: partial.windWarning ?? "none",
+    warningsChecked: partial.warningsChecked ?? true,
     sunrise: partial.sunrise ?? "06:30",
     sunset: partial.sunset ?? "18:00",
     temp: 18,

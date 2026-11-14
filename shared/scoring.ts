@@ -32,6 +32,16 @@ export interface HourCall {
   reasons: ReasonCode[];
 }
 
+export type WindWarning = "none" | "strong" | "gale" | "storm" | "hurricane";
+export const WARNINGS_UNCHECKED_CAP = "marginal" as const;
+
+const OUTSIDE_RATING: SL20Rating = {
+  label: "Avoid", bg: "rgba(224,92,92,0.2)", fg: "#e05c5c", rank: 0,
+};
+const MARGINAL_RATING: SL20Rating = {
+  label: "Marginal", bg: "rgba(245,166,35,0.2)", fg: "#f5a623", rank: 1,
+};
+
 // proposal, pending skipper validation
 const SWELL_LIMITS = {
   marginalM: 1.5,
@@ -103,6 +113,7 @@ export function assessHour(input: HourInput): HourCall {
   if (input.windKt === null || input.gustKt === null) {
     return { state: "no-call", legacy, reasons: ["missing-data"] };
   }
+
   if (input.daylight === false) return { state: "outside", legacy, reasons: ["dark"] };
   if (!hasMarineForVessel(input)) return { state: "no-call", legacy, reasons: ["missing-data"] };
   const wind = Math.max(0, input.windKt);
@@ -128,6 +139,22 @@ export function assessHour(input: HourInput): HourCall {
   }
   const state = legacy.rank >= 2 ? "inside" : legacy.rank === 1 ? "marginal" : "outside";
   return { state, legacy, reasons };
+}
+
+export function applyOfficialMarineWarning(
+  call: HourCall,
+  windWarning: WindWarning,
+  warningsChecked: boolean,
+): HourCall {
+  if (windWarning !== "none") {
+    return { state: "outside", legacy: OUTSIDE_RATING, reasons: [...call.reasons, "warning"] };
+  }
+  if (warningsChecked) return call;
+  const capped = {
+    state: call.state === "inside" ? WARNINGS_UNCHECKED_CAP : call.state,
+    legacy: call.legacy.rank > MARGINAL_RATING.rank ? MARGINAL_RATING : call.legacy,
+  };
+  return { ...capped, reasons: [...call.reasons, "warning-unchecked"] };
 }
 
 export function isGolden(input: {

@@ -3,6 +3,7 @@ import { forecastInstant } from "@shared/forecastTime";
 import { precipitationMm } from "@shared/precipitation";
 import {
   assessHour,
+  applyOfficialMarineWarning,
   fishingScore,
   hasMarineForVessel,
   isDaylightHour,
@@ -16,6 +17,7 @@ import {
   rateSL20,
   type HourCall,
   type HourInput,
+  type WindWarning,
   type FishingOpts,
   type SL20Rating,
 } from "@shared/scoring";
@@ -30,6 +32,7 @@ import { fetchFishingDataFromBackend } from "@/lib/forecastApi";
 
 export {
   assessHour,
+  applyOfficialMarineWarning,
   fishingScore,
   hasMarineForVessel,
   isDaylightHour,
@@ -69,6 +72,8 @@ export interface HourRow {
   windDir: number | null;
   gustKt: number | null;
   thunderstorm?: boolean;
+  windWarning?: WindWarning;
+  warningsChecked?: boolean;
   rainProb: number | null;
   precipitationMm?: number | null;
   waveH: number | null;
@@ -94,7 +99,7 @@ export interface TideExtreme {
 }
 
 export function callForRow(row: HourRow): HourCall {
-  return assessHour({
+  const call = assessHour({
     windKt: row.windKt,
     gustKt: row.gustKt,
     windDirDeg: row.windDir,
@@ -105,6 +110,7 @@ export function callForRow(row: HourRow): HourCall {
     thunderstorm: row.thunderstorm ?? false,
     daylight: row.daylight,
   });
+  return applyOfficialMarineWarning(call, row.windWarning ?? "none", row.warningsChecked ?? false);
 }
 
 export interface DayData {
@@ -392,6 +398,8 @@ async function fetchFishingDataDirect(loc: Location, days: number, timezone: str
       windDir:   wi === undefined ? null : (windh.wind_direction_10m || [])[wi] ?? null,
       gustKt:    wi === undefined ? null : (windh.wind_gusts_10m || [])[wi] ?? null,
       thunderstorm: [95, 96, 97, 99].includes(wh.weather_code?.[i]) || !!officialMarine?.days?.some(day => day.date === t.slice(0, 10) && day.thunderstorm),
+      windWarning: officialMarine?.days?.find(day => day.date === t.slice(0, 10))?.windWarning ?? "none",
+      warningsChecked: officialMarine?.warningsChecked ?? false,
       rainProb:  (wh.precipitation_probability || [])[i] ?? null,
       precipitationMm: precipitationMm(wh.precipitation?.[i]),
       waveH:     hasM ? (mh.wave_height || [])[mi] ?? null : null,

@@ -4,6 +4,7 @@ import { fishingScore, moonTransitTimes } from "../shared/scoring";
 import { validateCoordinates, validateForecastDays } from "../shared/http";
 import { meetsCriteria, VESSEL_PRESETS } from "../client/src/lib/sickieCriteria";
 import { buildBrief, briefMarkdown, eligible, resolveLocation } from "./briefing";
+import { resetOfficialMarineCache } from "./officialMarine";
 import { consumeRateLimit, getCached, resetOpsState, setCached } from "./ops";
 
 function fakeReq(query: Record<string, string>): Request {
@@ -68,11 +69,23 @@ function findFutureDate(hours: number[], starsMatch: (stars: number[]) => boolea
 }
 
 function mockForecastFetch(periods: Array<{ date: string; hours: number[]; seaLevelStart: number; seaLevelStep: number }>) {
+  resetOfficialMarineCache();
   const rows = periods.flatMap(period => period.hours.map((hour, index) => ({
     time: `${period.date}T${String(hour).padStart(2, "0")}:00`,
     seaLevel: period.seaLevelStart + period.seaLevelStep * index,
   })));
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url === "https://www.bom.gov.au/wa/forecasts/perth-waters.shtml") {
+      const issuedAt = new Date(Date.now() - 60_000 + 8 * 60 * 60 * 1000);
+      const hour = issuedAt.getUTCHours();
+      const issueHour = hour % 12 || 12;
+      const minute = String(issuedAt.getUTCMinutes()).padStart(2, "0");
+      const period = hour >= 12 ? "pm" : "am";
+      const weekday = issuedAt.toLocaleString("en-AU", { weekday: "long", timeZone: "UTC" });
+      const month = issuedAt.toLocaleString("en-AU", { month: "long", timeZone: "UTC" });
+      return new Response(`<p>Forecast issued at ${issueHour}:${minute} ${period} WST on ${weekday} ${issuedAt.getUTCDate()} ${month} ${issuedAt.getUTCFullYear()}.</p>
+        <h2>Forecast for ${weekday} until midnight</h2><dl><dt>Winds</dt><dd>Variable below 10 knots.</dd><dt>Weather</dt><dd>Fine.</dd></dl>`);
+    }
     if (url.includes("marine-api")) {
       return new Response(JSON.stringify({
         latitude: -33.5,
@@ -139,12 +152,29 @@ describe("briefing input validation", () => {
 });
 
 describe("briefing windows ignore fishing scores by default", () => {
+  it("caps uncovered calls and states that BOM warnings were not checked", async () => {
+    const hours = [9];
+    const date = findFutureDate(hours, () => true, 0);
+    mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
+    try {
+      const brief = await buildBrief(fakeReq({ lat: "4.17", lon: "73.51", days: "3" }));
+      expect(brief.officialMarine).toMatchObject({ status: "outside-coverage", warningsChecked: false, zones: [] });
+      expect(brief.upcomingHours[0].call).toMatchObject({
+        state: "marginal",
+        reasons: ["warning-unchecked"],
+      });
+      expect(briefMarkdown(brief)).toContain("Warnings not checked. Open the BOM forecast.");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("returns W1 at two stars by default and keeps minStars as an explicit bite-time filter", async () => {
     const hours = [7, 8, 9];
     const date = findFutureDate(hours, stars => stars.every(star => star === 2), 0);
     mockForecastFetch([{ date, hours, seaLevelStart: 0.5, seaLevelStep: 0 }]);
     try {
-      const defaultBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3" }));
+      const defaultBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3" }));
       expect(defaultBrief.query.criteria.minStars).toBe(1);
       expect(defaultBrief.nextWindows).toHaveLength(1);
       expect(defaultBrief.nextWindows[0]).toMatchObject({
@@ -155,14 +185,21 @@ describe("briefing windows ignore fishing scores by default", () => {
         sl20: "Excellent",
         call: { state: "inside", reasons: [] },
       });
+      expect(defaultBrief.officialMarine).toMatchObject({
+        status: "available",
+        warningsChecked: true,
+        zones: [{ area: "Perth Local Waters", status: "available" }],
+      });
+      expect(defaultBrief.upcomingHours[0]).toMatchObject({ windWarning: "none", warningsChecked: true });
+      expect(briefMarkdown(defaultBrief)).toContain("Warnings checked.");
 
-      const filteredBrief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "3", minStars: "4" }));
+      const filteredBrief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "3", minStars: "4" }));
       expect(filteredBrief.query.criteria.minStars).toBe(4);
       expect(filteredBrief.nextWindows).toHaveLength(0);
       expect(briefMarkdown(filteredBrief)).toContain("with bite-time filter");
 
       const windFilteredBrief = await buildBrief(fakeReq({
-        lat: "-33.5", lon: "115.4", days: "3", mode: "wind", minStars: "4",
+        lat: "-32.06", lon: "115.65", days: "3", mode: "wind", minStars: "4",
       }));
       expect(windFilteredBrief.nextWindows).toHaveLength(0);
       expect(briefMarkdown(windFilteredBrief)).toContain("with bite-time filter");
@@ -181,7 +218,7 @@ describe("briefing windows ignore fishing scores by default", () => {
       { date: shorterDate, hours: shorterHours, seaLevelStart: 0.5, seaLevelStep: 0.25 },
     ]);
     try {
-      const brief = await buildBrief(fakeReq({ lat: "-33.5", lon: "115.4", days: "5" }));
+      const brief = await buildBrief(fakeReq({ lat: "-32.06", lon: "115.65", days: "5" }));
       expect(brief.bestUpcoming?.start).toBe(`${longerDate} 06:00`);
       expect(brief.bestUpcoming?.durationHours).toBe(6);
       expect(brief.bestUpcoming?.bestFishStars).toBe(2);

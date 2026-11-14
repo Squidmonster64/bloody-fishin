@@ -8,6 +8,7 @@ import { hourBucketEnd, localHourKey } from "../shared/forecastTime.js";
 import type { Request } from "express";
 import { precipitationMm, precipitationTotal } from "../shared/precipitation.js";
 import {
+  applyOfficialMarineWarning,
   fishingScore,
   hasMarineForVessel,
   assessHour,
@@ -18,6 +19,7 @@ import {
   isDaylightHour,
   type HourCall,
   type SL20Rating,
+  type WindWarning,
 } from "../shared/scoring.js";
 import {
   fetchWithTimeout,
@@ -30,6 +32,9 @@ type Hour = {
   time: string; date: string; hour: number; windKt: number | null; gustKt: number | null;
   windDirDeg: number | null;
   thunderstorm: boolean;
+  windWarning: WindWarning;
+  windWarningArea?: string;
+  warningsChecked: boolean;
   precipitationMm: number | null; rainProb: number | null; temp: number | null; waveH: number | null; swellH: number | null;
   swellP: number | null; swellDir: number | null; windWaveH: number | null; seaLevel: number | null; tideRate: number | null; daylight: boolean | null;
   sunrise: string; sunset: string;
@@ -290,11 +295,19 @@ export async function buildBrief(request: Request) {
   const { vessel, criteria, mode } = criteriaFromQuery(request.query);
   const [data, officialMarine] = await Promise.all([forecast(location, days), getOfficialMarine(location.lat, location.lon)]);
   for (const hour of data.hours) {
-    if (officialMarine.days.some(day => day.date === hour.date && day.thunderstorm)) {
+    const marineDay = officialMarine.days.find(day => day.date === hour.date);
+    if (marineDay?.thunderstorm) {
       hour.thunderstorm = true;
-      hour.call = assessHour({ ...hour, thunderstorm: true });
-      hour.sl20 = hour.call.legacy;
     }
+    hour.windWarning = marineDay?.windWarning ?? "none";
+    hour.windWarningArea = marineDay?.windWarningArea;
+    hour.warningsChecked = officialMarine.warningsChecked;
+    hour.call = applyOfficialMarineWarning(
+      assessHour({ ...hour, thunderstorm: hour.thunderstorm }),
+      hour.windWarning,
+      hour.warningsChecked,
+    );
+    hour.sl20 = hour.call.legacy;
   }
   const now = new Date();
   const futureHours = data.hours.filter((hour) => hour.time >= localHourKey(data.timezone, now));
@@ -358,6 +371,9 @@ export async function buildBrief(request: Request) {
     windDirDeg: hour.windDirDeg,
     gustKt: hour.gustKt,
     thunderstorm: hour.thunderstorm,
+    windWarning: hour.windWarning,
+    windWarningArea: hour.windWarningArea,
+    warningsChecked: hour.warningsChecked,
     swellM: hour.swellH,
     swellPeriodS: hour.swellP,
     swellDirDeg: hour.swellDir,
@@ -406,6 +422,15 @@ export async function buildBrief(request: Request) {
 
 export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
   const filter = `${brief.query.mode === "wind" ? `wind ≤ ${brief.query.criteria.maxWind} kt` : `${brief.query.vessel.toUpperCase()} vessel criteria`}${brief.query.criteria.minStars > 1 ? " with bite-time filter" : ""}`;
+  const warningLabels = { none: "", strong: "Strong Wind Warning", gale: "Gale Warning", storm: "Storm Force Wind Warning", hurricane: "Hurricane Force Wind Warning" };
+  const currentWarnings = brief.officialMarine.days
+    .filter(day => day.windWarning !== "none")
+    .map(day => `${warningLabels[day.windWarning]} (${day.windWarningArea ?? brief.officialMarine.area.split(" — ")[0]})`);
+  const warningsSummary = !brief.officialMarine.warningsChecked
+    ? "Warnings not checked. Open the BOM forecast."
+    : currentWarnings.length
+      ? `Warnings checked. BOM wind warning current: ${Array.from(new Set(currentWarnings)).join("; ")}.`
+      : "Warnings checked.";
   const lines = [
     "# Bloody Dave's Fishing Planner — Public Forecast Brief",
     "",
@@ -416,6 +441,7 @@ export function briefMarkdown(brief: Awaited<ReturnType<typeof buildBrief>>) {
     "",
     "## Official marine outlook",
     `BOM status: ${brief.officialMarine.status}. ${brief.officialMarine.issued ?? ""} · ${brief.officialMarine.source}`,
+    warningsSummary,
     ...brief.officialMarine.days.map(day => `- **${day.date}:** Wind ${day.winds} Seas ${day.seas} Swell ${day.swell} ${day.weather}`),
     "",
     "## Next qualifying windows",

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchFishingDataFromBackend } from "./forecastApi";
+import { callForRow } from "./fishingEngine";
 
 describe("forecast brief row mapping", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -20,6 +21,9 @@ describe("forecast brief row mapping", () => {
         windDirDeg: 90,
         gustKt: 11,
         thunderstorm: false,
+        windWarning: "strong",
+        windWarningArea: "Perth Coast",
+        warningsChecked: true,
         rainChance: 0,
         precipitationMm: 0,
         waveM: 1,
@@ -60,6 +64,9 @@ describe("forecast brief row mapping", () => {
       daylight: false,
       sunrise: "05:10",
       sunset: "18:55",
+      windWarning: "strong",
+      warningsChecked: true,
     });
+    expect(callForRow(data.merged[0]).reasons).toContain("warning");
   });
 });

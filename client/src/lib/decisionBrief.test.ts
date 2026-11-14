@@ -36,6 +36,8 @@ function hour(partial: Partial<HourRow> & Pick<HourRow, "time" | "hour" | "dateS
     fishScore: partial.fishScore ?? 70,
     fishStars: partial.fishStars ?? 4,
     slRank: partial.slRank ?? 2,
+    windWarning: partial.windWarning ?? "none",
+    warningsChecked: partial.warningsChecked ?? true,
     golden: partial.golden ?? false,
     ...partial,
   };
