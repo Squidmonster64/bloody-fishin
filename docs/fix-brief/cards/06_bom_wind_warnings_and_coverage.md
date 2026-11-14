@@ -2,18 +2,30 @@
 
 Phase 1A. Effort M. Depends on: card 02.
 Base: `Squidmonster64/bloody-fishin`, branch `codex/cloudflare-worker` @ `93078fc`.
+Revised 14 Nov 2026 against real BOM pages saved that day (see "Read this first").
 
 ## Goal
 
 An official wind warning must override the call. When the app has not checked warnings, it must say so and must not show a positive call. Today only the word "thunderstorm" is read [M]. Every Rottnest spot is outside the coverage box [M].
 
-No new data source. This card reads more from the page the app already fetches.
+BOM covers Perth with two separate forecast zones [M, BOM map page, 14 Nov 2026]:
+
+| Zone | BOM page | Product | Covers |
+|---|---|---|---|
+| Perth Local Waters | `https://www.bom.gov.au/wa/forecasts/perth-waters.shtml` (fetched today) | IDW11400 | Two Rocks to Dawesville, **inshore** from Rottnest |
+| Perth Coast | `https://www.bom.gov.au/wa/forecasts/perth-coast.shtml` (**new**) | IDW11280 | Two Rocks to Dawesville, **offshore** from Rottnest |
+
+This card reads warnings from both pages. The owner approved adding the Perth Coast page on 14 Nov 2026.
 
 ## Read this first
 
-- **The warning markup on the BOM page is unverified.** I could not open the page (BOM blocks automated readers [R]) and the repo's only HTML fixture has no warning (`server/officialMarine.test.ts:4-5`) [M]. BOM marine forecasts normally carry a line such as "Strong Wind Warning for Saturday for Perth Local Waters" [J, from memory]. **Before coding, ask the owner for one saved copy of the page from a warning day.** Use it as the test fixture. If none is available, build to the phrase patterns below and mark the PR "parser not tested against a real warning page".
-- Scraping BOM pages is outside BOM's default terms [R]. This card adds no new request and no new republished text. It does not resolve that gate.
-- Tests must not fetch BOM.
+- **The warning markup is verified against a real page.** On 14 Nov 2026 a Strong Wind Warning was current for Perth Coast only. Real pages from that 1:01 pm WST issue are in `server/fixtures/bom/`:
+  - `perth-coast-2026-11-14-strong-wind.html`: the warning sits inside the day's own section, after `<h2>Forecast for Saturday until midnight</h2>`, as `<p class="marine warning">Strong Wind Warning for Saturday for Perth Coast</p>` [M].
+  - `perth-waters-2026-11-14-strong-wind-current.html`: the same day's Local Waters page. No warning applied inshore (winds 10–20 kt), and the page has none. Its only warning text is the generic link "View the current warnings for Western Australia" [M]. That link must **not** count as a warning.
+  - `marine-wind-warning-IDW20100-2026-11-14.html`: a trimmed copy of BOM's separate state warning page, kept for reference only. Do not fetch or parse IDW20100.
+- **Not yet seen:** a Local Waters page with a warning on it. Both pages use the same template, so the same `<p class="marine warning">… for <Weekday> for <Area></p>` line is expected [J]. Gale, Storm Force and Hurricane Force wording is also from memory [J]. Say both in the PR.
+- Scraping BOM pages is outside BOM's default terms [R]. This card adds one more page under that same gate. It does not resolve the gate.
+- Tests must not fetch BOM. Use the fixtures above and mocked `fetch`.
 
 ## Files and functions to touch
 
@@ -21,8 +33,9 @@ No new data source. This card reads more from the page the app already fetches.
 |---|---|
 | `shared/officialMarine.ts:1-16` | `OfficialMarineDay` and `OfficialMarine` types. Only flag is `thunderstorm` |
 | `shared/officialMarine.ts:18-20` | `inPerthWaters`: lat -32.65 to -31.45, lon **115.55** to 115.78 |
-| `server/officialMarine.ts:7-31` | `parseOfficialMarine`. Line 16 splits the page by `<h2>`. Line 27 sets `thunderstorm` |
-| `server/officialMarine.ts:33-43` | `getOfficialMarine`: `outside-coverage`, `unavailable` or parsed result |
+| `server/officialMarine.ts:3-4` | One `source` URL and one `area` string |
+| `server/officialMarine.ts:7-31` | `parseOfficialMarine`. Splits the page by `<h2>`. Sets `thunderstorm` |
+| `server/officialMarine.ts:33-43` | `getOfficialMarine`: one fetch, one 5-minute cache, `outside-coverage`, `unavailable` or parsed |
 | `server/briefing.ts:289-295` | Whole-day thunderstorm override |
 | `client/src/lib/fishingEngine.ts:370` | Same override on the legacy direct path |
 | `client/src/pages/Home.tsx:69-74` | "Official marine outlook" panel |
@@ -30,12 +43,11 @@ No new data source. This card reads more from the page the app already fetches.
 
 ## Behaviour change
 
-### 1. Parse warnings
+### 1. Parse warnings (same parser for both pages)
 
 Add to `OfficialMarineDay`: `windWarning: "none" | "strong" | "gale" | "storm" | "hurricane"`.
-Add to `OfficialMarine`: `warningsChecked: boolean`. True only when status is `available`.
 
-Match on cleaned text, case-insensitive:
+Give `parseOfficialMarine` the zone it is reading (`source`, `area` and the BOM area name, `"Perth Local Waters"` or `"Perth Coast"`). Match on cleaned text, case-insensitive:
 
 | Phrase | Level |
 |---|---|
@@ -44,61 +56,99 @@ Match on cleaned text, case-insensitive:
 | "Storm Force Wind Warning" | storm |
 | "Hurricane Force Wind Warning" | hurricane |
 
-Assign to days like this. Look first inside each day's own section. Then look in the whole page for "<phrase> for <weekday>" and map the weekday to the parsed date. If a warning phrase is on the page and no day can be worked out, apply it to **every** parsed day. Take the highest level found for a day.
+Rules:
+1. Look first inside each day's own `<h2>` section. This is where the real page puts it.
+2. Then look in the whole page for "<phrase> for <weekday>" and map the weekday to the parsed date.
+3. If the line names an area ("… for Perth Coast"), count it only when the area is this page's own area. If it names no area, count it.
+4. If a warning phrase is on the page and no day can be worked out, apply it to **every** parsed day.
+5. Link text that only points to the warnings list ("View the current warnings for …") has none of the phrases above, so rules 1 to 4 already skip it. Add a test so it stays that way.
+6. Take the highest level found for a day.
 
-### 2. Apply warnings to the call (legacy labels until card 07)
+### 2. Which pages a spot needs [J, proposal for skipper validation]
+
+| Spot is in | Pages read | Warnings for a date | Checked when |
+|---|---|---|---|
+| `inPerthWaters` (inshore) | Local Waters | Local Waters only. A Perth Coast-only warning does **not** apply, as on 14 Nov | Local Waters is `available` |
+| `inPerthCoast` (offshore of Rottnest) | Local Waters **and** Perth Coast | Highest of the two. The trip there crosses Local Waters | **both** are `available` |
+| neither | none | none | never (`outside-coverage`) |
+
+Thunderstorm: for an offshore spot, true if either page says so.
+
+### 3. Coverage boxes [J, proposal for skipper validation]
+
+- `inPerthWaters`: move the west edge from 115.55 to **115.49**. This takes in Thomson Bay (115.543), Salmon Bay (115.526), Parker Point (115.512) and Parakeet Bay (115.507) from the app's own list (`fishingEngine.ts:154-157`).
+- New `inPerthCoast`: same latitudes, lon **115.00** up to (not including) 115.49. This holds Rottnest West (115.467). The BOM page gives no seaward edge; 115.00 is a conservative choice [J]. Put both edges in named constants.
+- This replaces the earlier `nearPerthWaters` idea. There is no "Perth Coast not read" cap any more.
+- Whether the south-side Rottnest bays belong under Local Waters or Perth Coast is a skipper question.
+
+### 4. Fetch
+
+- `getOfficialMarine(lat, lon)` fetches only the pages the spot needs, in parallel.
+- Same timeout (10 s), 5-minute cache **per URL**, and 24 h staleness for each page.
+- If any needed page fails or is stale, `warningsChecked` is false. Never treat a failed page as "no warning".
+
+### 5. Result shape
+
+Add to `OfficialMarine`:
+- `warningsChecked: boolean`. True only when every page the spot needs was read and is fresh.
+- `zones: Array<{ area, source, status, issued }>`, one entry per page read.
+
+Keep `status`, `source`, `area`, `issued` and `days` for the spot's own zone (Local Waters for inshore, Perth Coast for offshore), so existing callers keep working. `status` is `available` only when every page needed is available. `days[].windWarning` and `days[].thunderstorm` are the combined values from section 2.
+
+### 6. Apply warnings to the call (legacy labels until card 07)
 
 | Condition | Effect on `assessHour` for every hour of that date |
 |---|---|
 | strong | `outside`, reason `warning`. Card 07 relaxes this to a Marginal cap for the `offshore` preset only |
 | gale, storm or hurricane | `outside`, reason `warning`, for every preset |
-| `warningsChecked` false (status `unavailable` or `outside-coverage`) | No better than `marginal`, reason `warning-unchecked` |
+| `warningsChecked` false | No better than `marginal`, reason `warning-unchecked` |
 
 The cap for unchecked warnings is a proposal [J]. It means spots outside Perth, such as Shark Bay and overseas, can never show better than Marginal. The alternative is a banner with no cap. Put the choice in one constant, `WARNINGS_UNCHECKED_CAP = "marginal"`, so the owner can decide.
 
-### 3. Coverage box [J, proposal for skipper validation]
+### 7. Show it
 
-BOM names the area "Two Rocks to Dawesville, inshore from Rottnest" (`server/officialMarine.ts:4`) [M].
-
-- `inPerthWaters`: move the west edge from 115.55 to **115.49**. This takes in Thomson Bay (115.543), Salmon Bay (115.526), Parker Point (115.512) and Parakeet Bay (115.507) from the app's own list (`fishingEngine.ts:154-157`).
-- New `nearPerthWaters`: same latitudes, lon 115.40 to 115.49. This holds Rottnest West (115.467). Here a Local Waters warning **applies** (`outside`), but a clear page does **not** count as checked, because the Perth Coast forecast is not read. State is capped at `marginal` with `warning-unchecked`.
-- Whether the south-side Rottnest bays belong under Local Waters or Perth Coast is a skipper question.
-
-### 4. Show it
-
-- `Home.tsx:69`: when a warning is current, the summary line reads "BOM wind warning current: Strong Wind Warning" (or the level) in the danger colour. When `warningsChecked` is false it reads "Warnings not checked. Open the BOM forecast." Keep the existing link (`Home.tsx:74`).
+- `Home.tsx:69`: when a warning is current, the summary line reads "BOM wind warning current: Strong Wind Warning (Perth Coast)" (level and zone) in the danger colour. When `warningsChecked` is false it reads "Warnings not checked. Open the BOM forecast." Keep the existing link (`Home.tsx:74`) and add the Perth Coast link when that page was read.
 - Use the app's own words. Do not copy more BOM text than is shown today.
-- `/brief.json`: `officialMarine.days[].windWarning` and `officialMarine.warningsChecked`. `/brief` Markdown: one line under "Official marine outlook".
+- `/brief.json`: `officialMarine.days[].windWarning`, `officialMarine.warningsChecked` and `officialMarine.zones`. `/brief` Markdown: one line under "Official marine outlook".
 
 ## Tests to add
 
 | Test | Input | Expected |
 |---|---|---|
-| Parse strong | Fixture HTML with "Strong Wind Warning for Sunday for Perth Local Waters" and a Sunday 27 September section | that day `windWarning: "strong"`, other days `"none"` |
-| Parse gale in section | "Gale Warning" inside the day's own block | `"gale"` |
-| Parse, day unknown | Warning phrase with no weekday | every day `"strong"` |
+| Real Perth Coast page | `perth-coast-2026-11-14-strong-wind.html`, now = 14 Nov 2026 14:00 AWST, area Perth Coast | 2026-11-14 `"strong"`; 15, 16 and 17 Nov `"none"` |
+| Real Local Waters page | `perth-waters-2026-11-14-strong-wind-current.html`, same now, area Perth Local Waters | every day `"none"`; the "View the current warnings" link is not a warning |
+| Wrong area | Perth Coast fixture parsed as area Perth Local Waters | every day `"none"` |
+| Gale in section | Hand-made: the Perth Coast fixture with the Sunday section given `<p class="marine warning">Gale Warning for Sunday for Perth Coast</p>`. Label it made up | 15 Nov `"gale"` |
+| Day unknown | Hand-made: warning line with no weekday. Label it made up | every day `"strong"` |
 | Parse none | Existing fixture (`officialMarine.test.ts:4-5`) | `"none"`, `warningsChecked` true |
 | Fixture D1 | 9 / 120 / 12, chop 0.3, swell 1.1 @ 11, day, strong warning | `outside`, reason `warning` |
 | Fixture D2 | same, gale | `outside` |
-| Fixture D3 | same, status `unavailable` | `marginal`, `warning-unchecked` |
-| Fixture D4 | `inPerthWaters(-31.999, 115.543)` | true. Calm hour, clear page: `inside` |
-| Fixture D5 | `inPerthWaters(-31.998, 115.467)` false, `nearPerthWaters` true. Calm, clear page | `marginal`, `warning-unchecked` |
-| Fixture D6 | D5 with a strong warning | `outside`, `warning` |
+| Fixture D3 | same, page unavailable or stale | `marginal`, `warning-unchecked` |
+| Fixture D4 | `inPerthWaters(-31.999, 115.543)` true. Calm hour, Local Waters clear | `inside` |
+| Fixture D4c | D4 on 14 Nov with the two real fixtures (Perth Coast warned, Local Waters clear) | `inside`. A Perth Coast warning does not apply inshore |
+| Fixture D5 | Rottnest West (-31.998, 115.467): `inPerthWaters` false, `inPerthCoast` true. Calm, both pages clear | `inside` |
+| Fixture D5u | D5 with Perth Coast page unavailable | `marginal`, `warning-unchecked` |
+| Fixture D6 | D5 with a Local Waters Strong Wind Warning | `outside`, `warning` |
+| Fixture D6c | D5 on 14 Nov with the two real fixtures | `outside`, `warning` |
 | Fixture D7 | (4.17, 73.51), calm | `marginal`, `warning-unchecked` |
+| Fetch | Mocked `fetch`: inshore spot requests only perth-waters; Rottnest West requests both | URLs as stated |
 | Existing pin | `inPerthWaters(-32, 115.46)` | still false |
 | Thunderstorm unchanged | Fixture E2 | `outside`, `thunderstorm` |
 
+Pass a fixed `now` to the parser so the 14 Nov fixtures are not stale.
+
 ## Acceptance criteria
 
-- With a strong-wind fixture, no hour of the warned date is `inside` or `marginal` for the sl20 preset on any surface.
-- With BOM unavailable, no hour anywhere is `inside`, and the screen says warnings were not checked.
-- Thomson Bay reports `officialMarine.status: "available"`.
-- `pnpm check` and `pnpm test` pass.
+- With the real 14 Nov fixtures, no hour of 14 Nov is `inside` or `marginal` at Rottnest West for the sl20 preset on any surface, and Thomson Bay is not downgraded by the Perth Coast warning.
+- With any needed BOM page unavailable, no hour at that spot is `inside`, and the screen says warnings were not checked.
+- Thomson Bay reports `officialMarine.status: "available"`. Rottnest West reports two `zones`.
+- `pnpm check` and `pnpm test` pass (see `.clinerules` for the known suite-nav failure).
 
 ## What NOT to change
 
 - The whole-day thunderstorm rule (`server/briefing.ts:290-294`). It is conservative and stays until the skipper decides otherwise.
-- The fetch itself: URL, 5-minute cache, 24 h staleness (`server/officialMarine.ts:3,14,36`). Do not add a second BOM URL.
+- Only these two BOM URLs. Do not fetch IDW20100 or any other BOM page.
+- Timeout, cache length and 24 h staleness stay as they are, applied per page.
 - Do not add more republished BOM text to `/brief` or the app.
 - Do not call any BOM endpoint from tests or CI.
 

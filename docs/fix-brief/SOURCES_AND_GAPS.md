@@ -82,7 +82,7 @@ Not re-measured, carried from the reviews as **[R]**:
 
 | # | Unverified item | Affects | What to do |
 |---|---|---|---|
-| 1 | **How a wind warning appears in the BOM Perth Local Waters page HTML.** The repo fixture has no warning. I did not fetch BOM. The phrase patterns in card 06 are from memory | Card 06 | Owner saves one copy of the page on a warning day. Until then the parser is untested against real markup |
+| 1 | **How a wind warning appears in the BOM page HTML.** Resolved 14 Nov 2026 for Perth Coast: real page saved with `<p class="marine warning">Strong Wind Warning for Saturday for Perth Coast</p>` inside the day section (`server/fixtures/bom/`). A Local Waters page with a warning is still unseen; same template assumed. Gale, Storm and Hurricane wording still from memory | Card 06 | Save a Local Waters page the next time a warning names Perth Local Waters, and add it as a fixture |
 | 2 | **Open-Meteo multi-model response field names** | Card 14 | Coding agent reads the provider docs first |
 | 3 | Whether the Worker's BOM fetch keeps working. It returned `available` today, but BOM blocks scrapers elsewhere [R] | Cards 06, 07 | If it fails, every call caps at marginal by design. That will be visible |
 | 4 | Whether the Open-Meteo plan in use covers a pilot. Free tier is non-commercial [R]. I did not look at any key or account | Card 14, and the product as a whole | Owner decision |
@@ -175,3 +175,7 @@ Not re-measured, carried from the reviews as **[R]**:
 The owner confirmed the vessel: Whittley SL20, 2019, outboard (OB) version. Source for dimensions: Whittley "SL 20 OB SPECS & STANDARDS" sheet, https://whittleyboats.treepl.co/SL%2020%20OB%20SPECS%20%20STANDARDS.pdf (hull 6.37 m, beam 2.40 m, 7.50 m on trailer). Dry weight for the OB version was not found.
 
 Engine confirmed by the owner: Yamaha 150 four-stroke. Speed source: boatsales.com.au review of the SL 20 OB with a Yamaha F130A, as republished by Whittley, https://whittleyboats.treepl.co/reviews/sl-20-ob-boatsales-com-au (rpm, speed and fuel table; test in a gusty 15 kt south-westerly chop on Port Phillip Bay). No published test with the F150 was found. Card 15 speeds and the dependent times in cards 16 and 17 and TEST_FIXTURES section 5 were updated.
+
+## Update 14 Nov 2026 (card 06)
+
+BOM's WA map page (https://www.bom.gov.au/wa/forecasts/map.shtml) lists Perth Local Waters and Perth Coast as separate zones. Perth Coast (IDW11280, https://www.bom.gov.au/wa/forecasts/perth-coast.shtml) is "Two Rocks to Dawesville, offshore from Rottnest Island". On 14 Nov 2026 BOM's state warning page (IDW20100) named Perth Coast, Bunbury Geographe Coast and Leeuwin Coast, not Perth Local Waters, and the Local Waters page showed no warning. The owner approved reading the Perth Coast page as a second source for offshore spots (Rottnest West). Card 06 and the D rows in TEST_FIXTURES were revised. The BOM terms gate now covers two pages.

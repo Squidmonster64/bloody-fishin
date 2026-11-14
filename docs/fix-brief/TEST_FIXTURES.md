@@ -64,8 +64,11 @@ Phase 2 factors used [J]: sea-breeze allowance 1.2 on mean wind from 180° to 25
 | D2 | 9 / 120 / 12 | 0.3 | 1.1 @ 11 | 09:00 day | Gale Warning for that date | Go | Outside | Outside (every preset) | Outside | 06 |
 | D3 | 9 / 120 / 12 | 0.3 | 1.1 @ 11 | 09:00 day | page unavailable or stale | Go | Marginal (warnings not checked) | Marginal | Marginal | 06 |
 | D4 | A1 conditions, spot **Thomson Bay** (-31.999, 115.543) | | | 08:00 day | clear | Excellent, BOM status "outside-coverage" | Inside, BOM status "available" | Inside | Inside | 06 |
-| D5 | A1 conditions, spot **Rottnest West** (-31.998, 115.467) | | | 08:00 day | clear on Local Waters; Perth Coast not read | Excellent | Marginal (warnings not confirmed here) | Marginal | Marginal | 06 |
+| D4c | D4 on 14 Nov 2026, real fixtures: Perth Coast Strong Wind Warning, Local Waters clear | | | 08:00 day | Local Waters clear | Excellent | Inside (Perth Coast warning does not apply inshore) | Inside | Inside | 06 |
+| D5 | A1 conditions, spot **Rottnest West** (-31.998, 115.467), in Perth Coast zone | | | 08:00 day | clear on Local Waters and Perth Coast | Excellent | Inside | Inside | Inside | 06 |
+| D5u | D5 with the Perth Coast page unavailable | | | 08:00 day | Perth Coast not read | Excellent | Marginal (warnings not checked) | Marginal | Marginal | 06 |
 | D6 | D5 with a Local Waters Strong Wind Warning | | | | warning | Excellent | Outside (warning) | Outside | Outside | 06 |
+| D6c | D5 on 14 Nov 2026, real fixtures: Perth Coast Strong Wind Warning | | | 08:00 day | Perth Coast warning | Excellent | Outside (warning) | Outside | Outside | 06 |
 | D7 | A1 conditions, spot **Maldives (Male)** | | | 08:00 day | no source | Excellent | Marginal (warnings not checked) | Marginal | Marginal | 06 |
 | E1 | A1 conditions, model weather code 95 that hour | | | 09:00 day | clear | Avoid | Outside (thunderstorm) | Outside | Outside | 02 |
 | E2 | A1 conditions, BOM day text says "chance of a thunderstorm" | | | 09:00 day | clear | Avoid (live 14 Nov [M]) | Outside (unchanged whole-day rule) | Outside | Outside | 02 |
